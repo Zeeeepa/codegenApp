@@ -10,3 +10,12 @@ process.env.REACT_APP_API_BASE_URL = 'https://api.codegen.com';
 process.env.REACT_APP_DEFAULT_ORGANIZATION = 'test-org';
 process.env.REACT_APP_USER_ID = 'test-user';
 
+// Extend Jest global types
+declare global {
+  namespace jest {
+    interface Matchers<R> {
+      toBeInTheDocument(): R;
+      toHaveTextContent(text: string | RegExp): R;
+    }
+  }
+}
