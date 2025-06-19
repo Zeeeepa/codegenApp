@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import ListOrganizations from './list-organizations';
 import CreateAgentRun from './create-agent-run';
 import ListAgentRuns from './list-agent-runs';
+import { SetupGuide } from './components/SetupGuide';
 import { getPreferenceValues, setPreferenceValues, getEnvFileContent, validateEnvironmentConfiguration } from './utils/preferences';
 import './App.css';
 
@@ -271,6 +272,29 @@ function Settings() {
   );
 }
 
+// Wrapper component that shows setup guide when needed
+function AppContent() {
+  const envValidation = validateEnvironmentConfiguration();
+  
+  // Show setup guide if configuration is invalid and we're not on settings page
+  const location = useLocation();
+  const showSetupGuide = !envValidation.isValid && location.pathname !== '/settings';
+  
+  if (showSetupGuide) {
+    return <SetupGuide />;
+  }
+  
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/agent-runs" replace />} />
+      <Route path="/organizations" element={<ListOrganizations />} />
+      <Route path="/create-agent-run" element={<CreateAgentRun />} />
+      <Route path="/agent-runs" element={<ListAgentRuns />} />
+      <Route path="/settings" element={<Settings />} />
+    </Routes>
+  );
+}
+
 function App() {
   return (
     <Router
@@ -306,13 +330,7 @@ function App() {
           }}
         />
         
-        <Routes>
-          <Route path="/" element={<Navigate to="/agent-runs" replace />} />
-          <Route path="/organizations" element={<ListOrganizations />} />
-          <Route path="/create-agent-run" element={<CreateAgentRun />} />
-          <Route path="/agent-runs" element={<ListAgentRuns />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
+        <AppContent />
       </div>
     </Router>
   );

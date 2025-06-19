@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import { validateEnvironmentConfiguration } from './preferences';
 
 // Mock environment variables for testing
