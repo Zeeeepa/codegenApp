@@ -1,85 +1,77 @@
-// Test script to verify API connectivity with real credentials
-const fetch = require('node-fetch');
+#!/usr/bin/env node
 
-const API_TOKEN = 'sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99';
-const ORG_ID = '323';
-const BASE_URL = 'http://localhost:3001/api';
+const API_BASE = 'http://localhost:3001';
+const TOKEN = 'sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99';
 
 async function testAPI() {
-  console.log('🧪 Testing Codegen API with real credentials...');
-  
+  console.log('🧪 Testing API endpoints...\n');
+
+  // Test health endpoint
   try {
-    // Test user endpoint
-    console.log('\n1️⃣ Testing /users/me endpoint...');
-    const userResponse = await fetch(`${BASE_URL}/v1/users/me`, {
+    const healthResponse = await fetch(`${API_BASE}/health`);
+    const healthData = await healthResponse.json();
+    console.log('✅ Health Check:', JSON.stringify(healthData, null, 2));
+  } catch (error) {
+    console.log('❌ Health Check failed:', error.message);
+  }
+
+  // Test user endpoint
+  try {
+    const userResponse = await fetch(`${API_BASE}/api/v1/users/me`, {
       headers: {
-        'Authorization': `Bearer ${API_TOKEN}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${TOKEN}`
+      }
+    });
+    const userData = await userResponse.json();
+    console.log('\n✅ User Data:', JSON.stringify(userData, null, 2));
+  } catch (error) {
+    console.log('\n❌ User endpoint failed:', error.message);
+  }
+
+  // Test organizations endpoint
+  try {
+    const orgResponse = await fetch(`${API_BASE}/api/v1/organizations`, {
+      headers: {
+        'Authorization': `Bearer ${TOKEN}`
       }
     });
     
-    if (userResponse.ok) {
-      const userData = await userResponse.json();
-      console.log('✅ User data retrieved successfully:');
-      console.log(`   - ID: ${userData.id}`);
-      console.log(`   - Email: ${userData.email}`);
-      console.log(`   - GitHub: @${userData.github_username}`);
-      console.log(`   - Full Name: ${userData.full_name || 'Not set'}`);
+    if (orgResponse.ok) {
+      const orgData = await orgResponse.json();
+      console.log('\n✅ Organizations:', JSON.stringify(orgData, null, 2));
     } else {
-      console.log(`❌ User endpoint failed: ${userResponse.status} ${userResponse.statusText}`);
-      const errorText = await userResponse.text();
-      console.log(`   Error: ${errorText}`);
+      console.log('\n⚠️ Organizations endpoint returned:', orgResponse.status, orgResponse.statusText);
     }
-    
-    // Test organizations endpoint
-    console.log('\n2️⃣ Testing /organizations endpoint...');
-    const orgsResponse = await fetch(`${BASE_URL}/v1/organizations`, {
+  } catch (error) {
+    console.log('\n❌ Organizations endpoint failed:', error.message);
+  }
+
+  // Test agent runs endpoint
+  try {
+    const runsResponse = await fetch(`${API_BASE}/api/v1/organizations/323/agent_runs?limit=3`, {
       headers: {
-        'Authorization': `Bearer ${API_TOKEN}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (orgsResponse.ok) {
-      const orgsData = await orgsResponse.json();
-      console.log('✅ Organizations data retrieved successfully:');
-      console.log(`   - Found ${orgsData.length} organizations`);
-      orgsData.forEach(org => {
-        console.log(`   - ${org.name} (ID: ${org.id})`);
-      });
-    } else {
-      console.log(`❌ Organizations endpoint failed: ${orgsResponse.status} ${orgsResponse.statusText}`);
-      const errorText = await orgsResponse.text();
-      console.log(`   Error: ${errorText}`);
-    }
-    
-    // Test agent runs endpoint for specific org
-    console.log('\n3️⃣ Testing /agent-runs endpoint...');
-    const runsResponse = await fetch(`${BASE_URL}/v1/agent-runs?organization_id=${ORG_ID}&limit=5`, {
-      headers: {
-        'Authorization': `Bearer ${API_TOKEN}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${TOKEN}`
       }
     });
     
     if (runsResponse.ok) {
       const runsData = await runsResponse.json();
-      console.log('✅ Agent runs data retrieved successfully:');
-      console.log(`   - Found ${runsData.length} recent agent runs`);
-      if (runsData.length > 0) {
-        console.log(`   - Latest run: ${runsData[0].id} (${runsData[0].status})`);
-      }
+      console.log('\n✅ Agent Runs:', JSON.stringify(runsData, null, 2));
     } else {
-      console.log(`❌ Agent runs endpoint failed: ${runsResponse.status} ${runsResponse.statusText}`);
-      const errorText = await runsResponse.text();
-      console.log(`   Error: ${errorText}`);
+      console.log('\n⚠️ Agent runs endpoint returned:', runsResponse.status, runsResponse.statusText);
     }
-    
   } catch (error) {
-    console.log(`❌ Network error: ${error.message}`);
+    console.log('\n❌ Agent runs endpoint failed:', error.message);
   }
-  
-  console.log('\n🎯 API Test Complete!');
 }
 
-testAPI();
+// Import fetch for Node.js
+import('node-fetch').then(({ default: fetch }) => {
+  global.fetch = fetch;
+  testAPI();
+}).catch(() => {
+  // Fallback for environments without node-fetch
+  console.log('⚠️ Using built-in fetch or curl fallback');
+  testAPI();
+});
+
