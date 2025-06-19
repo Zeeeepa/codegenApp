@@ -18,6 +18,13 @@ export interface CredentialsValidationResult {
   userDisplayName?: string;
   userInfo?: UserResponse;
 }
+
+interface FetchErrorDiagnostics {
+  title: string;
+  userMessage: string;
+  technicalDetails: string;
+  suggestedActions: string[];
+}
 /**
  * Get user preferences with validation
  */
@@ -47,6 +54,117 @@ export async function getCredentials(): Promise<Preferences> {
     apiBaseUrl,
   };
 }
+
+/**
+ * Comprehensive fetch error diagnostics
+ */
+async function diagnoseFetchError(
+  fetchError: any, 
+  endpoint: string, 
+  credentials: Preferences
+): Promise<FetchErrorDiagnostics> {
+  console.error("🔍 Diagnosing fetch error...");
+  
+  // Check if backend server is running
+  const backendHealthy = await checkBackendHealth();
+  
+  // Analyze the error
+  const errorMessage = fetchError instanceof Error ? fetchError.message : String(fetchError);
+  const isNetworkError = fetchError instanceof TypeError && errorMessage === 'Failed to fetch';
+  
+  // Check API token configuration
+  const hasValidToken = credentials.apiToken && 
+                       credentials.apiToken !== 'your_api_token_here' && 
+                       credentials.apiToken.length > 10;
+  
+  console.error("🔍 Diagnostic results:", {
+    backendHealthy,
+    isNetworkError,
+    hasValidToken,
+    endpoint,
+    errorMessage
+  });
+  
+  // Determine the most likely cause and provide specific guidance
+  if (!backendHealthy) {
+    return {
+      title: "Backend Server Not Running",
+      userMessage: "The backend server (port 8001) is not responding. Please start it with 'npm run dev'.",
+      technicalDetails: `Failed to connect to ${endpoint}. Backend server appears to be down.`,
+      suggestedActions: [
+        "Run 'npm run dev' to start both frontend and backend servers",
+        "Check if port 8001 is available",
+        "Verify server/index.js is working correctly"
+      ]
+    };
+  }
+  
+  if (!hasValidToken) {
+    return {
+      title: "API Token Required",
+      userMessage: "Please set your Codegen API token in the .env file. Get it from https://app.codegen.com/settings",
+      technicalDetails: `API token is missing or invalid: ${credentials.apiToken ? 'present but invalid' : 'not set'}`,
+      suggestedActions: [
+        "Visit https://app.codegen.com/settings to get your API token",
+        "Update REACT_APP_API_TOKEN in your .env file",
+        "Restart the application with 'npm run dev'"
+      ]
+    };
+  }
+  
+  if (isNetworkError) {
+    return {
+      title: "Network Connection Error",
+      userMessage: "Cannot connect to the API. Check your network connection and backend server.",
+      technicalDetails: `Network error when connecting to ${endpoint}: ${errorMessage}`,
+      suggestedActions: [
+        "Check if backend server is running on port 8001",
+        "Verify your network connection",
+        "Check for firewall or proxy issues",
+        "Try restarting the backend server"
+      ]
+    };
+  }
+  
+  // Generic error fallback
+  return {
+    title: "API Connection Error",
+    userMessage: `Failed to connect to Codegen API: ${errorMessage}`,
+    technicalDetails: `Unexpected error: ${errorMessage} at ${endpoint}`,
+    suggestedActions: [
+      "Check your API token is valid",
+      "Verify backend server is running",
+      "Check network connectivity",
+      "Review browser console for more details"
+    ]
+  };
+}
+
+/**
+ * Check if backend server is healthy
+ */
+async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const healthEndpoint = 'http://localhost:8001/health';
+    const response = await fetch(healthEndpoint, { 
+      method: 'GET',
+      timeout: 5000 // 5 second timeout
+    } as any);
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log("✅ Backend health check passed:", data);
+      return true;
+    } else {
+      console.error("❌ Backend health check failed:", response.status, response.statusText);
+      return false;
+    }
+  } catch (error) {
+    console.error("❌ Backend health check error:", error);
+    return false;
+  }
+}
+
 /**
  * Validate API token - uses cache first, only fetches if needed
  */
@@ -124,49 +242,22 @@ export async function validateCredentials(): Promise<CredentialsValidationResult
         },
       });
     } catch (fetchError) {
-       console.error("🚨 Raw fetch error:", fetchError);
-       console.error("🚨 Fetch error type:", typeof fetchError);
-       console.error("🚨 Fetch error constructor:", fetchError?.constructor?.name);
+       console.error("��� Raw fetch error:", fetchError);
        
-       let errorMessage = "Unknown error";
-       let errorName = "UnknownError";
-       let errorStack = undefined;
+       // Provide comprehensive diagnostics and user-friendly error messages
+       const diagnostics = await diagnoseFetchError(fetchError, endpoint, credentials);
        
-       if (fetchError instanceof Error) {
-         // It's a standard Error object
-         errorMessage = fetchError.message;
-         errorName = fetchError.name;
-         errorStack = fetchError.stack;
-         console.error("🚨 Error message:", errorMessage);
-         console.error("🚨 Error name:", errorName);
-       } else if (typeof fetchError === 'object' && fetchError !== null) {
-         // It's a plain object, attempt to stringify or log it
-         errorMessage = JSON.stringify(fetchError);
-         console.error("🚨 Non-Error object details:", fetchError);
-       } else {
-         // Handle other primitive types or null/undefined
-         errorMessage = String(fetchError);
-       }
+       // Show user-friendly toast message
+       await showToast({
+         style: ToastStyle.Failure,
+         title: diagnostics.title,
+         message: diagnostics.userMessage,
+       });
        
-       console.error("🚨 Endpoint:", endpoint);
-       console.error("🚨 Full error details:", JSON.stringify({
-         message: errorMessage,
-         name: errorName,
-         stack: errorStack,
-         endpoint: endpoint
-       }, null, 2));
-       
-       // Additional network-specific error details
-       if (fetchError instanceof TypeError && errorMessage === 'Failed to fetch') {
-         console.error("🚨 Network error - possible causes:", {
-           cors: "CORS policy blocking request",
-           network: "Network connectivity issue",
-           ssl: "SSL/TLS certificate issue",
-           proxy: "Proxy configuration issue"
-         });
-       }
-       
-       throw fetchError;
+       return {
+         isValid: false,
+         error: diagnostics.userMessage,
+       };
      }
    
     console.log("📡 API Response:", {
@@ -234,7 +325,7 @@ export async function validateCredentials(): Promise<CredentialsValidationResult
                            (userInfo.github_username ? `@${userInfo.github_username}` : undefined) ||
                            userInfo.email ||
                            `User ${userInfo.id}`;
-    console.log("🏷️ User display name:", userDisplayName);
+    console.log("��️ User display name:", userDisplayName);
    
     // Fetch and cache organizations for first-time setup
     let organizations: Array<{ id: number; name: string }> = [];
