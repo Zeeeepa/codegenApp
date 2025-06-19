@@ -70,16 +70,27 @@ export async function getPreferenceValues(): Promise<Preferences> {
    // Check environment variables as fallback
    const envToken = process.env.REACT_APP_API_TOKEN;
    const envOrg = process.env.REACT_APP_DEFAULT_ORGANIZATION;
+   const envApiBaseUrl = process.env.REACT_APP_API_BASE_URL;
+   const envUserId = process.env.REACT_APP_USER_ID;
    
-   if (envToken || envOrg) {
-     console.log('🌍 Loading from environment variables:', {
-       hasEnvToken: !!envToken,
-       hasEnvOrg: !!envOrg
-     });
+   console.log('🌍 Environment variables check:', {
+     hasEnvToken: !!envToken,
+     hasEnvOrg: !!envOrg,
+     hasEnvApiBaseUrl: !!envApiBaseUrl,
+     hasEnvUserId: !!envUserId,
+     tokenValue: envToken ? `${envToken.substring(0, 8)}...` : 'not set',
+     orgValue: envOrg || 'not set',
+     apiBaseUrlValue: envApiBaseUrl || 'not set'
+   });
+   
+   if (envToken || envOrg || envApiBaseUrl) {
+     console.log('🌍 Loading from environment variables');
      
      const envPreferences: Preferences = {
        apiToken: envToken || '',
        defaultOrganization: envOrg || '',
+       apiBaseUrl: envApiBaseUrl || DEFAULT_PREFERENCES.apiBaseUrl,
+       userId: envUserId || '',
        ...DEFAULT_PREFERENCES
      };
      
@@ -159,4 +170,32 @@ export async function clearPreferences(): Promise<void> {
     console.error('Failed to clear preferences:', error);
     throw error;
   }
+}
+
+/**
+ * Validate that required environment variables are present
+ */
+export function validateEnvironmentConfiguration(): { isValid: boolean; missingVars: string[]; warnings: string[] } {
+  const missingVars: string[] = [];
+  const warnings: string[] = [];
+  
+  // Check for required environment variables
+  if (!process.env.REACT_APP_API_TOKEN) {
+    missingVars.push('REACT_APP_API_TOKEN');
+  }
+  
+  // Check for recommended environment variables
+  if (!process.env.REACT_APP_API_BASE_URL) {
+    warnings.push('REACT_APP_API_BASE_URL not set, using default: https://api.codegen.com');
+  }
+  
+  if (!process.env.REACT_APP_DEFAULT_ORGANIZATION) {
+    warnings.push('REACT_APP_DEFAULT_ORGANIZATION not set, you will need to select an organization manually');
+  }
+  
+  return {
+    isValid: missingVars.length === 0,
+    missingVars,
+    warnings
+  };
 }

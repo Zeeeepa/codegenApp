@@ -4,7 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import ListOrganizations from './list-organizations';
 import CreateAgentRun from './create-agent-run';
 import ListAgentRuns from './list-agent-runs';
-import { getPreferenceValues, setPreferenceValues, getEnvFileContent } from './utils/preferences';
+import { getPreferenceValues, setPreferenceValues, getEnvFileContent, validateEnvironmentConfiguration } from './utils/preferences';
 import './App.css';
 
 // Navigation component
@@ -75,6 +75,7 @@ function Settings() {
   const [token, setToken] = React.useState('');
   const [saved, setSaved] = React.useState(false);
   const [envContent, setEnvContent] = React.useState('');
+  const [envValidation, setEnvValidation] = React.useState(validateEnvironmentConfiguration());
 
   const handleSave = async () => {
     try {
@@ -129,6 +130,9 @@ function Settings() {
         if (savedContent) {
           setEnvContent(savedContent);
         }
+        
+        // Update environment validation
+        setEnvValidation(validateEnvironmentConfiguration());
       } catch (error) {
         console.error('Failed to load preferences:', error);
       }
@@ -213,7 +217,38 @@ function Settings() {
             )}
             
             <div className="pt-4 border-t border-gray-700">
-              <h3 className="text-lg font-medium text-white mb-2">Current Configuration</h3>
+              <h3 className="text-lg font-medium text-white mb-2">Environment Variables Status</h3>
+              <div className="space-y-3 text-sm">
+                {envValidation.missingVars.length > 0 && (
+                  <div className="p-3 bg-red-900/20 border border-red-700 rounded-lg">
+                    <div className="text-red-400 font-medium mb-1">❌ Missing Required Variables:</div>
+                    <ul className="text-red-300 text-xs space-y-1">
+                      {envValidation.missingVars.map(varName => (
+                        <li key={varName}>• {varName}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {envValidation.warnings.length > 0 && (
+                  <div className="p-3 bg-yellow-900/20 border border-yellow-700 rounded-lg">
+                    <div className="text-yellow-400 font-medium mb-1">⚠️ Warnings:</div>
+                    <ul className="text-yellow-300 text-xs space-y-1">
+                      {envValidation.warnings.map((warning, index) => (
+                        <li key={index}>• {warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {envValidation.isValid && envValidation.warnings.length === 0 && (
+                  <div className="p-3 bg-green-900/20 border border-green-700 rounded-lg">
+                    <div className="text-green-400 font-medium">✅ All environment variables are properly configured!</div>
+                  </div>
+                )}
+              </div>
+              
+              <h3 className="text-lg font-medium text-white mb-2 mt-6">Current Configuration</h3>
               <div className="space-y-2 text-sm">
                 <div className="text-gray-300">
                   <span className="font-medium">Org ID:</span> 
@@ -221,7 +256,11 @@ function Settings() {
                 </div>
                 <div className="text-gray-300">
                   <span className="font-medium">Token:</span> 
-                  <span className="ml-2 text-gray-400">{token || 'Not set'}</span>
+                  <span className="ml-2 text-gray-400">{token ? `${token.substring(0, 8)}...` : 'Not set'}</span>
+                </div>
+                <div className="text-gray-300">
+                  <span className="font-medium">API Base URL:</span> 
+                  <span className="ml-2 text-gray-400">{process.env.REACT_APP_API_BASE_URL || 'Using default'}</span>
                 </div>
               </div>
             </div>

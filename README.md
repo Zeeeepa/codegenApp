@@ -1,6 +1,6 @@
-# Agent Run Manager
+# Codegen Agent Run Manager
 
-A web application for managing AI agent runs, converted from a Raycast extension. This application provides a user-friendly interface to create, monitor, and manage Codegen AI agent runs.
+A web application for managing Codegen agent runs, converted from a Raycast extension. This application provides a user-friendly interface to create, monitor, and manage Codegen AI agent runs.
 
 ## 🚀 Features
 
@@ -8,21 +8,17 @@ A web application for managing AI agent runs, converted from a Raycast extension
 - **Organization Support**: Work with multiple organizations
 - **Real-time Updates**: Live status updates for running agents
 - **Credential Management**: Secure API token handling
+- **Environment Variable Validation**: Visual status indicators for configuration
 - **Responsive Design**: Works on desktop and mobile devices
 
 ## 🏗️ Architecture
 
-This application consists of two main components:
-
-1. **Frontend**: React application built with Create React App
-2. **Backend**: Express.js proxy server to handle CORS and API communication
-
-The backend proxy is necessary because the Codegen API doesn't allow direct browser access due to CORS policies.
+This application is a React-based frontend that connects directly to the Codegen API using environment variables for configuration. The application supports both development and production deployments.
 
 ## 📋 Prerequisites
 
 - Node.js 16+ and npm
-- A Codegen API token (get one from [Codegen Dashboard](https://codegen.com))
+- A Codegen API token (get one from [Codegen Dashboard](https://app.codegen.com/settings))
 
 ## 🛠️ Installation & Setup
 
@@ -36,62 +32,44 @@ cd codegenApp
 ### 2. Install dependencies
 
 ```bash
-# Install frontend and backend dependencies
 npm install
 ```
 
-This will automatically install both frontend and backend dependencies.
+### 3. Environment Configuration
 
-### 3. Configure environment variables
-
-```bash
-# Copy environment files
-cp .env.example .env.local
-cp server/.env.example server/.env
-```
-
-Edit the environment files with your configuration:
-
-**`.env.local`** (Frontend):
-```env
-REACT_APP_API_BASE_URL=http://localhost:3001/api
-```
-
-**`server/.env`** (Backend):
-```env
-PORT=3001
-CODEGEN_API_BASE=https://api.codegen.com
-FRONTEND_URL=http://localhost:3000
-```
-
-### 4. Start the development servers
+Create a `.env` file in the project root with your Codegen API credentials:
 
 ```bash
-# Start both frontend and backend simultaneously
-npm run dev
+# Required: Your Codegen API token
+# Get it from https://app.codegen.com/settings
+REACT_APP_API_TOKEN=your_api_token_here
+
+# Optional: Your default organization ID
+REACT_APP_DEFAULT_ORGANIZATION=your_org_id_here
+
+# Optional: API Base URL (defaults to https://api.codegen.com)
+REACT_APP_API_BASE_URL=https://api.codegen.com
+
+# Optional: Your user ID for personalized features
+REACT_APP_USER_ID=your_user_id_here
 ```
 
-This will start:
-- Backend proxy server on `http://localhost:3001`
-- Frontend React app on `http://localhost:3000`
+### 4. Start the development server
+
+```bash
+npm start
+```
+
+The application will be available at `http://localhost:3000` (or the next available port).
 
 ## 🔧 Development
 
 ### Available Scripts
 
-#### Frontend + Backend
-- `npm run dev` - Start both frontend and backend in development mode
-- `npm install` - Install all dependencies (frontend + backend)
-
-#### Frontend Only
-- `npm start` - Start only the React development server
+- `npm start` - Start the React development server
 - `npm run build` - Build the React app for production
 - `npm test` - Run the test suite
-
-#### Backend Only
-- `npm run server:start` - Start the backend server in production mode
-- `npm run server:dev` - Start the backend server in development mode
-- `npm run server:install` - Install backend dependencies only
+- `npm run eject` - Eject from Create React App (not recommended)
 
 ### Project Structure
 
@@ -107,12 +85,25 @@ codegenApp/
 │   ├── hooks/            # Custom React hooks
 │   ├── storage/          # Local storage utilities
 │   └── *.tsx             # React components
-├── server/               # Backend proxy server
-│   ├── index.js         # Express server
-│   └── package.json     # Backend dependencies
-├── .env.local           # Frontend environment variables
+├── .env                  # Environment variables
 └── README.md            # This file
 ```
+
+## ⚙️ Configuration
+
+The application supports multiple configuration methods:
+
+1. **Environment Variables** (recommended): Set `REACT_APP_*` variables in `.env` file
+2. **Settings Page**: Configure credentials through the web interface
+3. **LocalStorage**: Automatically saves settings for future sessions
+
+### Environment Variable Validation
+
+The Settings page will show the status of your environment variables:
+
+- ✅ **Green**: All required variables are set
+- ⚠️ **Yellow**: Optional variables missing (warnings)
+- ❌ **Red**: Required variables missing (will prevent API calls)
 
 ## 🚀 Deployment
 
@@ -138,71 +129,67 @@ npm run build
 # Deploy the 'build' folder to GitHub Pages
 ```
 
-### Backend Deployment
-
-The backend proxy server can be deployed to any Node.js hosting service:
-
-#### Railway
-```bash
-cd server
-# Deploy to Railway with the server folder as root
-```
-
-#### Heroku
-```bash
-cd server
-# Create Heroku app and deploy
-```
-
-#### Render
-```bash
-# Deploy the server folder to Render
-```
-
 ### Environment Variables for Production
 
-**Frontend** (set in your hosting platform):
-```env
-REACT_APP_API_BASE_URL=https://your-backend-domain.com/api
-```
+Set these environment variables in your hosting platform:
 
-**Backend** (set in your hosting platform):
 ```env
-PORT=3001
-CODEGEN_API_BASE=https://api.codegen.com
-FRONTEND_URL=https://your-frontend-domain.com
+REACT_APP_API_TOKEN=your_production_api_token
+REACT_APP_DEFAULT_ORGANIZATION=your_org_id
+REACT_APP_API_BASE_URL=https://api.codegen.com
+REACT_APP_USER_ID=your_user_id
 ```
 
 ## 🔐 Authentication
 
-1. Get your API token from the [Codegen Dashboard](https://codegen.com)
-2. Enter the token in the application's settings/preferences
+1. Get your API token from the [Codegen Dashboard](https://app.codegen.com/settings)
+2. Add it to your `.env` file or enter it in the application's Settings page
 3. The application will validate your credentials and load your organizations
+
+## 🧪 Testing
+
+Run the test suite to ensure everything is working correctly:
+
+```bash
+npm test
+```
+
+The test suite includes:
+- Environment variable validation tests
+- Component rendering tests
+- API configuration tests
 
 ## 🐛 Troubleshooting
 
-### CORS Errors
-If you see CORS errors, ensure:
-- The backend proxy server is running on port 3001
-- The frontend is configured to use `http://localhost:3001/api`
-- Both servers are running simultaneously with `npm run dev`
+### Missing Environment Variables
+
+If you see errors about missing environment variables:
+
+1. Ensure your `.env` file is in the project root
+2. Restart the development server after creating/modifying `.env`
+3. Check the Settings page for validation status
 
 ### API Connection Issues
-- Verify your API token is valid
-- Check that the backend server can reach `https://api.codegen.com`
-- Ensure your network allows outbound HTTPS connections
+
+If API calls are failing:
+
+1. Verify your API token is correct
+2. Check that the API base URL is accessible (`https://api.codegen.com`)
+3. Ensure your organization ID is valid
+4. Check browser console for detailed error messages
 
 ### Development Server Issues
-- Make sure ports 3000 and 3001 are available
-- Try restarting both servers: `npm run dev`
+
+- Make sure port 3000 is available
+- Try restarting the server: `npm start`
 - Check the console for detailed error messages
 
 ## 📝 API Token Setup
 
-1. Visit [Codegen Dashboard](https://codegen.com)
+1. Visit [Codegen Dashboard](https://app.codegen.com/settings)
 2. Navigate to API settings
 3. Generate a new API token
-4. Copy the token and paste it in the application
+4. Copy the token and add it to your `.env` file or Settings page
 
 ## 🤝 Contributing
 
@@ -230,7 +217,6 @@ To update the application:
 
 ```bash
 git pull origin main
-npm install  # Updates both frontend and backend dependencies
-npm run dev  # Restart the development servers
+npm install  # Updates dependencies
+npm start    # Restart the development server
 ```
-
