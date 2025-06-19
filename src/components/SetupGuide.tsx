@@ -11,11 +11,48 @@ export const SetupGuide: React.FC<SetupGuideProps> = ({ onComplete }) => {
     missingVars: string[];
     warnings: string[];
   }>({ isValid: false, missingVars: [], warnings: [] });
+  
+  const [backendStatus, setBackendStatus] = useState<{
+    isHealthy: boolean;
+    checking: boolean;
+    error?: string;
+  }>({ isHealthy: false, checking: true });
 
   useEffect(() => {
     const validation = validateEnvironmentConfiguration();
     setConfig(validation);
+    
+    // Check backend health
+    checkBackendHealth();
   }, []);
+  
+  const checkBackendHealth = async () => {
+    setBackendStatus({ isHealthy: false, checking: true });
+    
+    try {
+      const response = await fetch('http://localhost:8001/health', {
+        method: 'GET',
+        timeout: 5000
+      } as any);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setBackendStatus({ isHealthy: true, checking: false });
+      } else {
+        setBackendStatus({ 
+          isHealthy: false, 
+          checking: false, 
+          error: `Server responded with ${response.status}` 
+        });
+      }
+    } catch (error) {
+      setBackendStatus({ 
+        isHealthy: false, 
+        checking: false, 
+        error: 'Cannot connect to backend server' 
+      });
+    }
+  };
 
   const handleRefresh = () => {
     window.location.reload();
@@ -82,6 +119,42 @@ export const SetupGuide: React.FC<SetupGuideProps> = ({ onComplete }) => {
         </div>
       )}
 
+      {/* Backend Server Status */}
+      <div style={{
+        backgroundColor: backendStatus.isHealthy ? '#d4edda' : '#f8d7da',
+        border: `1px solid ${backendStatus.isHealthy ? '#c3e6cb' : '#f5c6cb'}`,
+        borderRadius: '4px',
+        padding: '1rem',
+        marginBottom: '1rem'
+      }}>
+        <h4 style={{ 
+          color: backendStatus.isHealthy ? '#155724' : '#721c24', 
+          marginBottom: '0.5rem' 
+        }}>
+          {backendStatus.checking ? '🔄' : backendStatus.isHealthy ? '✅' : '❌'} Backend Server Status
+        </h4>
+        <p style={{ 
+          color: backendStatus.isHealthy ? '#155724' : '#721c24', 
+          marginBottom: '0.5rem' 
+        }}>
+          {backendStatus.checking 
+            ? 'Checking backend server...'
+            : backendStatus.isHealthy 
+              ? 'Backend server is running on port 8001 ✅'
+              : `Backend server is not responding: ${backendStatus.error}`
+          }
+        </p>
+        {!backendStatus.isHealthy && !backendStatus.checking && (
+          <div style={{ fontSize: '0.9em', color: '#721c24' }}>
+            <strong>To fix:</strong> Run <code style={{ 
+              backgroundColor: '#f8d7da', 
+              padding: '0.2rem 0.4rem', 
+              borderRadius: '3px' 
+            }}>npm run dev</code> to start both frontend and backend servers.
+          </div>
+        )}
+      </div>
+
       <div style={{
         backgroundColor: '#d1ecf1',
         border: '1px solid #bee5eb',
@@ -133,6 +206,26 @@ export const SetupGuide: React.FC<SetupGuideProps> = ({ onComplete }) => {
 
       <div style={{ textAlign: 'center' }}>
         <button
+          onClick={() => {
+            checkBackendHealth();
+            const validation = validateEnvironmentConfiguration();
+            setConfig(validation);
+          }}
+          style={{
+            backgroundColor: '#28a745',
+            color: 'white',
+            border: 'none',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '1rem',
+            marginRight: '1rem'
+          }}
+        >
+          🔍 Check Again
+        </button>
+        
+        <button
           onClick={handleRefresh}
           style={{
             backgroundColor: '#007bff',
@@ -145,7 +238,7 @@ export const SetupGuide: React.FC<SetupGuideProps> = ({ onComplete }) => {
             marginRight: '1rem'
           }}
         >
-          🔄 Refresh After Setup
+          🔄 Refresh Page
         </button>
         
         <a
