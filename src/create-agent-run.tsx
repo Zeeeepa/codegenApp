@@ -79,12 +79,34 @@ export default function CreateAgentRun() {
           }
         }
 
-        // Just validate credentials without fetching orgs (we have them cached)
+        // Validate credentials and get organizations from API
         const validation = await validateCredentials();
         if (!validation.isValid) {
           setValidationError(validation.error || "Invalid credentials");
           setIsLoadingOrgs(false);
           return;
+        }
+
+        // Load organizations from validation result (which fetches from API)
+        if (validation.organizations && validation.organizations.length > 0) {
+          // Convert basic organizations to full OrganizationResponse format
+          const fullOrganizations: OrganizationResponse[] = validation.organizations.map(org => ({
+            id: org.id,
+            name: org.name,
+            settings: {}, // Basic settings object
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }));
+          
+          setOrganizations(fullOrganizations);
+          
+          // If no default org is set but we have organizations, set the first one as default
+          if (!cachedDefaultOrgId && fullOrganizations.length > 0) {
+            const firstOrg = fullOrganizations[0];
+            setDefaultOrgId(firstOrg.id.toString());
+            localStorage.setItem("defaultOrganizationId", firstOrg.id.toString());
+            localStorage.setItem("defaultOrganization", JSON.stringify(firstOrg));
+          }
         }
           
         // TODO: Re-enable user profile fetching later
@@ -176,9 +198,19 @@ export default function CreateAgentRun() {
 
   const [formData, setFormData] = useState<FormValues>({
     prompt: '',
-    organizationId: defaultOrgId || preferences.defaultOrganization || '',
+    organizationId: '',
     attachClipboard: false
   });
+
+  // Update form data when default organization changes
+  useEffect(() => {
+    if (defaultOrgId && !formData.organizationId) {
+      setFormData(prev => ({
+        ...prev,
+        organizationId: defaultOrgId
+      }));
+    }
+  }, [defaultOrgId, formData.organizationId]);
 
   if (validationError) {
     return (
