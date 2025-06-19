@@ -49,6 +49,25 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
       const defaultOrgId = await getDefaultOrganizationId();
       console.log(`Initialized organization ID: ${defaultOrgId}`);
       setOrganizationIdState(defaultOrgId);
+      
+      // If no default organization is set, try to get organizations and set the first one
+      if (!defaultOrgId) {
+        try {
+          const { validateCredentials } = await import("../utils/credentials");
+          const validation = await validateCredentials();
+          if (validation.isValid && validation.organizations && validation.organizations.length > 0) {
+            const firstOrg = validation.organizations[0];
+            console.log(`No default org found, using first available: ${firstOrg.name} (${firstOrg.id})`);
+            setOrganizationIdState(firstOrg.id);
+            
+            // Store as default for future use
+            localStorage.setItem("defaultOrganizationId", firstOrg.id.toString());
+            localStorage.setItem("defaultOrganization", JSON.stringify(firstOrg));
+          }
+        } catch (error) {
+          console.error("Failed to auto-set default organization:", error);
+        }
+      }
     }
     initializeOrgId();
 
@@ -148,10 +167,14 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
 
   // Set organization ID
   const setOrganizationId = useCallback((orgId: number) => {
+    console.log(`Setting organization ID to: ${orgId}`);
     setOrganizationIdState(orgId);
     setAgentRuns([]);
     setError(null);
     setSyncStatus(SyncStatus.IDLE);
+    
+    // Update localStorage to persist the selection
+    localStorage.setItem("defaultOrganizationId", orgId.toString());
   }, []);
 
   // Initial load
@@ -235,4 +258,3 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
     setOrganizationId,
   };
 }
-
