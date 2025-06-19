@@ -14,12 +14,16 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  Pause
+  Pause,
+  FileText
 } from "lucide-react";
+import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
+import { MonitorSelectedButton, AddToMonitorButton } from "./components/MonitorSelectedButton";
+import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
 import { getAPIClient } from "./api/client";
 import { getAgentRunCache } from "./storage/agentRunCache";
-import { AgentRunStatus, AgentRunFilters } from "./api/types";
+import { AgentRunStatus, AgentRunFilters, CachedAgentRun } from "./api/types";
 import { getDateRanges, getStatusFilterOptions, hasActiveFilters, clearFilters } from "./utils/filtering";
 import { SyncStatus } from "./storage/cacheTypes";
 
@@ -36,9 +40,11 @@ export default function ListAgentRuns() {
     organizationId,
   } = useCachedAgentRuns();
 
+  const selection = useAgentRunSelection();
   const [searchText, setSearchText] = useState("");
   const [dateRanges] = useState(() => getDateRanges());
   const [statusFilterOptions, setStatusFilterOptions] = useState(() => getStatusFilterOptions([]));
+  const [responseModalRun, setResponseModalRun] = useState<CachedAgentRun | null>(null);
   const apiClient = getAPIClient();
   const cache = getAgentRunCache();
 
@@ -173,77 +179,7 @@ export default function ListAgentRuns() {
     }
   };
 
-  // Add an agent run to monitor by ID or URL
-  const addAgentRunToMonitor = async () => {
-    if (!organizationId) return;
 
-    try {
-      // Check clipboard for potential agent run ID or URL
-      const clipboardText = await navigator.clipboard.readText();
-      let suggestedInput = "";
-      
-      if (clipboardText) {
-        console.log("🔍 Checking clipboard for agent run:", clipboardText);
-        
-        // Try multiple URL patterns to extract agent run ID
-        const urlPatterns = [
-          /codegen\.com\/agent\/trace\/(\d+)/,           // Original pattern
-          /chadcode\.sh\/agent\/trace\/(\d+)/,
-        ];
-        
-        // Try each pattern
-        for (const pattern of urlPatterns) {
-          const match = clipboardText.match(pattern);
-          if (match) {
-            suggestedInput = match[1];
-            console.log("✅ Extracted agent run ID from URL:", suggestedInput);
-            break;
-          }
-        }
-        
-        // If no URL match, check if it's just a number
-        if (!suggestedInput && /^\d+$/.test(clipboardText.trim())) {
-          suggestedInput = clipboardText.trim();
-          console.log("✅ Using direct agent run ID:", suggestedInput);
-        }
-      }
-
-      // Show instructions based on whether we found something useful in clipboard
-      const instructions = suggestedInput 
-        ? `Found agent run ID ${suggestedInput} in clipboard. Press Enter to add it, or replace with a different ID/URL.`
-        : "Copy an agent run ID or Codegen URL to your clipboard first, then try again.";
-
-      if (suggestedInput) {
-        toast.success(`Add Agent Run #${suggestedInput}?`);
-        console.log(instructions);
-      } else {
-        toast.error("Copy Agent Run ID First");
-        console.log(instructions);
-      }
-
-      if (!suggestedInput) return;
-
-      // Parse the agent run ID
-      const agentRunId = parseInt(suggestedInput, 10);
-
-      toast.loading(`Fetching details for agent run #${agentRunId}...`);
-
-      // Fetch the agent run from the API
-      const agentRun = await apiClient.getAgentRun(organizationId, agentRunId);
-      
-      // Add to cache and tracking
-      await cache.updateAgentRun(organizationId, agentRun);
-      await cache.addToTracking(organizationId, agentRun);
-
-      toast.success(`Now monitoring agent run #${agentRunId} - you'll get notifications for status changes`);
-
-      // Refresh to show the new agent run
-      await refresh();
-
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not fetch or add the agent run");
-    }
-  };
 
   // Delete an agent run
   const deleteAgentRun = async (agentRunId: number) => {
@@ -342,14 +278,18 @@ export default function ListAgentRuns() {
               })()}
             </div>
             <div className="flex items-center space-x-3">
-              <button
-                onClick={addAgentRunToMonitor}
-                className="inline-flex items-center px-3 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
-                title="Add Agent Run to Monitor (Cmd+M)"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Monitor
-              </button>
+              {selection.hasSelection && organizationId && (
+                <MonitorSelectedButton 
+                  organizationId={organizationId} 
+                  onMonitoringComplete={refresh}
+                />
+              )}
+              {organizationId && (
+                <AddToMonitorButton 
+                  organizationId={organizationId} 
+                  onAddComplete={refresh}
+                />
+              )}
               <button
                 onClick={() => navigate('/create-agent-run')}
                 className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -357,6 +297,15 @@ export default function ListAgentRuns() {
                 <Plus className="h-4 w-4 mr-2" />
                 Create Run
               </button>
+              {selection.hasSelection && (
+                <button
+                  onClick={selection.clearSelection}
+                  className="inline-flex items-center px-3 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+                  title="Clear selection"
+                >
+                  Clear ({selection.selectionCount})
+                </button>
+              )}
             </div>
           </div>
           
@@ -460,13 +409,12 @@ export default function ListAgentRuns() {
                 : "Create your first agent run to get started"}
             </p>
             <div className="flex justify-center space-x-3">
-              <button
-                onClick={addAgentRunToMonitor}
-                className="inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add to Monitor
-              </button>
+              {organizationId && (
+                <AddToMonitorButton 
+                  organizationId={organizationId} 
+                  onAddComplete={refresh}
+                />
+              )}
               <button
                 onClick={() => navigate('/create-agent-run')}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -496,11 +444,39 @@ export default function ListAgentRuns() {
               const canStop = run.status === AgentRunStatus.ACTIVE;
               const canResume = run.status === AgentRunStatus.PAUSED;
 
+              const isSelected = selection.isSelected(run.id);
+              const canViewResponse = run.status === AgentRunStatus.COMPLETE && run.result;
+              
+              // Convert AgentRunResponse to CachedAgentRun for selection
+              const cachedRun: CachedAgentRun = {
+                ...run,
+                lastUpdated: new Date().toISOString(),
+                organizationName: undefined, // Will be populated by cache if available
+                isPolling: false
+              };
+
               return (
-                <div key={run.id} className="p-6 hover:bg-gray-50 bg-black rounded-lg border border-gray-700 hover:shadow-md transition-shadow">
+                <div 
+                  key={run.id} 
+                  className={`p-6 rounded-lg border transition-all cursor-pointer ${
+                    isSelected 
+                      ? 'bg-blue-900 border-blue-500 shadow-lg' 
+                      : 'bg-black border-gray-700 hover:bg-gray-800 hover:shadow-md'
+                  }`}
+                  onClick={() => selection.toggleRun(run.id, cachedRun)}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                      <StatusIcon className={`h-5 w-5 ${statusDisplay.color}`} />
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => selection.toggleRun(run.id, cachedRun)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <StatusIcon className={`h-5 w-5 ${statusDisplay.color}`} />
+                      </div>
                       <div>
                         <h3 className="text-lg font-medium text-white">Agent Run #{run.id}</h3>
                         <p className="text-sm text-gray-500">Created {formatDate(run.created_at)}</p>
@@ -510,7 +486,17 @@ export default function ListAgentRuns() {
                       </span>
                     </div>
                     
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                      {canViewResponse && (
+                        <button
+                          onClick={() => setResponseModalRun(cachedRun)}
+                          className="inline-flex items-center px-3 py-1.5 border border-green-600 text-sm font-medium rounded text-green-300 bg-green-900 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-gray-800"
+                          title="View Response"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </button>
+                      )}
+                      
                       <button
                         onClick={() => window.open(run.web_url, '_blank')}
                         className="inline-flex items-center px-3 py-1.5 border border-gray-600 text-sm font-medium rounded text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
@@ -560,6 +546,15 @@ export default function ListAgentRuns() {
               );
             })}
           </div>
+        )}
+        
+        {/* Response Modal */}
+        {responseModalRun && (
+          <AgentRunResponseModal
+            run={responseModalRun}
+            isOpen={!!responseModalRun}
+            onClose={() => setResponseModalRun(null)}
+          />
         )}
       </div>
     </div>
