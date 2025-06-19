@@ -42,6 +42,7 @@ app.use('/api/v1', async (req, res) => {
     const targetUrl = `${CODEGEN_API_BASE}/v1${req.path}`;
     
     console.log(`🔄 Proxying ${req.method} ${req.path} to ${targetUrl}`);
+    console.log(`🔑 Authorization: ${req.headers.authorization ? req.headers.authorization.substring(0, 20) + '...' : 'MISSING'}`);
     
     // Forward the request to Codegen API
     const response = await fetch(targetUrl + (req.url.includes('?') ? '&' + req.url.split('?')[1] : ''), {
@@ -50,9 +51,11 @@ app.use('/api/v1', async (req, res) => {
         'Content-Type': 'application/json',
         'Authorization': req.headers.authorization,
         'User-Agent': 'Agent-Run-Manager-Proxy/1.0',
+        'Accept': 'application/json',
+        'Accept-Encoding': 'identity', // Disable compression to avoid parsing issues
         ...Object.fromEntries(
           Object.entries(req.headers).filter(([key]) => 
-            !['host', 'connection', 'content-length'].includes(key.toLowerCase())
+            !['host', 'connection', 'content-length', 'accept-encoding'].includes(key.toLowerCase())
           )
         )
       },
@@ -73,8 +76,16 @@ app.use('/api/v1', async (req, res) => {
     // Handle different content types
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
-      const data = await response.json();
-      res.json(data);
+      try {
+        const data = await response.json();
+        res.json(data);
+      } catch (jsonError) {
+        console.error('❌ JSON parsing error:', jsonError);
+        // If JSON parsing fails, try to get raw text
+        const text = await response.text();
+        console.log('📄 Raw response:', text.substring(0, 200) + '...');
+        res.status(response.status).send(text);
+      }
     } else {
       const text = await response.text();
       res.send(text);
