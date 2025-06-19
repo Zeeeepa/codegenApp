@@ -15,14 +15,19 @@
     "react-scripts": "5.0.1",
     "typescript": "^4.9.5",
     "@types/react": "^18.2.6",
-    "@types/react-dom": "^18.2.4"
+    "@types/react-dom": "^18.2.4",
+    "concurrently": "^8.2.0"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "dev": "react-scripts start"
+    "dev": "concurrently \"npm run server:dev\" \"npm run start\"",
+    "server:install": "cd server && npm install",
+    "server:start": "cd server && npm start",
+    "server:dev": "cd server && npm run dev",
+    "postinstall": "npm run server:install"
   },
   "eslintConfig": {
     "extends": [
@@ -42,12 +47,13 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "https://api.codegen.com",
+  "proxy": "http://localhost:3001",
   "devServer": {
     "headers": {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-      "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization"
+      "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Authorization, Accept, Origin",
+      "Access-Control-Allow-Credentials": "true"
     }
   }
 }

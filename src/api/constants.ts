@@ -25,5 +25,5 @@ export const API_ENDPOINTS = {
     `/v1/beta/organizations/${organizationId}/agent/run/stop`,
 } as const;
 
-// API Base URL fallback
-export const DEFAULT_API_BASE_URL = "";
+// API Base URL fallback - points to our proxy server
+export const DEFAULT_API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:3001/api";
