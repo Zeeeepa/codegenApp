@@ -16,9 +16,7 @@ interface FormValues {
   attachClipboard: boolean;
 }
 
-interface Preferences {
-  defaultOrganization?: string;
-}
+
 
 export default function CreateAgentRun() {
   const navigate = useNavigate();
@@ -30,9 +28,7 @@ export default function CreateAgentRun() {
   const [defaultOrgId, setDefaultOrgId] = useState<string | null>(null);
   const { refresh } = useCachedAgentRuns();
 
-  const preferences: Preferences = {
-    defaultOrganization: process.env.REACT_APP_DEFAULT_ORGANIZATION
-  };
+
   const apiClient = getAPIClient();
   const cache = getAgentRunCache();
   const backgroundMonitoring = getBackgroundMonitoringService();
@@ -93,9 +89,10 @@ export default function CreateAgentRun() {
           const fullOrganizations: OrganizationResponse[] = validation.organizations.map(org => ({
             id: org.id,
             name: org.name,
-            settings: {}, // Basic settings object
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            settings: {
+              enable_pr_creation: true,
+              enable_rules_detection: true
+            }
           }));
           
           setOrganizations(fullOrganizations);

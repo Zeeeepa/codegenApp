@@ -62,7 +62,14 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
             
             // Store as default for future use
             localStorage.setItem("defaultOrganizationId", firstOrg.id.toString());
-            localStorage.setItem("defaultOrganization", JSON.stringify(firstOrg));
+            localStorage.setItem("defaultOrganization", JSON.stringify({
+              id: firstOrg.id,
+              name: firstOrg.name,
+              settings: {
+                enable_pr_creation: true,
+                enable_rules_detection: true
+              }
+            }));
           }
         } catch (error) {
           console.error("Failed to auto-set default organization:", error);
