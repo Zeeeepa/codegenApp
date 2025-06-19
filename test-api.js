@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 
 const API_TOKEN = 'sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99';
 const ORG_ID = '323';
-const BASE_URL = 'http://localhost:8001/api';
+const BASE_URL = 'http://localhost:3001/api';
 
 async function testAPI() {
   console.log('🧪 Testing Codegen API with real credentials...');
@@ -83,4 +83,3 @@ async function testAPI() {
 }
 
 testAPI();
-

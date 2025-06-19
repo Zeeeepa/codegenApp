@@ -5,13 +5,13 @@ echo "================================================"
 
 API_TOKEN="sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99"
 ORG_ID="323"
-BASE_URL="http://localhost:8001/api"
+BASE_URL="http://localhost:3001/api"
 
 echo ""
 echo "🔍 1. Checking backend server health..."
-HEALTH_RESPONSE=$(curl -s -w "%{http_code}" http://localhost:8001/health)
+HEALTH_RESPONSE=$(curl -s -w "%{http_code}" http://localhost:3001/health)
 if [[ $? -eq 0 ]]; then
-    echo "✅ Backend server is running on port 8001"
+    echo "✅ Backend server is running on port 3001"
     echo "   Response: $HEALTH_RESPONSE"
 else
     echo "❌ Backend server is not running!"
@@ -88,4 +88,3 @@ echo "   2. The app should load without 'Failed to fetch' errors"
 echo "   3. You should see your user data and agent runs"
 echo ""
 echo "🎊 SUCCESS! Your CodegenApp is working with real credentials!"
-

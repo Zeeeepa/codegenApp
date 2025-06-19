@@ -30,13 +30,13 @@ export const SetupGuide: React.FC<SetupGuideProps> = ({ onComplete }) => {
     setBackendStatus({ isHealthy: false, checking: true });
     
     try {
-      const response = await fetch('http://localhost:8001/health', {
+      const response = await fetch('http://localhost:3001/health', {
         method: 'GET',
         timeout: 5000
       } as any);
       
       if (response.ok) {
-        const data = await response.json();
+        await response.json(); // Health check response
         setBackendStatus({ isHealthy: true, checking: false });
       } else {
         setBackendStatus({ 
