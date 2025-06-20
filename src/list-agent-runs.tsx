@@ -17,6 +17,7 @@ import { AgentRunStatus, AgentRunFilters, CachedAgentRun } from "./api/types";
 import { getDateRanges, getStatusFilterOptions, hasActiveFilters, clearFilters } from "./utils/filtering";
 import { SyncStatus } from "./storage/cacheTypes";
 import { useDialog } from "./contexts/DialogContext";
+import { SettingsDialog } from "./components/SettingsDialog";
 
 export default function ListAgentRuns() {
   const {
@@ -29,6 +30,7 @@ export default function ListAgentRuns() {
     updateFilters,
     filters,
     organizationId,
+    setOrganizationId,
   } = useCachedAgentRuns();
 
   const selection = useAgentRunSelection();
@@ -37,7 +39,7 @@ export default function ListAgentRuns() {
   const [statusFilterOptions, setStatusFilterOptions] = useState(() => getStatusFilterOptions([]));
   const apiClient = getAPIClient();
   const cache = getAgentRunCache();
-  const { openDialog } = useDialog();
+  const { openDialog, closeDialog, isDialogOpen } = useDialog();
 
   // Initialize component and update status filter options when runs change
   useEffect(() => {
@@ -402,6 +404,13 @@ export default function ListAgentRuns() {
           </div>
         )}
       </div>
+      
+      {/* Settings Dialog */}
+      <SettingsDialog
+        isOpen={isDialogOpen('settings')}
+        onClose={() => closeDialog()}
+        setOrganizationId={setOrganizationId}
+      />
     </div>
   );
 }

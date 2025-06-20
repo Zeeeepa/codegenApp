@@ -6,7 +6,6 @@ import { SetupGuide } from './components/SetupGuide';
 import { AgentRunSelectionProvider } from './contexts/AgentRunSelectionContext';
 import { DialogProvider, useDialog } from './contexts/DialogContext';
 import { CreateAgentRunDialog } from './components/CreateAgentRunDialog';
-import { SettingsDialog } from './components/SettingsDialog';
 import { validateEnvironmentConfiguration } from './utils/preferences';
 import './App.css';
 
@@ -39,10 +38,7 @@ function Dialogs() {
           closeDialog();
         }}
       />
-      <SettingsDialog
-        isOpen={isDialogOpen('settings')}
-        onClose={() => closeDialog()}
-      />
+      {/* SettingsDialog moved to ListAgentRuns component to access setOrganizationId */}
     </>
   );
 }
