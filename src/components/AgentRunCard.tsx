@@ -3,7 +3,6 @@ import {
   Play, 
   Square, 
   ExternalLink, 
-  Copy, 
   Trash2, 
   CheckCircle,
   Clock,
@@ -12,11 +11,13 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
-  AlertCircle
+  AlertCircle,
+  MessageSquare
 } from 'lucide-react';
 import { CachedAgentRun, AgentRunStatus } from '../api/types';
 import { useAgentRunSelection } from '../contexts/AgentRunSelectionContext';
 import { AgentRunResponseModal } from './AgentRunResponseModal';
+import { RespondToRunDialog } from './RespondToRunDialog';
 
 interface AgentRunCardProps {
   run: CachedAgentRun;
@@ -24,11 +25,13 @@ interface AgentRunCardProps {
   onResume: (agentRunId: number) => void;
   onDelete: (agentRunId: number) => void;
   onCopyUrl: (url: string, message: string) => void;
+  onRespond: (runId: number, prompt: string) => Promise<void>;
 }
 
-export function AgentRunCard({ run, onStop, onResume, onDelete, onCopyUrl }: AgentRunCardProps) {
+export function AgentRunCard({ run, onStop, onResume, onDelete, onCopyUrl, onRespond }: AgentRunCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [responseModalRun, setResponseModalRun] = useState<CachedAgentRun | null>(null);
+  const [respondDialogRun, setRespondDialogRun] = useState<CachedAgentRun | null>(null);
   const selection = useAgentRunSelection();
 
   const getStatusIcon = (status: string) => {
@@ -151,13 +154,16 @@ export function AgentRunCard({ run, onStop, onResume, onDelete, onCopyUrl }: Age
                 <ExternalLink className="h-4 w-4" />
               </button>
               
-              <button
-                onClick={() => onCopyUrl(run.web_url, 'Web URL copied to clipboard')}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-600 text-sm font-medium rounded text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
-                title="Copy Web URL"
-              >
-                <Copy className="h-4 w-4" />
-              </button>
+              {/* Respond button - only show for completed runs */}
+              {run.status === 'COMPLETE' && (
+                <button
+                  onClick={() => setRespondDialogRun(run)}
+                  className="inline-flex items-center px-3 py-1.5 border border-blue-600 text-sm font-medium rounded text-blue-300 bg-blue-900 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+                  title="Respond to Agent Run"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                </button>
+              )}
               
               {canStop && (
                 <button
@@ -291,6 +297,16 @@ export function AgentRunCard({ run, onStop, onResume, onDelete, onCopyUrl }: Age
           run={responseModalRun}
           isOpen={!!responseModalRun}
           onClose={() => setResponseModalRun(null)}
+        />
+      )}
+
+      {/* Respond Dialog */}
+      {respondDialogRun && (
+        <RespondToRunDialog
+          run={respondDialogRun}
+          isOpen={!!respondDialogRun}
+          onClose={() => setRespondDialogRun(null)}
+          onSendResponse={onRespond}
         />
       )}
     </>
