@@ -258,7 +258,7 @@ export default function ListOrganizations() {
                       // Use apiClient to check organization details
                       console.log('API Client available:', !!apiClient);
                       // Navigate to agent runs for this organization
-                      navigate('/list-agent-runs');
+                      navigate('/agent-runs');
                     }}
                     className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     title="View Agent Runs"
