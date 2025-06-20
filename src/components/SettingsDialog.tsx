@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Building, Star, StarOff, Copy, RefreshCw, AlertCircle, Settings as SettingsIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Dialog } from './Dialog';
-import { getAPIClient } from '../api/client';
 import { validateCredentials, hasCredentials } from '../utils/credentials';
-import { getPreferenceValues, setPreferenceValues, getEnvFileContent, validateEnvironmentConfiguration } from '../utils/preferences';
+import { getPreferenceValues, setPreferenceValues, validateEnvironmentConfiguration } from '../utils/preferences';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 
 interface SettingsDialogProps {
@@ -27,7 +26,6 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
   const [orgId, setOrgId] = useState('');
   const [token, setToken] = useState('');
   const [saved, setSaved] = useState(false);
-  const [envContent, setEnvContent] = useState('');
   const [envValidation, setEnvValidation] = useState(validateEnvironmentConfiguration());
 
   // Organizations tab state
@@ -37,7 +35,6 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
   const [defaultOrgId, setDefaultOrgId] = useState<number | null>(null);
   const [searchText, setSearchText] = useState<string>("");
 
-  const apiClient = getAPIClient();
   const { displayName: userDisplayName } = useCurrentUser();
 
   // Load configuration data when dialog opens
@@ -54,26 +51,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
       setOrgId(preferences.defaultOrganization || '');
       setToken(preferences.apiToken || '');
       
-      // Generate .env content
-      const envLines: string[] = [];
-      if (preferences.defaultOrganization) {
-        envLines.push(`org_id=${preferences.defaultOrganization}`);
-      } else {
-        envLines.push('org_id=');
-      }
-      if (preferences.apiToken) {
-        envLines.push(`token=${preferences.apiToken}`);
-      } else {
-        envLines.push('token=');
-      }
-      const generatedContent = envLines.join('\n') + '\n';
-      setEnvContent(generatedContent);
-      
-      // Try to load any previously saved .env content
-      const savedContent = await getEnvFileContent();
-      if (savedContent) {
-        setEnvContent(savedContent);
-      }
+      // We don't need to generate .env content in this component anymore
       
       // Update environment validation
       setEnvValidation(validateEnvironmentConfiguration());
@@ -122,9 +100,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
         defaultOrganization: orgId,
       });
       
-      // Get the updated .env content
-      const content = await getEnvFileContent();
-      setEnvContent(content);
+      // Settings saved successfully
       
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);

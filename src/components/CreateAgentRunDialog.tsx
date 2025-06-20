@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { Rocket, Clipboard as ClipboardIcon, Settings } from "lucide-react";
+import { Rocket, Clipboard as ClipboardIcon } from "lucide-react";
 import { Dialog } from "./Dialog";
 import { getAPIClient } from "../api/client";
 import { getAgentRunCache } from "../storage/agentRunCache";
@@ -166,7 +166,7 @@ export function CreateAgentRunDialog({ isOpen, onClose, onRunCreated }: CreateAg
       await cache.addToTracking(organizationId, agentRun);
       
       // Start background monitoring
-      backgroundMonitoring.startMonitoring();
+      backgroundMonitoring.start();
 
       toast.success(`Agent run #${agentRun.id} created and monitoring started!`);
       
