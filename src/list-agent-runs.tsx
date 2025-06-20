@@ -111,6 +111,27 @@ export default function ListAgentRuns() {
     }
   };
 
+  // Respond to an agent run (continue the conversation)
+  const respondToAgentRun = async (agentRunId: number, prompt: string) => {
+    if (!organizationId) return;
+
+    try {
+      await apiClient.resumeAgentRun(organizationId, {
+        agent_run_id: agentRunId,
+        prompt: prompt,
+      });
+
+      toast.success(`Response sent to agent run #${agentRunId}`);
+
+      // Resume monitoring for this run since user has responded
+      await cache.resumeMonitoring(organizationId, agentRunId);
+      
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send response");
+    }
+  };
+
 
 
   // Delete an agent run
@@ -374,6 +395,7 @@ export default function ListAgentRuns() {
                   onResume={resumeAgentRun}
                   onDelete={deleteAgentRun}
                   onCopyUrl={copyToClipboard}
+                  onRespond={respondToAgentRun}
                 />
               );
             })}
