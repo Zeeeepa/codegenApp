@@ -174,23 +174,51 @@ export async function clearPreferences(): Promise<void> {
 
 /**
  * Validate that required environment variables are present
+ * Now checks both process.env and localStorage for configuration
  */
 export function validateEnvironmentConfiguration(): { isValid: boolean; missingVars: string[]; warnings: string[] } {
   const missingVars: string[] = [];
   const warnings: string[] = [];
   
-  // Check for required environment variables
-  if (!process.env.REACT_APP_API_TOKEN) {
-    missingVars.push('REACT_APP_API_TOKEN');
+  // Check for API token in both environment variables and localStorage
+  const envToken = process.env.REACT_APP_API_TOKEN;
+  let localStorageToken = '';
+  
+  try {
+    const stored = localStorage.getItem('app_preferences');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      localStorageToken = parsed.apiToken || '';
+    }
+  } catch (error) {
+    console.warn('Failed to read localStorage preferences for validation:', error);
   }
   
-  // Check for recommended environment variables
-  if (!process.env.REACT_APP_API_BASE_URL) {
+  if (!envToken && !localStorageToken) {
+    missingVars.push('REACT_APP_API_TOKEN (or localStorage configuration)');
+  }
+  
+  // Check for recommended environment variables and localStorage equivalents
+  const envApiBaseUrl = process.env.REACT_APP_API_BASE_URL;
+  const envDefaultOrg = process.env.REACT_APP_DEFAULT_ORGANIZATION;
+  
+  let localStorageOrg = '';
+  try {
+    const stored = localStorage.getItem('app_preferences');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      localStorageOrg = parsed.defaultOrganization || '';
+    }
+  } catch (error) {
+    // Ignore localStorage read errors for warnings
+  }
+  
+  if (!envApiBaseUrl) {
     warnings.push('REACT_APP_API_BASE_URL not set, using default: https://api.codegen.com');
   }
   
-  if (!process.env.REACT_APP_DEFAULT_ORGANIZATION) {
-    warnings.push('REACT_APP_DEFAULT_ORGANIZATION not set, you will need to select an organization manually');
+  if (!envDefaultOrg && !localStorageOrg) {
+    warnings.push('REACT_APP_DEFAULT_ORGANIZATION not set (and no localStorage configuration), you will need to select an organization manually');
   }
   
   return {
