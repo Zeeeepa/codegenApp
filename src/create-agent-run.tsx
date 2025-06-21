@@ -179,6 +179,11 @@ export default function CreateAgentRun() {
       // Refresh the list view to show the new run
       await refresh();
 
+      // Dispatch event for immediate UI updates
+      window.dispatchEvent(new CustomEvent('agentRunCreated', { 
+        detail: { agentRunId: agentRun.id, organizationId } 
+      }));
+
       toast.success(`Starting agent run #${agentRun.id} - I'll let you know when it's done`, {
         duration: 5000,
       });
