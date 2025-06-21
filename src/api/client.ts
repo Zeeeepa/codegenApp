@@ -21,7 +21,8 @@ export class CodegenAPIClient {
 
   constructor() {
     // Note: Constructor cannot be async, so we'll handle credentials in makeRequest
-    this.baseUrl = DEFAULT_API_BASE_URL;
+    // In development mode, use proxy to avoid CORS issues
+    this.baseUrl = process.env.NODE_ENV === 'development' ? '' : DEFAULT_API_BASE_URL;
     this.apiToken = '';
   }
 
@@ -149,21 +150,31 @@ export class CodegenAPIClient {
     };
 
     try {
-      const response = await fetch(url, {
+      const fetchOptions: RequestInit = {
         ...options,
-        mode: "cors",
-        credentials: "omit",
         headers: {
           ...defaultHeaders,
           ...options.headers,
         },
-      });
+      };
+
+      // In development mode, use proxy without CORS mode
+      if (process.env.NODE_ENV === 'development') {
+        fetchOptions.mode = "cors";
+        fetchOptions.credentials = "omit";
+      } else {
+        fetchOptions.mode = "cors";
+        fetchOptions.credentials = "omit";
+      }
+
+      const response = await fetch(url, fetchOptions);
 
       console.log('📡 API response:', {
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
-        url: response.url
+        url: response.url,
+        mode: process.env.NODE_ENV
       });
 
       if (!response.ok) {
@@ -175,10 +186,34 @@ export class CodegenAPIClient {
       console.error(`❌ API request failed for ${endpoint}:`, {
         error,
         url,
-        message: error instanceof Error ? error.message : String(error)
+        message: error instanceof Error ? error.message : String(error),
+        isDevelopment: process.env.NODE_ENV === 'development'
       });
       
       if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch')) {
+          // In development mode, provide helpful CORS error message
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('🚨 CORS Error in Development Mode - Check proxy configuration');
+            showToast({
+              style: ToastStyle.Failure,
+              title: "CORS Error",
+              message: "API request blocked by CORS. Check proxy configuration or restart dev server."
+            });
+          } else {
+            showToast({
+              style: ToastStyle.Failure,
+              title: "Network Error",
+              message: "Unable to connect to the API. Please check your internet connection."
+            });
+          }
+        } else {
+          showToast({
+            style: ToastStyle.Failure,
+            title: "API Error",
+            message: error.message
+          });
+        }
         throw error;
       }
       
