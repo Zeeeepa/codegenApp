@@ -152,7 +152,7 @@ export class CodegenAPIClient {
       const response = await fetch(url, {
         ...options,
         mode: "cors",
-        credentials: "include",
+        credentials: "omit",
         headers: {
           ...defaultHeaders,
           ...options.headers,
