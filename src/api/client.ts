@@ -154,6 +154,12 @@ export class CodegenAPIClient {
     organizationId: number,
     request: ResumeAgentRunRequest
   ): Promise<AgentRunResponse> {
+    console.log("🔄 Resume Agent Run API Call:", {
+      organizationId,
+      request,
+      endpoint: API_ENDPOINTS.AGENT_RUN_RESUME(organizationId)
+    });
+    
     return this.makeRequest<AgentRunResponse>(
       API_ENDPOINTS.AGENT_RUN_RESUME(organizationId),
       {
@@ -167,6 +173,12 @@ export class CodegenAPIClient {
     organizationId: number,
     request: StopAgentRunRequest
   ): Promise<AgentRunResponse> {
+    console.log("⏹️ Stop Agent Run API Call:", {
+      organizationId,
+      request,
+      endpoint: API_ENDPOINTS.AGENT_RUN_STOP(organizationId)
+    });
+    
     return this.makeRequest<AgentRunResponse>(
       API_ENDPOINTS.AGENT_RUN_STOP(organizationId),
       {

@@ -56,6 +56,13 @@ export function ResumeAgentRunDialog({
 
     setIsLoading(true);
     try {
+      console.log("🚀 Attempting to resume agent run:", {
+        organizationId,
+        agentRunId,
+        prompt: prompt.trim(),
+        agentRunStatus: agentRunDetails?.status
+      });
+      
       // Use the exact same API call pattern as the original resumeAgentRun function
       await apiClient.resumeAgentRun(organizationId, {
         agent_run_id: agentRunId,
