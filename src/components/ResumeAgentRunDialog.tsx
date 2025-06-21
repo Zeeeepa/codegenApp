@@ -56,40 +56,40 @@ export function ResumeAgentRunDialog({
 
     setIsLoading(true);
     try {
-      console.log("🚀 Attempting to resume agent run:", {
+      console.log("🚀 Opening browser to resume agent run:", {
         organizationId,
         agentRunId,
         prompt: prompt.trim(),
         agentRunStatus: agentRunDetails?.status
       });
       
-      // Use the exact same API call pattern as the original resumeAgentRun function
-      await apiClient.resumeAgentRun(organizationId, {
-        agent_run_id: agentRunId,
-        prompt: prompt.trim(),
-      });
-
-      // Use the exact same success message pattern
-      toast.success(`Agent run #${agentRunId} has been resumed`);
+      // Construct the Codegen chat URL for this agent run
+      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
+      
+      // Open the URL in a new browser tab/window
+      // The browser will handle the authentication via existing session
+      window.open(chatUrl, '_blank', 'noopener,noreferrer');
+      
+      // Copy the prompt to clipboard so user can easily paste it
+      await navigator.clipboard.writeText(prompt.trim());
+      
+      toast.success(`Opened agent run #${agentRunId} in browser. Your message has been copied to clipboard - paste it in the chat!`);
       
       setPrompt("Continue with the previous task"); // Reset to default
       onResumed?.(); // Trigger refresh
       onClose();
     } catch (error) {
-      console.error("Resume agent run error:", error);
+      console.error("Failed to open browser or copy to clipboard:", error);
       
-      // Enhanced error handling with more specific messages
-      if (error instanceof Error) {
-        if (error.message.includes('404')) {
-          toast.error(`Resume endpoint not found. The resume feature may not be available for agent run #${agentRunId}.`);
-        } else if (error.message.includes('403')) {
-          toast.error(`Permission denied. You may not have access to resume agent run #${agentRunId}.`);
-        } else {
-          toast.error(`Failed to resume agent run: ${error.message}`);
-        }
-      } else {
-        toast.error("Failed to resume agent run: Unknown error");
-      }
+      // Fallback: just open the URL without clipboard
+      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
+      window.open(chatUrl, '_blank', 'noopener,noreferrer');
+      
+      toast.success(`Opened agent run #${agentRunId} in browser. Please paste your message: "${prompt.trim()}"`);
+      
+      setPrompt("Continue with the previous task");
+      onResumed?.();
+      onClose();
     } finally {
       setIsLoading(false);
     }
@@ -112,7 +112,7 @@ export function ResumeAgentRunDialog({
           <div className="flex items-center space-x-3">
             <Play className="h-6 w-6 text-green-400" />
             <h2 className="text-xl font-semibold text-white">
-              Resume Agent Run #{agentRunId}
+              Continue Agent Run #{agentRunId}
             </h2>
           </div>
           <button
@@ -170,11 +170,11 @@ export function ResumeAgentRunDialog({
                     </div>
                   )}
 
-                  {/* Resume Instructions */}
+                  {/* Continue Instructions */}
                   <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-3">
                     <p className="text-blue-200 text-sm">
-                      💡 <strong>Resume Instructions:</strong> Enter a prompt to continue this agent run. 
-                      The agent will receive your message and continue from where it left off.
+                      💡 <strong>Continue Instructions:</strong> Enter your message and click "Open in Browser". 
+                      This will open the agent chat in a new tab with your message copied to clipboard for easy pasting.
                     </p>
                   </div>
                 </div>
@@ -201,7 +201,7 @@ export function ResumeAgentRunDialog({
                   disabled={isLoading}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Press Cmd+Enter (Mac) or Ctrl+Enter (Windows) to resume
+                  Press Cmd+Enter (Mac) or Ctrl+Enter (Windows) to open in browser
                 </p>
               </div>
 
@@ -221,12 +221,12 @@ export function ResumeAgentRunDialog({
                   {isLoading ? (
                     <>
                       <Loader className="h-4 w-4 animate-spin mr-2" />
-                      Resuming...
+                      Opening...
                     </>
                   ) : (
                     <>
                       <Send className="h-4 w-4 mr-2" />
-                      Resume Agent Run
+                      Open in Browser
                     </>
                   )}
                 </button>
