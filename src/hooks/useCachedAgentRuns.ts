@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { showToast, ToastStyle } from "../utils/toast";
 import { AgentRunResponse, AgentRunFilters, SortOptions } from "../api/types";
 import { getAgentRunCache } from "../storage/agentRunCache";
@@ -243,11 +243,13 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
     return () => clearInterval(pollInterval);
   }, [organizationId, cache, apiClient, loadCachedData]);
 
-  // Apply filters and sorting
-  const filteredRuns = sortAgentRuns(
-    filterAgentRuns(agentRuns, filters),
-    sortOptions
-  );
+  // Apply filters and sorting - memoized for performance
+  const filteredRuns = useMemo(() => {
+    return sortAgentRuns(
+      filterAgentRuns(agentRuns, filters),
+      sortOptions
+    );
+  }, [agentRuns, filters, sortOptions]);
 
   return {
     agentRuns,

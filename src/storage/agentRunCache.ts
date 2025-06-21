@@ -220,7 +220,11 @@ export class AgentRunCache {
    * Check if an agent run should be polled for updates
    */
   private shouldPollRun(run: AgentRunResponse): boolean {
-    return run.status === AgentRunStatus.ACTIVE || run.status === AgentRunStatus.EVALUATION;
+    const status = run.status.toUpperCase();
+    return status === AgentRunStatus.ACTIVE || 
+           status === AgentRunStatus.EVALUATION ||
+           status === AgentRunStatus.PENDING ||
+           status === "RUNNING"; // Handle legacy status values
   }
 
   /**

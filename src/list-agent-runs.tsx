@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { 
@@ -43,33 +43,28 @@ export default function ListAgentRuns() {
   const selection = useAgentRunSelection();
   const [searchText, setSearchText] = useState("");
   const [dateRanges] = useState(() => getDateRanges());
-  const [statusFilterOptions, setStatusFilterOptions] = useState(() => getStatusFilterOptions([]));
   const [responseModalRun, setResponseModalRun] = useState<CachedAgentRun | null>(null);
   const apiClient = getAPIClient();
   const cache = getAgentRunCache();
 
-  // Initialize component and update status filter options when runs change
-  useEffect(() => {
-    // Component initialization logic
-    console.log('Agent runs component initialized');
-    console.log('Current filters:', filters as AgentRunFilters);
-  }, [filters]);
-
-  // Update status filter options when filteredRuns change
-  useEffect(() => {
-    if (filteredRuns.length > 0) {
-      setStatusFilterOptions(getStatusFilterOptions(filteredRuns));
-    }
+  // Memoize status filter options to prevent infinite loops
+  const statusFilterOptions = useMemo(() => {
+    return getStatusFilterOptions(filteredRuns);
   }, [filteredRuns]);
 
-  // Update search filter when search text changes
-  const handleSearchTextChange = (text: string) => {
+  // Initialize component - only run once
+  useEffect(() => {
+    console.log('Agent runs component initialized');
+  }, []); // Empty dependency array - only run once
+
+  // Update search filter when search text changes - memoized to prevent re-renders
+  const handleSearchTextChange = useCallback((text: string) => {
     setSearchText(text);
     updateFilters({
       ...filters,
       searchQuery: text,
     });
-  };
+  }, [filters, updateFilters]);
 
   const copyToClipboard = async (text: string, successMessage: string) => {
     try {
@@ -81,34 +76,46 @@ export default function ListAgentRuns() {
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
+      case "active":
       case "running":
         return Clock;
+      case "complete":
       case "completed":
         return CheckCircle;
       case "failed":
+      case "error":
         return XCircle;
+      case "cancelled":
       case "stopped":
         return Square;
       case "paused":
         return Pause;
+      case "pending":
+        return Clock;
       default:
         return AlertCircle;
     }
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
+      case "active":
       case "running":
         return "text-blue-600";
+      case "complete":
       case "completed":
         return "text-green-600";
       case "failed":
+      case "error":
         return "text-red-600";
+      case "cancelled":
       case "stopped":
         return "text-gray-500";
       case "paused":
         return "text-yellow-600";
+      case "pending":
+        return "text-blue-400";
       default:
         return "text-gray-500";
     }
@@ -179,6 +186,32 @@ export default function ListAgentRuns() {
     }
   };
 
+  // Respond to an agent run (for stopped/failed runs)
+  const respondToAgentRun = async (agentRunId: number) => {
+    if (!organizationId) return;
+
+    const prompt = window.prompt(
+      `Enter your response to agent run #${agentRunId}:`,
+      "Please continue with the task"
+    );
+    
+    if (!prompt || !prompt.trim()) return;
+
+    try {
+      // Try resume endpoint first (it might work for stopped runs too)
+      await apiClient.resumeAgentRun(organizationId, {
+        agent_run_id: agentRunId,
+        prompt: prompt.trim(),
+      });
+
+      toast.success(`Response sent to agent run #${agentRunId}`);
+
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to respond to agent run");
+    }
+  };
+
 
 
   // Delete an agent run
@@ -200,14 +233,14 @@ export default function ListAgentRuns() {
     }
   };
 
-  // Clear all filters
-  const handleClearFilters = () => {
+  // Clear all filters - memoized
+  const handleClearFilters = useCallback(() => {
     updateFilters(clearFilters());
     setSearchText("");
-  };
+  }, [updateFilters]);
 
-  // Filter by status
-  const filterByStatus = (status: AgentRunStatus) => {
+  // Filter by status - memoized
+  const filterByStatus = useCallback((status: AgentRunStatus) => {
     const currentStatuses = filters.status || [];
     const newStatuses = currentStatuses.includes(status)
       ? currentStatuses.filter(s => s !== status)
@@ -217,7 +250,7 @@ export default function ListAgentRuns() {
       ...filters,
       status: newStatuses.length > 0 ? newStatuses : undefined,
     });
-  };
+  }, [filters, updateFilters]);
 
   // Get sync status display
   const getSyncStatusAccessory = () => {
@@ -443,6 +476,15 @@ export default function ListAgentRuns() {
               const StatusIcon = statusDisplay.icon;
               const canStop = run.status === AgentRunStatus.ACTIVE;
               const canResume = run.status === AgentRunStatus.PAUSED;
+              const canRespond = [
+                AgentRunStatus.FAILED,
+                AgentRunStatus.ERROR,
+                AgentRunStatus.CANCELLED,
+                AgentRunStatus.TIMEOUT,
+                AgentRunStatus.MAX_ITERATIONS_REACHED,
+                AgentRunStatus.OUT_OF_TOKENS
+              ].includes(run.status as AgentRunStatus) || 
+              run.status.toLowerCase() === 'stopped';
 
               const isSelected = selection.isSelected(run.id);
               const canViewResponse = run.status === AgentRunStatus.COMPLETE && run.result;
@@ -530,6 +572,16 @@ export default function ListAgentRuns() {
                           title="Resume Agent Run (Cmd+R)"
                         >
                           <Play className="h-4 w-4" />
+                        </button>
+                      )}
+                      
+                      {canRespond && (
+                        <button
+                          onClick={() => respondToAgentRun(run.id)}
+                          className="inline-flex items-center px-3 py-1.5 border border-blue-600 text-sm font-medium rounded text-blue-300 bg-blue-900 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+                          title="Respond to Agent Run"
+                        >
+                          <FileText className="h-4 w-4" />
                         </button>
                       )}
                       
