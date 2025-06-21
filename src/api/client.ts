@@ -10,6 +10,7 @@ import {
   ResumeAgentRunRequest,
   StopAgentRunRequest,
   MessageAgentRunRequest,
+  AgentRunWithLogsResponse,
   PaginatedResponse,
   APIError,
 } from "./types";
@@ -224,6 +225,37 @@ export class CodegenAPIClient {
     );
   }
 
+  async getAgentRunLogs(
+    organizationId: number,
+    agentRunId: number,
+    skip?: number,
+    limit?: number
+  ): Promise<AgentRunWithLogsResponse> {
+    try {
+      return await this.makeRequest<AgentRunWithLogsResponse>(
+        API_ENDPOINTS.AGENT_RUN_LOGS(organizationId, agentRunId, skip, limit),
+        {
+          method: "GET",
+        }
+      );
+    } catch (error) {
+      // If the logs endpoint doesn't exist, return a mock response with basic agent run data
+      if (error instanceof Error && error.message.includes("404")) {
+        console.log("Logs endpoint not available, returning basic agent run data");
+        const agentRun = await this.getAgentRun(organizationId, agentRunId);
+        return {
+          ...agentRun,
+          logs: [],
+          total_logs: 0,
+          page: 1,
+          size: limit || 100,
+          pages: 0
+        };
+      }
+      throw error;
+    }
+  }
+
   // Organization Methods
   async getOrganizations(
     page = 1,
@@ -266,6 +298,35 @@ export class CodegenAPIClient {
   // Get current user info from alpha /me endpoint
   async getMe(): Promise<UserResponse> {
     return this.makeRequest<UserResponse>(API_ENDPOINTS.USER_ME);
+  }
+
+  // Get agent run logs
+  async getAgentRunLogs(
+    organizationId: number,
+    agentRunId: number,
+    skip?: number,
+    limit?: number
+  ): Promise<AgentRunWithLogsResponse> {
+    try {
+      return await this.makeRequest<AgentRunWithLogsResponse>(
+        API_ENDPOINTS.AGENT_RUN_LOGS(organizationId, agentRunId, skip, limit)
+      );
+    } catch (error) {
+      // If the logs endpoint doesn't exist, return empty logs as fallback
+      if (error instanceof Error && error.message.includes("404")) {
+        console.log("Logs endpoint not available, returning empty logs");
+        const agentRun = await this.getAgentRun(organizationId, agentRunId);
+        return {
+          ...agentRun,
+          logs: [],
+          total_logs: 0,
+          page: 1,
+          size: limit || 50,
+          pages: 0
+        };
+      }
+      throw error;
+    }
   }
 
   // Validation Method

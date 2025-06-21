@@ -27,6 +27,8 @@ export const API_ENDPOINTS = {
     `/v1/beta/organizations/${organizationId}/agent/run/stop`,
   AGENT_RUN_MESSAGE: (organizationId: number) => 
     `/v1/beta/organizations/${organizationId}/agent/run/message`,
+  AGENT_RUN_LOGS: (organizationId: number, agentRunId: number, skip?: number, limit?: number) => 
+    `/v1/organizations/${organizationId}/agent/run/${agentRunId}/logs${skip !== undefined || limit !== undefined ? `?${skip !== undefined ? `skip=${skip}` : ''}${skip !== undefined && limit !== undefined ? '&' : ''}${limit !== undefined ? `limit=${limit}` : ''}` : ''}`,
 } as const;
 
 // API Base URL - uses environment variable with fallback to production API

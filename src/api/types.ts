@@ -9,6 +9,49 @@ export interface AgentRunResponse {
   result?: string;
 }
 
+// Agent Run Log Types
+export interface AgentRunLog {
+  agent_run_id: number;
+  created_at: string;
+  message_type: AgentRunLogType;
+  thought?: string | null;
+  tool_name?: string | null;
+  tool_input?: any | null;
+  tool_output?: any | null;
+  observation?: any | string | null;
+}
+
+export enum AgentRunLogType {
+  // Plan Agent Types
+  ACTION = "ACTION",
+  PLAN_EVALUATION = "PLAN_EVALUATION", 
+  FINAL_ANSWER = "FINAL_ANSWER",
+  ERROR = "ERROR",
+  USER_MESSAGE = "USER_MESSAGE",
+  USER_GITHUB_ISSUE_COMMENT = "USER_GITHUB_ISSUE_COMMENT",
+  
+  // PR Agent Types
+  INITIAL_PR_GENERATION = "INITIAL_PR_GENERATION",
+  DETECT_PR_ERRORS = "DETECT_PR_ERRORS",
+  FIX_PR_ERRORS = "FIX_PR_ERRORS",
+  PR_CREATION_FAILED = "PR_CREATION_FAILED",
+  PR_EVALUATION = "PR_EVALUATION",
+  
+  // Commit Agent Types
+  COMMIT_EVALUATION = "COMMIT_EVALUATION",
+  
+  // Link Types
+  AGENT_RUN_LINK = "AGENT_RUN_LINK"
+}
+
+export interface AgentRunWithLogsResponse extends AgentRunResponse {
+  logs: AgentRunLog[];
+  total_logs: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
 export interface UserResponse {
   id: number;
   email?: string;
@@ -47,6 +90,11 @@ export interface MessageAgentRunRequest {
   agent_run_id: number;
   prompt: string;
   images?: string[];
+}
+
+export interface GetAgentRunLogsRequest {
+  skip?: number;
+  limit?: number;
 }
 
 // Paginated Response Type
@@ -138,4 +186,44 @@ export interface TrackedAgentRun {
   createdAt: string;
   webUrl: string;
   addedAt: string; // When it was added to tracking
+}
+
+// Agent Run Logs Types
+export enum AgentRunLogType {
+  ACTION = "ACTION",
+  PLAN_EVALUATION = "PLAN_EVALUATION", 
+  FINAL_ANSWER = "FINAL_ANSWER",
+  ERROR = "ERROR",
+  USER_MESSAGE = "USER_MESSAGE",
+  USER_GITHUB_ISSUE_COMMENT = "USER_GITHUB_ISSUE_COMMENT",
+  INITIAL_PR_GENERATION = "INITIAL_PR_GENERATION",
+  DETECT_PR_ERRORS = "DETECT_PR_ERRORS",
+  FIX_PR_ERRORS = "FIX_PR_ERRORS",
+  PR_CREATION_FAILED = "PR_CREATION_FAILED",
+  PR_EVALUATION = "PR_EVALUATION",
+  COMMIT_EVALUATION = "COMMIT_EVALUATION",
+  AGENT_RUN_LINK = "AGENT_RUN_LINK",
+  THOUGHT = "THOUGHT",
+  OBSERVATION = "OBSERVATION",
+  TOOL_CALL = "TOOL_CALL",
+  TOOL_RESULT = "TOOL_RESULT"
+}
+
+export interface AgentRunLog {
+  agent_run_id: number;
+  created_at: string;
+  message_type: AgentRunLogType;
+  thought?: string | null;
+  tool_name?: string | null;
+  tool_input?: any | null;
+  tool_output?: any | null;
+  observation?: any | string | null;
+}
+
+export interface AgentRunWithLogsResponse extends AgentRunResponse {
+  logs: AgentRunLog[];
+  total_logs: number;
+  page: number;
+  size: number;
+  pages: number;
 }

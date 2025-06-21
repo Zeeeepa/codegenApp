@@ -16,12 +16,14 @@ import {
   Clock,
   XCircle,
   Pause,
-  MessageSquare
+  MessageSquare,
+  ScrollText
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
 import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
 import { MessageAgentRunDialog } from "./components/MessageAgentRunDialog";
+import { AgentRunLogsDialog } from "./components/AgentRunLogsDialog";
 import { MonitoringDashboard } from "./components/MonitoringDashboard";
 import { getAPIClient } from "./api/client";
 import { getAgentRunCache } from "./storage/agentRunCache";
@@ -49,6 +51,7 @@ export default function ListAgentRuns() {
   const [responseModalRun, setResponseModalRun] = useState<CachedAgentRun | null>(null);
   const [messageDialogAgentRunId, setMessageDialogAgentRunId] = useState<number | null>(null);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const [logsDialogRun, setLogsDialogRun] = useState<CachedAgentRun | null>(null);
 
   const apiClient = getAPIClient();
   const cache = getAgentRunCache();
@@ -71,8 +74,8 @@ export default function ListAgentRuns() {
 
   // Memoize status filter options to prevent infinite loops
   const statusFilterOptions = useMemo(() => {
-    return getStatusFilterOptions(filteredRuns);
-  }, [filteredRuns]);
+    return getStatusFilterOptions(agentRuns);
+  }, [agentRuns]);
 
   // Initialize component - only run once
   useEffect(() => {
@@ -592,6 +595,14 @@ export default function ListAgentRuns() {
                         <Copy className="h-4 w-4" />
                       </button>
                       
+                      <button
+                        onClick={() => setLogsDialogRun(cachedRun)}
+                        className="inline-flex items-center px-3 py-1.5 border border-purple-600 text-sm font-medium rounded text-purple-300 bg-purple-900 hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 focus:ring-offset-gray-800"
+                        title="View Agent Run Logs"
+                      >
+                        <ScrollText className="h-4 w-4" />
+                      </button>
+                      
                       {canStop && (
                         <button
                           onClick={() => stopAgentRun(run.id)}
@@ -673,6 +684,16 @@ export default function ListAgentRuns() {
           agentRunId={messageDialogAgentRunId}
           organizationId={organizationId}
           onMessageSent={handleMessageSent}
+        />
+      )}
+
+      {/* Logs Dialog */}
+      {logsDialogRun && organizationId !== null && (
+        <AgentRunLogsDialog
+          agentRun={logsDialogRun}
+          organizationId={organizationId}
+          isOpen={!!logsDialogRun}
+          onClose={() => setLogsDialogRun(null)}
         />
       )}
     </div>
