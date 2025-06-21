@@ -9,11 +9,16 @@ export function filterAgentRuns(
 ): AgentRunResponse[] {
   let filteredRuns = [...runs];
 
-  // Filter by status
+  // Filter by status - handle case-insensitive comparison
   if (filters.status && filters.status.length > 0) {
-    filteredRuns = filteredRuns.filter(run => 
-      filters.status!.includes(run.status as AgentRunStatus)
-    );
+    filteredRuns = filteredRuns.filter(run => {
+      const runStatus = run.status.toUpperCase();
+      return filters.status!.some(filterStatus => 
+        filterStatus.toUpperCase() === runStatus ||
+        (filterStatus === AgentRunStatus.ACTIVE && runStatus === "RUNNING") ||
+        (filterStatus === AgentRunStatus.COMPLETE && runStatus === "COMPLETED")
+      );
+    });
   }
 
   // Filter by organization
@@ -224,4 +229,3 @@ export function debounce<T extends (...args: any[]) => any>(
     timeout = setTimeout(() => func(...args), wait);
   };
 }
-
