@@ -21,6 +21,7 @@ import {
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
 import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
+import { MessageAgentRunDialog } from "./components/MessageAgentRunDialog";
 import { getAPIClient } from "./api/client";
 import { getAgentRunCache } from "./storage/agentRunCache";
 import { AgentRunStatus, CachedAgentRun } from "./api/types";
@@ -45,6 +46,8 @@ export default function ListAgentRuns() {
   const [searchText, setSearchText] = useState("");
   const [dateRanges] = useState(() => getDateRanges());
   const [responseModalRun, setResponseModalRun] = useState<CachedAgentRun | null>(null);
+  const [messageDialogAgentRunId, setMessageDialogAgentRunId] = useState<number | null>(null);
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
 
   const apiClient = getAPIClient();
   const cache = getAgentRunCache();
@@ -204,30 +207,14 @@ export default function ListAgentRuns() {
     }
   };
 
-  // Send message to an agent run (for active, paused, stopped, failed runs)
-  const sendMessageToAgentRun = async (agentRunId: number) => {
-    if (!organizationId) return;
+  // Open message dialog for an agent run
+  const openMessageDialog = (agentRunId: number) => {
+    setMessageDialogAgentRunId(agentRunId);
+    setIsMessageDialogOpen(true);
+  };
 
-    const prompt = window.prompt(
-      `Send message to agent run #${agentRunId}:`,
-      "Please continue with the task"
-    );
-    
-    if (!prompt || !prompt.trim()) return;
-
-    try {
-      // Try resume endpoint first (it might work for stopped runs too)
-      await apiClient.resumeAgentRun(organizationId, {
-        agent_run_id: agentRunId,
-        prompt: prompt.trim(),
-      });
-
-      toast.success(`Message sent to agent run #${agentRunId}`);
-
-      await refresh();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to send message to agent run");
-    }
+  const handleMessageSent = async () => {
+    await refresh();
   };
 
 
@@ -482,8 +469,7 @@ export default function ListAgentRuns() {
               const canStop = run.status === AgentRunStatus.ACTIVE;
               const canResume = run.status === AgentRunStatus.PAUSED;
               const canMessage = [
-                AgentRunStatus.ACTIVE,
-                AgentRunStatus.PAUSED,
+                AgentRunStatus.COMPLETE,
                 AgentRunStatus.FAILED,
                 AgentRunStatus.ERROR,
                 AgentRunStatus.CANCELLED,
@@ -594,7 +580,7 @@ export default function ListAgentRuns() {
                       
                       {canMessage && (
                         <button
-                          onClick={() => sendMessageToAgentRun(run.id)}
+                          onClick={() => openMessageDialog(run.id)}
                           className="inline-flex items-center px-3 py-1.5 border border-purple-600 text-sm font-medium rounded text-purple-300 bg-purple-900 hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 focus:ring-offset-gray-800"
                           title="Send Message to Agent Run"
                         >
@@ -624,6 +610,20 @@ export default function ListAgentRuns() {
           run={responseModalRun}
           isOpen={!!responseModalRun}
           onClose={() => setResponseModalRun(null)}
+        />
+      )}
+
+      {/* Message Dialog */}
+      {messageDialogAgentRunId && organizationId && (
+        <MessageAgentRunDialog
+          isOpen={isMessageDialogOpen}
+          onClose={() => {
+            setIsMessageDialogOpen(false);
+            setMessageDialogAgentRunId(null);
+          }}
+          agentRunId={messageDialogAgentRunId}
+          organizationId={organizationId}
+          onMessageSent={handleMessageSent}
         />
       )}
     </div>
