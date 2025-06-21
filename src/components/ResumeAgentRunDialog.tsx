@@ -56,6 +56,13 @@ export function ResumeAgentRunDialog({
 
     setIsLoading(true);
     try {
+      console.log("🚀 Attempting to resume agent run:", {
+        organizationId,
+        agentRunId,
+        prompt: prompt.trim(),
+        agentRunStatus: agentRunDetails?.status
+      });
+      
       // Use the exact same API call pattern as the original resumeAgentRun function
       await apiClient.resumeAgentRun(organizationId, {
         agent_run_id: agentRunId,
@@ -69,8 +76,20 @@ export function ResumeAgentRunDialog({
       onResumed?.(); // Trigger refresh
       onClose();
     } catch (error) {
-      // Use the exact same error handling pattern
-      toast.error(error instanceof Error ? error.message : "Failed to resume agent run");
+      console.error("Resume agent run error:", error);
+      
+      // Enhanced error handling with more specific messages
+      if (error instanceof Error) {
+        if (error.message.includes('404')) {
+          toast.error(`Resume endpoint not found. The resume feature may not be available for agent run #${agentRunId}.`);
+        } else if (error.message.includes('403')) {
+          toast.error(`Permission denied. You may not have access to resume agent run #${agentRunId}.`);
+        } else {
+          toast.error(`Failed to resume agent run: ${error.message}`);
+        }
+      } else {
+        toast.error("Failed to resume agent run: Unknown error");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -219,4 +238,3 @@ export function ResumeAgentRunDialog({
     </div>
   );
 }
-
