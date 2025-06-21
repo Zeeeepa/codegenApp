@@ -170,6 +170,11 @@ export function CreateAgentRunDialog({ isOpen, onClose, onRunCreated }: CreateAg
 
       toast.success(`Agent run #${agentRun.id} created and monitoring started!`);
       
+      // Dispatch event for immediate UI updates
+      window.dispatchEvent(new CustomEvent('agentRunCreated', { 
+        detail: { agentRunId: agentRun.id, organizationId } 
+      }));
+      
       // Reset form
       setFormValues({
         prompt: "",

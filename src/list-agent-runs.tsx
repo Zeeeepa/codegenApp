@@ -15,7 +15,8 @@ import {
   Trash2,
   Clock,
   XCircle,
-  Pause
+  Pause,
+  MessageSquare
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
@@ -48,6 +49,21 @@ export default function ListAgentRuns() {
   const apiClient = getAPIClient();
   const cache = getAgentRunCache();
   const { openDialog } = useDialog();
+
+  // Listen for new agent run creation events for immediate UI updates
+  useEffect(() => {
+    const handleAgentRunCreated = () => {
+      // Trigger immediate refresh when a new agent run is created
+      refresh();
+    };
+
+    // Listen for custom events (dispatched from create agent run form)
+    window.addEventListener('agentRunCreated', handleAgentRunCreated);
+    
+    return () => {
+      window.removeEventListener('agentRunCreated', handleAgentRunCreated);
+    };
+  }, [refresh]);
 
   // Memoize status filter options to prevent infinite loops
   const statusFilterOptions = useMemo(() => {
@@ -104,22 +120,22 @@ export default function ListAgentRuns() {
     switch (status.toLowerCase()) {
       case "active":
       case "running":
-        return "text-blue-600";
+        return "text-blue-400";
       case "complete":
       case "completed":
-        return "text-green-600";
+        return "text-emerald-400";
       case "failed":
       case "error":
-        return "text-red-600";
+        return "text-red-400";
       case "cancelled":
       case "stopped":
-        return "text-gray-500";
+        return "text-gray-400";
       case "paused":
-        return "text-yellow-600";
+        return "text-amber-400";
       case "pending":
-        return "text-blue-400";
+        return "text-slate-400";
       default:
-        return "text-gray-500";
+        return "text-gray-400";
     }
   };
 
@@ -188,29 +204,30 @@ export default function ListAgentRuns() {
     }
   };
 
-  // Respond to an agent run (for stopped/failed runs)
-  const respondToAgentRun = async (agentRunId: number) => {
+  // Send message to an agent run (for active, stopped, failed, paused runs)
+  const sendMessageToAgentRun = async (agentRunId: number) => {
     if (!organizationId) return;
 
     const prompt = window.prompt(
-      `Enter your response to agent run #${agentRunId}:`,
+      `Send message to agent run #${agentRunId}:`,
       "Please continue with the task"
     );
     
     if (!prompt || !prompt.trim()) return;
 
     try {
-      // Try resume endpoint first (it might work for stopped runs too)
+      // Try resume endpoint for messaging
       await apiClient.resumeAgentRun(organizationId, {
         agent_run_id: agentRunId,
         prompt: prompt.trim(),
       });
 
-      toast.success(`Response sent to agent run #${agentRunId}`);
+      toast.success(`Message sent to agent run #${agentRunId}`);
 
+      // Trigger immediate refresh for faster UI updates
       await refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to respond to agent run");
+      toast.error(error instanceof Error ? error.message : "Failed to send message to agent run");
     }
   };
 
@@ -465,7 +482,9 @@ export default function ListAgentRuns() {
               const StatusIcon = statusDisplay.icon;
               const canStop = run.status === AgentRunStatus.ACTIVE;
               const canResume = run.status === AgentRunStatus.PAUSED;
-              const canRespond = [
+              const canMessage = [
+                AgentRunStatus.ACTIVE,
+                AgentRunStatus.PAUSED,
                 AgentRunStatus.FAILED,
                 AgentRunStatus.ERROR,
                 AgentRunStatus.CANCELLED,
@@ -491,8 +510,8 @@ export default function ListAgentRuns() {
                   key={run.id} 
                   className={`p-6 rounded-lg border transition-all cursor-pointer ${
                     isSelected 
-                      ? 'bg-blue-900 border-blue-500 shadow-lg' 
-                      : 'bg-black border-gray-700 hover:bg-gray-800 hover:shadow-md'
+                      ? 'bg-blue-900/30 border-blue-500/50 shadow-lg shadow-blue-500/20' 
+                      : 'bg-gray-900/50 border-gray-700/50 hover:bg-gray-800/60 hover:border-gray-600/50 hover:shadow-md'
                   }`}
                   onClick={() => selection.toggleRun(run.id, cachedRun)}
                 >
@@ -512,7 +531,17 @@ export default function ListAgentRuns() {
                         <h3 className="text-lg font-medium text-white">Agent Run #{run.id}</h3>
                         <p className="text-sm text-gray-500">Created {formatDate(run.created_at)}</p>
                       </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusDisplay.color.replace('text-', 'bg-').replace('-600', '-100')} ${statusDisplay.color}`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        run.status.toLowerCase() === 'complete' || run.status.toLowerCase() === 'completed' 
+                          ? 'bg-emerald-900/50 text-emerald-300 border border-emerald-500/30'
+                          : run.status.toLowerCase() === 'active' || run.status.toLowerCase() === 'running'
+                          ? 'bg-blue-900/50 text-blue-300 border border-blue-500/30'
+                          : run.status.toLowerCase() === 'failed' || run.status.toLowerCase() === 'error'
+                          ? 'bg-red-900/50 text-red-300 border border-red-500/30'
+                          : run.status.toLowerCase() === 'paused'
+                          ? 'bg-amber-900/50 text-amber-300 border border-amber-500/30'
+                          : 'bg-gray-900/50 text-gray-300 border border-gray-500/30'
+                      }`}>
                         {run.status}
                       </span>
                     </div>
@@ -564,13 +593,13 @@ export default function ListAgentRuns() {
                         </button>
                       )}
                       
-                      {canRespond && (
+                      {canMessage && (
                         <button
-                          onClick={() => respondToAgentRun(run.id)}
-                          className="inline-flex items-center px-3 py-1.5 border border-blue-600 text-sm font-medium rounded text-blue-300 bg-blue-900 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
-                          title="Respond to Agent Run"
+                          onClick={() => sendMessageToAgentRun(run.id)}
+                          className="inline-flex items-center px-3 py-1.5 border border-purple-600 text-sm font-medium rounded text-purple-300 bg-purple-900 hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 focus:ring-offset-gray-800"
+                          title="Send Message to Agent Run"
                         >
-                          <FileText className="h-4 w-4" />
+                          <MessageSquare className="h-4 w-4" />
                         </button>
                       )}
                       
