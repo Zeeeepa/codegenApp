@@ -14,20 +14,24 @@ export const API_ENDPOINTS = {
   ORG_USER: (organizationId: number, userId: number) => 
     `/v1/organizations/${organizationId}/users/${userId}`,
   
-  // Agent Run endpoints
+  // Agent Run endpoints - VALIDATED ✅ 2025-06-21
   AGENT_RUN_CREATE: (organizationId: number) => 
-    `/v1/organizations/${organizationId}/agent/run`,
-  AGENT_RUN_GET: (organizationId: number, agentRunId: number) => 
-    `/v1/organizations/${organizationId}/agent/run/${agentRunId}`,
-  AGENT_RUN_RESUME: (organizationId: number, agentRunId: number) => 
-    `/v1/organizations/${organizationId}/agent/run/${agentRunId}/resume`,
-  AGENT_RUN_STOP: (organizationId: number, agentRunId: number) => 
-    `/v1/organizations/${organizationId}/agent/run/${agentRunId}/stop`,
-  // Alternative endpoints to try if the above don't work
-  AGENT_RUN_RESUME_ALT1: (organizationId: number, agentRunId: number) => 
-    `/v1/organizations/${organizationId}/agent/run/${agentRunId}/continue`,
-  AGENT_RUN_RESUME_ALT2: (organizationId: number) => 
-    `/v1/organizations/${organizationId}/agent/run/resume`,
+    `/v1/organizations/${organizationId}/agent/run`, // ✅ WORKING (200)
+  AGENT_RUN_LIST: (organizationId: number) => 
+    `/v1/organizations/${organizationId}/agent/runs`, // ✅ WORKING (200)
+  
+  // ❌ THESE ENDPOINTS DO NOT EXIST - ALL RETURN 404
+  // Based on API testing, the following endpoints are NOT available:
+  // - Individual agent run details (GET /agent/run/{id})
+  // - Resume functionality (POST /agent/run/{id}/resume)
+  // - Continue functionality (POST /agent/run/{id}/continue) 
+  // - Stop functionality (POST /agent/run/{id}/stop)
+  // - Respond/message functionality (POST /agent/run/{id}/respond)
+  // 
+  // The Codegen API appears to only support:
+  // 1. Creating new agent runs
+  // 2. Listing existing agent runs
+  // 3. Interaction via web interface at web_url
 } as const;
 
 // API Base URL - uses environment variable with fallback to production API

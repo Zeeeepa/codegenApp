@@ -133,25 +133,14 @@ export class AgentRunCache {
       
       const apiClient = getAPIClient();
       
-      // For now, we'll implement a simple approach since the API doesn't have a list endpoint
-      // In a real implementation, you might need to track agent run IDs separately
-      const cachedRuns = await this.getAgentRuns(organizationId);
-      const updatedRuns: AgentRunResponse[] = [];
-      
-      // Update existing runs that might have changed status
-      for (const cachedRun of cachedRuns) {
-        try {
-          const updatedRun = await apiClient.getAgentRun(organizationId, cachedRun.id);
-          updatedRuns.push(updatedRun);
-        } catch (error) {
-          // If we can't fetch a run, keep the cached version
-          console.warn(`Failed to update agent run ${cachedRun.id}:`, error);
-          updatedRuns.push(cachedRun);
-        }
-      }
+      // ✅ Use the working list endpoint to fetch all agent runs
+      const response = await apiClient.listAgentRuns(organizationId);
+      const updatedRuns = response.items || [];
 
       await this.setAgentRuns(organizationId, updatedRuns);
       await this.setSyncStatus(organizationId, SyncStatus.SUCCESS);
+      
+      console.log(`✅ Synced ${updatedRuns.length} agent runs for organization ${organizationId}`);
       
       return {
         status: SyncStatus.SUCCESS,

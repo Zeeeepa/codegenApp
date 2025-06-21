@@ -208,86 +208,75 @@ export class CodegenAPIClient {
     return response;
   }
 
+  async listAgentRuns(
+    organizationId: number
+  ): Promise<{ items: AgentRunResponse[] }> {
+    // ✅ ENDPOINT VALIDATION: List agent runs is WORKING
+    // Tested endpoint returns 200: GET /v1/organizations/{orgId}/agent/runs
+    return this.makeRequest<{ items: AgentRunResponse[] }>(
+      API_ENDPOINTS.AGENT_RUN_LIST(organizationId)
+    );
+  }
+
   async getAgentRun(
     organizationId: number,
     agentRunId: number
   ): Promise<AgentRunResponse> {
-    return this.makeRequest<AgentRunResponse>(
-      API_ENDPOINTS.AGENT_RUN_GET(organizationId, agentRunId)
-    );
+    // ❌ ENDPOINT VALIDATION: Individual agent run details NOT available via REST API
+    // Tested endpoint returns 404: GET /v1/organizations/{orgId}/agent/run/{id}
+    
+    const errorMessage = "Individual agent run details are not available via the Codegen REST API. " +
+      "Please use the agent runs list or web interface to view agent run information.";
+    
+    await showToast({
+      style: ToastStyle.Failure,
+      title: "Feature Not Available",
+      message: errorMessage,
+    });
+    
+    throw new Error(errorMessage);
   }
 
   async resumeAgentRun(
     organizationId: number,
     request: ResumeAgentRunRequest
   ): Promise<AgentRunResponse> {
-    const { agent_run_id, ...requestBody } = request;
+    // ❌ ENDPOINT VALIDATION: Resume functionality is NOT available via REST API
+    // All tested resume endpoints return 404:
+    // - POST /v1/organizations/{orgId}/agent/run/{id}/resume
+    // - POST /v1/organizations/{orgId}/agent/run/{id}/continue  
+    // - POST /v1/organizations/{orgId}/agent-runs/{id}/resume
+    // - POST /v1/beta/organizations/{orgId}/agent/run/resume
     
-    // Try the primary endpoint first (RESTful pattern)
-    try {
-      return await this.makeRequest<AgentRunResponse>(
-        API_ENDPOINTS.AGENT_RUN_RESUME(organizationId, agent_run_id),
-        {
-          method: "POST",
-          body: JSON.stringify(requestBody),
-        }
-      );
-    } catch (error) {
-      console.log('Primary resume endpoint failed, trying alternatives...');
-      
-      // Try alternative endpoint patterns
-      const alternatives = [
-        {
-          endpoint: API_ENDPOINTS.AGENT_RUN_RESUME_ALT1(organizationId, agent_run_id),
-          method: "POST"
-        },
-        {
-          endpoint: API_ENDPOINTS.AGENT_RUN_RESUME_ALT2(organizationId),
-          method: "POST"
-        },
-        {
-          endpoint: API_ENDPOINTS.AGENT_RUN_RESUME(organizationId, agent_run_id),
-          method: "PUT"
-        },
-        {
-          endpoint: API_ENDPOINTS.AGENT_RUN_RESUME(organizationId, agent_run_id),
-          method: "PATCH"
-        }
-      ];
-      
-      for (const alt of alternatives) {
-        try {
-          console.log(`Trying ${alt.method} ${alt.endpoint}`);
-          return await this.makeRequest<AgentRunResponse>(
-            alt.endpoint,
-            {
-              method: alt.method,
-              body: JSON.stringify(alt.method === "POST" ? requestBody : request),
-            }
-          );
-        } catch (altError) {
-          console.log(`Alternative ${alt.method} ${alt.endpoint} failed:`, altError instanceof Error ? altError.message : altError);
-          continue;
-        }
-      }
-      
-      // If all alternatives fail, throw the original error
-      throw error;
-    }
+    const errorMessage = "Resume functionality is not available via the Codegen REST API. " +
+      "Please use the web interface to interact with running agents.";
+    
+    await showToast({
+      style: ToastStyle.Failure,
+      title: "Feature Not Available",
+      message: errorMessage,
+    });
+    
+    throw new Error(errorMessage);
   }
 
   async stopAgentRun(
     organizationId: number,
     request: StopAgentRunRequest
   ): Promise<AgentRunResponse> {
-    const { agent_run_id } = request;
-    return this.makeRequest<AgentRunResponse>(
-      API_ENDPOINTS.AGENT_RUN_STOP(organizationId, agent_run_id),
-      {
-        method: "POST",
-        body: JSON.stringify({}), // Empty body for stop request
-      }
-    );
+    // ❌ ENDPOINT VALIDATION: Stop functionality is NOT available via REST API
+    // Tested endpoint returns 404: POST /v1/organizations/{orgId}/agent/run/{id}/stop
+    
+    const errorMessage = "Stop functionality is not available via the Codegen REST API. " +
+      "Please use the web interface to stop running agents.";
+    
+    await showToast({
+      style: ToastStyle.Failure,
+      title: "Feature Not Available", 
+      message: errorMessage,
+    });
+    
+    throw new Error(errorMessage);
   }
 
   // Organization Methods
