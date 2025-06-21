@@ -109,6 +109,18 @@ export class CodegenAPIClient {
       throw new Error("Access denied");
     }
 
+    if (response.status === 404) {
+      throw new Error("Agent run not found");
+    }
+
+    if (response.status === 400) {
+      throw new Error("Invalid agent_run_id");
+    }
+
+    if (response.status === 409) {
+      throw new Error("Agent run already stopped");
+    }
+
     if (response.status === 429) {
       await showToast({
         style: ToastStyle.Failure,
@@ -116,6 +128,10 @@ export class CodegenAPIClient {
         message: "Please wait a moment before trying again.",
       });
       throw new Error("Rate limit exceeded");
+    }
+
+    if (response.status === 500) {
+      throw new Error("Internal server error");
     }
 
     await showToast({
