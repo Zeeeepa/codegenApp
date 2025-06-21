@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Clock, Tool, Brain, AlertCircle, CheckCircle, MessageSquare, GitPullRequest, GitCommit, Link } from 'lucide-react';
 import { AgentRunResponse, AgentRunLog, AgentRunLogType, AgentRunWithLogsResponse } from '../api/types';
-import { apiClient } from '../api/client';
+import { getAPIClient } from '../api/client';
 import { showToast, ToastStyle } from '../utils/toast';
 import { LoadingSpinner } from './LoadingSpinner';
 
@@ -89,6 +89,8 @@ export const AgentRunLogsDialog: React.FC<AgentRunLogsDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedLogTypes, setSelectedLogTypes] = useState<Set<AgentRunLogType>>(new Set());
+
+  const apiClient = getAPIClient();
 
   const loadLogs = async (page = 1) => {
     setIsLoading(true);
@@ -315,4 +317,3 @@ export const AgentRunLogsDialog: React.FC<AgentRunLogsDialogProps> = ({
     </div>
   );
 };
-
