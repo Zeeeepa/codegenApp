@@ -32,7 +32,13 @@ export async function getCredentials(): Promise<Preferences> {
   const preferences = await getPreferenceValues();
  
   if (!preferences.apiToken) {
-    throw new Error("API token is required. Please set it in extension preferences.");
+    console.log("🔧 Development mode: No API token configured, will use mock data");
+    // Don't throw error in development mode - return empty token
+    return {
+      ...preferences,
+      apiToken: '',
+      apiBaseUrl: DEFAULT_API_BASE_URL
+    };
   }
   // Check for environment variable first, then preferences, then default
   // Only use env var if it's not empty
