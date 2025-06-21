@@ -234,8 +234,8 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
       }
     };
 
-    // Poll every 30 seconds for active runs
-    const pollInterval = setInterval(pollActiveRuns, 30000);
+    // Poll every 5 seconds for active runs (faster updates)
+    const pollInterval = setInterval(pollActiveRuns, 5000);
     
     // Initial poll
     pollActiveRuns();
