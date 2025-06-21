@@ -23,7 +23,7 @@ import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
 import { getAPIClient } from "./api/client";
 import { getAgentRunCache } from "./storage/agentRunCache";
-import { AgentRunStatus, AgentRunFilters, CachedAgentRun } from "./api/types";
+import { AgentRunStatus, CachedAgentRun } from "./api/types";
 import { getDateRanges, getStatusFilterOptions, hasActiveFilters, clearFilters } from "./utils/filtering";
 import { SyncStatus } from "./storage/cacheTypes";
 
