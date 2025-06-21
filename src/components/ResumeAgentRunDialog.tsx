@@ -56,7 +56,7 @@ export function ResumeAgentRunDialog({
 
     setIsLoading(true);
     try {
-      console.log("🚀 Opening browser to resume agent run:", {
+      console.log("🚀 Automating browser to resume agent run:", {
         organizationId,
         agentRunId,
         prompt: prompt.trim(),
@@ -66,26 +66,124 @@ export function ResumeAgentRunDialog({
       // Construct the Codegen chat URL for this agent run
       const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
       
-      // Open the URL in a new browser tab/window
-      // The browser will handle the authentication via existing session
-      window.open(chatUrl, '_blank', 'noopener,noreferrer');
+      // Open invisible browser window
+      const browserWindow = window.open(chatUrl, '_blank', 'width=1,height=1,left=-1000,top=-1000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no');
       
-      // Copy the prompt to clipboard so user can easily paste it
-      await navigator.clipboard.writeText(prompt.trim());
+      if (!browserWindow) {
+        throw new Error("Failed to open browser window - popup blocked?");
+      }
+
+      // Wait for page to load and then automate the chat input
+      setTimeout(async () => {
+        try {
+          const doc = browserWindow.document;
+          
+          // Wait a bit more for the page to fully load
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Try primary XPath selector first
+          let chatInput = doc.evaluate(
+            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div',
+            doc,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null
+          ).singleNodeValue as HTMLElement;
+          
+          // Fallback to CSS selector if XPath fails
+          if (!chatInput) {
+            chatInput = doc.querySelector('#chat-bar > div > div.sidebar-inset.flex.justify-center > div > form > fieldset > div') as HTMLElement;
+          }
+          
+          // If still not found, try to find any textarea or input in the chat area
+          if (!chatInput) {
+            chatInput = doc.querySelector('#chat-bar textarea, #chat-bar input[type="text"]') as HTMLElement;
+          }
+          
+          if (!chatInput) {
+            throw new Error("Could not find chat input element");
+          }
+          
+          // Focus and set the text
+          chatInput.focus();
+          if (chatInput.tagName.toLowerCase() === 'textarea' || chatInput.tagName.toLowerCase() === 'input') {
+            (chatInput as HTMLInputElement | HTMLTextAreaElement).value = prompt.trim();
+            
+            // Trigger input events to ensure React state updates
+            chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+            chatInput.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          
+          // Wait a moment for React to process the input
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Find and click the send button
+          let sendButton = doc.evaluate(
+            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div/div[2]/div[2]/button',
+            doc,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null
+          ).singleNodeValue as HTMLButtonElement;
+          
+          // Fallback CSS selector for send button
+          if (!sendButton) {
+            sendButton = doc.querySelector('#chat-bar > div > div.sidebar-inset.flex.justify-center > div > form > fieldset > div > div.flex.items-center.justify-between > div.flex.items-center.gap-3 > button') as HTMLButtonElement;
+          }
+          
+          // Generic fallback - look for any submit button in the chat area
+          if (!sendButton) {
+            sendButton = doc.querySelector('#chat-bar button[type="submit"], #chat-bar button:last-child') as HTMLButtonElement;
+          }
+          
+          if (sendButton) {
+            sendButton.click();
+            
+            // Wait for message to be sent
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Close the browser window
+            browserWindow.close();
+            
+            toast.success(`Agent run #${agentRunId} has been resumed successfully!`);
+            
+            // Update agent state and refresh
+            setPrompt("Continue with the previous task"); // Reset to default
+            onResumed?.(); // Trigger refresh to show updated status
+            onClose();
+          } else {
+            throw new Error("Could not find send button");
+          }
+          
+        } catch (automationError) {
+          console.error("Browser automation failed:", automationError);
+          browserWindow.close();
+          
+          // Fallback to the manual approach
+          const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
+          await navigator.clipboard.writeText(prompt.trim());
+          
+          toast.error(`Automation failed. Opened agent run in browser - please paste your message: "${prompt.trim()}"`);
+          
+          setPrompt("Continue with the previous task");
+          onResumed?.();
+          onClose();
+        }
+      }, 2000); // Wait 2 seconds for initial page load
       
-      toast.success(`Opened agent run #${agentRunId} in browser. Your message has been copied to clipboard - paste it in the chat!`);
-      
-      setPrompt("Continue with the previous task"); // Reset to default
-      onResumed?.(); // Trigger refresh
-      onClose();
     } catch (error) {
-      console.error("Failed to open browser or copy to clipboard:", error);
+      console.error("Failed to automate browser:", error);
       
-      // Fallback: just open the URL without clipboard
+      // Fallback to manual approach
       const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
       window.open(chatUrl, '_blank', 'noopener,noreferrer');
       
-      toast.success(`Opened agent run #${agentRunId} in browser. Please paste your message: "${prompt.trim()}"`);
+      try {
+        await navigator.clipboard.writeText(prompt.trim());
+        toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
+      } catch {
+        toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
+      }
       
       setPrompt("Continue with the previous task");
       onResumed?.();
@@ -112,7 +210,7 @@ export function ResumeAgentRunDialog({
           <div className="flex items-center space-x-3">
             <Play className="h-6 w-6 text-green-400" />
             <h2 className="text-xl font-semibold text-white">
-              Continue Agent Run #{agentRunId}
+              Resume Agent Run #{agentRunId}
             </h2>
           </div>
           <button
@@ -170,11 +268,11 @@ export function ResumeAgentRunDialog({
                     </div>
                   )}
 
-                  {/* Continue Instructions */}
+                  {/* Resume Instructions */}
                   <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-3">
                     <p className="text-blue-200 text-sm">
-                      💡 <strong>Continue Instructions:</strong> Enter your message and click "Open in Browser". 
-                      This will open the agent chat in a new tab with your message copied to clipboard for easy pasting.
+                      💡 <strong>Resume Instructions:</strong> Enter a prompt to continue this agent run. 
+                      The system will automatically open the agent chat and send your message.
                     </p>
                   </div>
                 </div>
@@ -201,7 +299,7 @@ export function ResumeAgentRunDialog({
                   disabled={isLoading}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Press Cmd+Enter (Mac) or Ctrl+Enter (Windows) to open in browser
+                  Press Cmd+Enter (Mac) or Ctrl+Enter (Windows) to resume
                 </p>
               </div>
 
@@ -221,12 +319,12 @@ export function ResumeAgentRunDialog({
                   {isLoading ? (
                     <>
                       <Loader className="h-4 w-4 animate-spin mr-2" />
-                      Opening...
+                      Resuming...
                     </>
                   ) : (
                     <>
                       <Send className="h-4 w-4 mr-2" />
-                      Open in Browser
+                      Resume Agent Run
                     </>
                   )}
                 </button>
