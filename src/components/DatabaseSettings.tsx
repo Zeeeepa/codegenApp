@@ -1,81 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import { Database, Plus, TestTube, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Database, Plus, TestTube, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-interface DatabaseConfig {
-  id?: number;
-  name: string;
-  host: string;
-  port: number;
-  database_name: string;
-  username: string;
-  password?: string;
-  is_active: boolean;
-}
+import { useApi, type DatabaseConfig } from '../utils/api';
 
 interface DatabaseSettingsProps {
-  apiBaseUrl: string;
+  apiBaseUrl?: string; // Made optional since we use centralized API client
 }
 
-const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({ apiBaseUrl }) => {
+const INITIAL_CONFIG: Omit<DatabaseConfig, 'id' | 'created_at' | 'updated_at'> = {
+  name: '',
+  host: 'localhost',
+  port: 5432,
+  database_name: '',
+  username: 'postgres',
+  password: '',
+  is_active: false,
+};
+
+const DatabaseSettings: React.FC<DatabaseSettingsProps> = () => {
   const [configs, setConfigs] = useState<DatabaseConfig[]>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [newConfig, setNewConfig] = useState<DatabaseConfig>({
-    name: '',
-    host: 'localhost',
-    port: 5432,
-    database_name: '',
-    username: 'postgres',
-    password: '',
-    is_active: false
-  });
+  const [testingConnection, setTestingConnection] = useState<number | null>(null);
+  const [newConfig, setNewConfig] = useState(INITIAL_CONFIG);
+
+  const api = useApi();
+
+  // Memoized validation
+  const isConfigValid = useMemo(() => {
+    return !!(newConfig.name?.trim() && 
+             newConfig.host?.trim() && 
+             newConfig.database_name?.trim() && 
+             newConfig.username?.trim());
+  }, [newConfig]);
+
+  const loadConfigs = useCallback(async () => {
+    const response = await api.getDatabaseConfigs();
+    if (response.success && response.data) {
+      setConfigs(response.data);
+    } else {
+      console.error('Failed to load database configs:', response.error);
+      toast.error('Failed to load database configurations');
+    }
+  }, [api]);
 
   useEffect(() => {
     loadConfigs();
-  }, []);
+  }, [loadConfigs]);
 
-  const loadConfigs = async () => {
-    try {
-      const response = await fetch(`${apiBaseUrl}/database/configs`);
-      if (response.ok) {
-        const data = await response.json();
-        setConfigs(data);
-      }
-    } catch (error) {
-      console.error('Failed to load database configs:', error);
+  const testConnection = useCallback(async (config: DatabaseConfig, configId?: number) => {
+    if (configId !== undefined) {
+      setTestingConnection(configId);
     }
-  };
-
-  const testConnection = async (config: DatabaseConfig) => {
-    setTestingConnection(true);
+    
     try {
-      const response = await fetch(`${apiBaseUrl}/database/test-connection`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
-      });
+      const response = await api.testDatabaseConnection(config);
       
-      const result = await response.json();
-      
-      if (result.success) {
+      if (response.success && response.data?.success) {
         toast.success('✅ Database connection successful!');
         return true;
       } else {
-        toast.error(`❌ Connection failed: ${result.error}`);
+        toast.error(`❌ Connection failed: ${response.data?.message || response.error}`);
         return false;
       }
     } catch (error) {
-      toast.error(`❌ Connection test failed: ${error}`);
+      toast.error(`❌ Connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return false;
     } finally {
-      setTestingConnection(false);
+      setTestingConnection(null);
     }
-  };
+  }, [api]);
 
-  const createDatabase = async () => {
-    if (!newConfig.name || !newConfig.host || !newConfig.database_name || !newConfig.username) {
+  const createDatabase = useCallback(async () => {
+    if (!isConfigValid) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -85,43 +82,33 @@ const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({ apiBaseUrl }) => {
       // First test the connection
       const connectionOk = await testConnection(newConfig);
       if (!connectionOk) {
-        setLoading(false);
         return;
       }
 
       // Save the configuration
-      const response = await fetch(`${apiBaseUrl}/database/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newConfig,
-          password_encrypted: newConfig.password // In production, encrypt this
-        })
+      const response = await api.saveDatabaseConfig({
+        ...newConfig,
+        password_encrypted: newConfig.password, // TODO: Implement proper encryption
       });
 
-      if (response.ok) {
+      if (response.success) {
         toast.success('✅ Database configuration saved!');
         setShowCreateDialog(false);
-        setNewConfig({
-          name: '',
-          host: 'localhost',
-          port: 5432,
-          database_name: '',
-          username: 'postgres',
-          password: '',
-          is_active: false
-        });
-        loadConfigs();
+        setNewConfig(INITIAL_CONFIG);
+        await loadConfigs();
       } else {
-        const error = await response.json();
-        toast.error(`❌ Failed to save config: ${error.error}`);
+        toast.error(`❌ Failed to save config: ${response.error}`);
       }
     } catch (error) {
-      toast.error(`❌ Error: ${error}`);
+      toast.error(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
-  };
+  }, [isConfigValid, newConfig, testConnection, api, loadConfigs]);
+
+  const handleConfigChange = useCallback((field: keyof typeof newConfig, value: string | number | boolean) => {
+    setNewConfig(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -160,12 +147,16 @@ const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({ apiBaseUrl }) => {
                     </span>
                   )}
                   <button
-                    onClick={() => testConnection(config)}
-                    disabled={testingConnection}
-                    className="flex items-center space-x-1 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                    onClick={() => testConnection(config, config.id)}
+                    disabled={testingConnection === config.id}
+                    className="flex items-center space-x-1 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors disabled:opacity-50"
                   >
-                    <TestTube className="w-3 h-3" />
-                    <span>Test</span>
+                    {testingConnection === config.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <TestTube className="w-3 h-3" />
+                    )}
+                    <span>{testingConnection === config.id ? 'Testing...' : 'Test'}</span>
                   </button>
                 </div>
               </div>
@@ -201,7 +192,7 @@ const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({ apiBaseUrl }) => {
                 <input
                   type="text"
                   value={newConfig.name}
-                  onChange={(e) => setNewConfig({ ...newConfig, name: e.target.value })}
+                  onChange={(e) => handleConfigChange('name', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="My Database"
                 />
@@ -215,7 +206,7 @@ const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({ apiBaseUrl }) => {
                   <input
                     type="text"
                     value={newConfig.host}
-                    onChange={(e) => setNewConfig({ ...newConfig, host: e.target.value })}
+                    onChange={(e) => handleConfigChange('host', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="localhost"
                   />
@@ -227,7 +218,7 @@ const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({ apiBaseUrl }) => {
                   <input
                     type="number"
                     value={newConfig.port}
-                    onChange={(e) => setNewConfig({ ...newConfig, port: parseInt(e.target.value) })}
+                    onChange={(e) => handleConfigChange('port', parseInt(e.target.value) || 5432)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="5432"
                   />
@@ -241,7 +232,7 @@ const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({ apiBaseUrl }) => {
                 <input
                   type="text"
                   value={newConfig.database_name}
-                  onChange={(e) => setNewConfig({ ...newConfig, database_name: e.target.value })}
+                  onChange={(e) => handleConfigChange('database_name', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="codegenapp"
                 />
@@ -254,7 +245,7 @@ const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({ apiBaseUrl }) => {
                 <input
                   type="text"
                   value={newConfig.username}
-                  onChange={(e) => setNewConfig({ ...newConfig, username: e.target.value })}
+                  onChange={(e) => handleConfigChange('username', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="postgres"
                 />
@@ -266,8 +257,8 @@ const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({ apiBaseUrl }) => {
                 </label>
                 <input
                   type="password"
-                  value={newConfig.password}
-                  onChange={(e) => setNewConfig({ ...newConfig, password: e.target.value })}
+                  value={newConfig.password || ''}
+                  onChange={(e) => handleConfigChange('password', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter password"
                 />
@@ -278,7 +269,7 @@ const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({ apiBaseUrl }) => {
                   type="checkbox"
                   id="is_active"
                   checked={newConfig.is_active}
-                  onChange={(e) => setNewConfig({ ...newConfig, is_active: e.target.checked })}
+                  onChange={(e) => handleConfigChange('is_active', e.target.checked)}
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <label htmlFor="is_active" className="text-sm text-gray-700">
@@ -296,10 +287,17 @@ const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({ apiBaseUrl }) => {
               </button>
               <button
                 onClick={createDatabase}
-                disabled={loading || testingConnection}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                disabled={loading || testingConnection !== null || !isConfigValid}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating...' : 'Create & Test'}
+                {loading ? (
+                  <span className="flex items-center justify-center space-x-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Creating...</span>
+                  </span>
+                ) : (
+                  'Create & Test'
+                )}
               </button>
             </div>
           </div>

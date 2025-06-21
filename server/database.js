@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import bcrypt from 'bcrypt';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -199,8 +200,17 @@ class Database {
     const query = `
       INSERT INTO database_configs (name, host, port, database_name, username, password_encrypted, is_active)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING *
+      RETURNING id, name, host, port, database_name, username, is_active, created_at
     `;
+    
+    // Encrypt password if provided
+    let encryptedPassword = null;
+    if (config.password) {
+      const saltRounds = 12;
+      encryptedPassword = await bcrypt.hash(config.password, saltRounds);
+    } else if (config.password_encrypted) {
+      encryptedPassword = config.password_encrypted;
+    }
     
     const values = [
       config.name,
@@ -208,7 +218,7 @@ class Database {
       config.port,
       config.database_name,
       config.username,
-      config.password_encrypted, // Should be encrypted before passing here
+      encryptedPassword,
       config.is_active || false
     ];
     

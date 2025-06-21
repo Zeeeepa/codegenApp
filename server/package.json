@@ -1,21 +1,39 @@
 {
-  "name": "agent-run-manager-server",
-  "version": "1.0.0",
-  "description": "Backend proxy server for Agent Run Manager",
+  "name": "codegen-app-server",
+  "version": "2.0.0",
+  "description": "Modern backend server for CodegenApp with PostgreSQL integration",
   "main": "index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "test": "vitest",
+    "lint": "eslint . --ext js --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext js --fix",
+    "db:migrate": "node database-migrate.js",
+    "db:test": "node test-database.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "node-fetch": "^3.3.2",
-    "pg": "^8.11.3"
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "joi": "^17.14.0",
+    "pg": "^8.13.1",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
-  },
-  "type": "module"
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "nodemon": "^3.1.9",
+    "supertest": "^7.0.0",
+    "vitest": "^2.1.8"
+  }
 }
+
