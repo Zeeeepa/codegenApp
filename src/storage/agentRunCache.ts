@@ -133,25 +133,14 @@ export class AgentRunCache {
       
       const apiClient = getAPIClient();
       
-      // For now, we'll implement a simple approach since the API doesn't have a list endpoint
-      // In a real implementation, you might need to track agent run IDs separately
-      const cachedRuns = await this.getAgentRuns(organizationId);
-      const updatedRuns: AgentRunResponse[] = [];
-      
-      // Update existing runs that might have changed status
-      for (const cachedRun of cachedRuns) {
-        try {
-          const updatedRun = await apiClient.getAgentRun(organizationId, cachedRun.id);
-          updatedRuns.push(updatedRun);
-        } catch (error) {
-          // If we can't fetch a run, keep the cached version
-          console.warn(`Failed to update agent run ${cachedRun.id}:`, error);
-          updatedRuns.push(cachedRun);
-        }
-      }
+      // ✅ Use the working list endpoint to fetch all agent runs
+      const response = await apiClient.listAgentRuns(organizationId);
+      const updatedRuns = response.items || [];
 
       await this.setAgentRuns(organizationId, updatedRuns);
       await this.setSyncStatus(organizationId, SyncStatus.SUCCESS);
+      
+      console.log(`✅ Synced ${updatedRuns.length} agent runs for organization ${organizationId}`);
       
       return {
         status: SyncStatus.SUCCESS,
@@ -315,6 +304,28 @@ export class AgentRunCache {
     // Check each tracked run for status changes
     for (const trackedRun of trackedRuns) {
       try {
+        // Skip monitoring completed runs unless they were recently responded to
+        if (trackedRun.lastKnownStatus === 'COMPLETE') {
+          // Check if this run was recently responded to (within last 5 minutes)
+          const key = this.getTrackedRunKey(organizationId, trackedRun.id);
+          const cached = this.cache.get(key);
+          
+          if (cached) {
+            try {
+              const entry: TrackedAgentRunCacheEntry = JSON.parse(cached);
+              const lastUpdated = new Date(entry.timestamp);
+              const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+              
+              if (lastUpdated < fiveMinutesAgo) {
+                console.log(`Skipping monitoring for completed run ${trackedRun.id} (no recent activity)`);
+                continue;
+              }
+            } catch (error) {
+              console.error(`Error checking last updated time for run ${trackedRun.id}:`, error);
+            }
+          }
+        }
+
         const currentRun = await apiClient.getAgentRun(organizationId, trackedRun.id);
         if (currentRun && currentRun.status !== trackedRun.lastKnownStatus) {
           // Status has changed!
@@ -496,6 +507,28 @@ export class AgentRunCache {
         this.metadata = JSON.parse(stored);
       } catch (error) {
         console.error("Error loading cache metadata:", error);
+      }
+    }
+  }
+
+  /**
+   * Resume monitoring for a specific agent run (used when user responds to a completed run)
+   */
+  async resumeMonitoring(organizationId: number, agentRunId: number): Promise<void> {
+    const key = this.getTrackedRunKey(organizationId, agentRunId);
+    const cached = this.cache.get(key);
+    
+    if (cached) {
+      try {
+        const entry: TrackedAgentRunCacheEntry = JSON.parse(cached);
+        // Mark as actively monitored again
+        entry.data.lastKnownStatus = "ACTIVE"; // Assume it becomes active when user responds
+        entry.timestamp = new Date().toISOString();
+        
+        this.cache.set(key, JSON.stringify(entry));
+        console.log(`Resumed monitoring for agent run ${agentRunId} in org ${organizationId}`);
+      } catch (error) {
+        console.error(`Error resuming monitoring for run ${agentRunId}:`, error);
       }
     }
   }

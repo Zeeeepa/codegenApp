@@ -1,6 +1,8 @@
 import { showToast, ToastStyle } from "../utils/toast";
 import { getCredentials, showCredentialsError, validateCredentials } from "../utils/credentials";
 import { clearStoredUserInfo } from "../storage/userStorage";
+import { getBackgroundMonitoringService } from "../utils/backgroundMonitoring";
+import { getAgentRunCache } from "../storage/agentRunCache";
 import { API_ENDPOINTS, DEFAULT_API_BASE_URL } from "./constants";
 import {
   AgentRunResponse,
@@ -91,6 +93,7 @@ export class CodegenAPIClient {
 
   private async handleAPIError(response: Response): Promise<never> {
     let errorMessage = `Request failed with status ${response.status}`;
+    let userFriendlyMessage = '';
     
     try {
       const errorData = await response.json() as APIError;
@@ -109,6 +112,18 @@ export class CodegenAPIClient {
       throw new Error("Access denied");
     }
 
+    if (response.status === 404) {
+      if (response.url?.includes('/resume')) {
+        userFriendlyMessage = "Resume endpoint not found. The agent run may not support resuming, or the API structure has changed.";
+        await showToast({
+          style: ToastStyle.Failure,
+          title: "Endpoint Not Found",
+          message: userFriendlyMessage,
+        });
+        throw new Error(userFriendlyMessage);
+      }
+    }
+
     if (response.status === 429) {
       await showToast({
         style: ToastStyle.Failure,
@@ -118,10 +133,29 @@ export class CodegenAPIClient {
       throw new Error("Rate limit exceeded");
     }
 
+    // Handle server errors
+    if (response.status >= 500) {
+      userFriendlyMessage = "Server error occurred. Please try again later.";
+      await showToast({
+        style: ToastStyle.Failure,
+        title: "Server Error",
+        message: userFriendlyMessage,
+      });
+      throw new Error(userFriendlyMessage);
+    }
+
     await showToast({
       style: ToastStyle.Failure,
       title: "API Error",
       message: errorMessage,
+    });
+
+    // Log detailed error for debugging
+    console.error(`❌ API request failed for ${response.url}:`, {
+      status: response.status,
+      statusText: response.statusText,
+      message: errorMessage,
+      url: response.url,
     });
 
     throw new Error(errorMessage);
@@ -132,12 +166,55 @@ export class CodegenAPIClient {
     organizationId: number,
     request: CreateAgentRunRequest
   ): Promise<AgentRunResponse> {
-    return this.makeRequest<AgentRunResponse>(
+    const response = await this.makeRequest<AgentRunResponse>(
       API_ENDPOINTS.AGENT_RUN_CREATE(organizationId),
       {
         method: "POST",
         body: JSON.stringify(request),
       }
+    );
+
+    // Automatically add the new agent run to monitoring
+    try {
+      const cache = getAgentRunCache();
+      const monitoringService = getBackgroundMonitoringService();
+      
+      // Add to cache and tracking
+      await cache.updateAgentRun(organizationId, response);
+      
+      // Start monitoring service if not already running
+      if (!monitoringService.isMonitoring()) {
+        await monitoringService.start();
+      }
+      
+      console.log(`✅ Agent run #${response.id} automatically added to monitoring`);
+      
+      await showToast({
+        style: ToastStyle.Success,
+        title: "Agent Run Created",
+        message: `Run #${response.id} created and added to monitoring`,
+      });
+      
+    } catch (monitoringError) {
+      console.error('Failed to add agent run to monitoring:', monitoringError);
+      // Don't fail the creation if monitoring fails
+      await showToast({
+        style: ToastStyle.Warning,
+        title: "Monitoring Setup Failed",
+        message: `Run #${response.id} created but monitoring setup failed`,
+      });
+    }
+
+    return response;
+  }
+
+  async listAgentRuns(
+    organizationId: number
+  ): Promise<{ items: AgentRunResponse[] }> {
+    // ✅ ENDPOINT VALIDATION: List agent runs is WORKING
+    // Tested endpoint returns 200: GET /v1/organizations/{orgId}/agent/runs
+    return this.makeRequest<{ items: AgentRunResponse[] }>(
+      API_ENDPOINTS.AGENT_RUN_LIST(organizationId)
     );
   }
 
@@ -145,35 +222,61 @@ export class CodegenAPIClient {
     organizationId: number,
     agentRunId: number
   ): Promise<AgentRunResponse> {
-    return this.makeRequest<AgentRunResponse>(
-      API_ENDPOINTS.AGENT_RUN_GET(organizationId, agentRunId)
-    );
+    // ❌ ENDPOINT VALIDATION: Individual agent run details NOT available via REST API
+    // Tested endpoint returns 404: GET /v1/organizations/{orgId}/agent/run/{id}
+    
+    const errorMessage = "Individual agent run details are not available via the Codegen REST API. " +
+      "Please use the agent runs list or web interface to view agent run information.";
+    
+    await showToast({
+      style: ToastStyle.Failure,
+      title: "Feature Not Available",
+      message: errorMessage,
+    });
+    
+    throw new Error(errorMessage);
   }
 
   async resumeAgentRun(
     organizationId: number,
     request: ResumeAgentRunRequest
   ): Promise<AgentRunResponse> {
-    return this.makeRequest<AgentRunResponse>(
-      API_ENDPOINTS.AGENT_RUN_RESUME(organizationId),
-      {
-        method: "POST",
-        body: JSON.stringify(request),
-      }
-    );
+    // ❌ ENDPOINT VALIDATION: Resume functionality is NOT available via REST API
+    // All tested resume endpoints return 404:
+    // - POST /v1/organizations/{orgId}/agent/run/{id}/resume
+    // - POST /v1/organizations/{orgId}/agent/run/{id}/continue  
+    // - POST /v1/organizations/{orgId}/agent-runs/{id}/resume
+    // - POST /v1/beta/organizations/{orgId}/agent/run/resume
+    
+    const errorMessage = "Resume functionality is not available via the Codegen REST API. " +
+      "Please use the web interface to interact with running agents.";
+    
+    await showToast({
+      style: ToastStyle.Failure,
+      title: "Feature Not Available",
+      message: errorMessage,
+    });
+    
+    throw new Error(errorMessage);
   }
 
   async stopAgentRun(
     organizationId: number,
     request: StopAgentRunRequest
   ): Promise<AgentRunResponse> {
-    return this.makeRequest<AgentRunResponse>(
-      API_ENDPOINTS.AGENT_RUN_STOP(organizationId),
-      {
-        method: "POST",
-        body: JSON.stringify(request),
-      }
-    );
+    // ❌ ENDPOINT VALIDATION: Stop functionality is NOT available via REST API
+    // Tested endpoint returns 404: POST /v1/organizations/{orgId}/agent/run/{id}/stop
+    
+    const errorMessage = "Stop functionality is not available via the Codegen REST API. " +
+      "Please use the web interface to stop running agents.";
+    
+    await showToast({
+      style: ToastStyle.Failure,
+      title: "Feature Not Available", 
+      message: errorMessage,
+    });
+    
+    throw new Error(errorMessage);
   }
 
   // Organization Methods
