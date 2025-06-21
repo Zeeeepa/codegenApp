@@ -18,8 +18,10 @@ import {
   FileText
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
+import { useDialog } from "./contexts/DialogContext";
 import { MonitorSelectedButton, AddToMonitorButton } from "./components/MonitorSelectedButton";
 import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
+import { ResumeAgentRunDialog } from "./components/ResumeAgentRunDialog";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
 import { getAPIClient } from "./api/client";
 import { getAgentRunCache } from "./storage/agentRunCache";
@@ -41,6 +43,7 @@ export default function ListAgentRuns() {
   } = useCachedAgentRuns();
 
   const selection = useAgentRunSelection();
+  const { openDialog, closeDialog, isDialogOpen, dialogData } = useDialog();
   const [searchText, setSearchText] = useState("");
   const [dateRanges] = useState(() => getDateRanges());
   const [responseModalRun, setResponseModalRun] = useState<CachedAgentRun | null>(null);
@@ -166,24 +169,12 @@ export default function ListAgentRuns() {
     }
   };
 
-  // Resume an agent run
-  const resumeAgentRun = async (agentRunId: number) => {
+  // Resume an agent run - now opens dialog for user input
+  const resumeAgentRun = (agentRunId: number) => {
     if (!organizationId) return;
-
-    try {
-      // For resume, we need a prompt - this is a simplified version
-      // In a real implementation, you might want to show a form for the resume prompt
-      await apiClient.resumeAgentRun(organizationId, {
-        agent_run_id: agentRunId,
-        prompt: "Continue with the previous task",
-      });
-
-      toast.success(`Agent run #${agentRunId} has been resumed`);
-
-      await refresh();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to resume agent run");
-    }
+    
+    // Open the resume dialog with the agent run ID
+    openDialog('resume-run', { agentRunId, organizationId });
   };
 
   // Respond to an agent run (for stopped/failed runs)
@@ -475,7 +466,10 @@ export default function ListAgentRuns() {
               const statusDisplay = getStatusDisplay(run.status);
               const StatusIcon = statusDisplay.icon;
               const canStop = run.status === AgentRunStatus.ACTIVE;
-              const canResume = run.status === AgentRunStatus.PAUSED;
+              const canResume = run.status === AgentRunStatus.PAUSED || 
+                                run.status === AgentRunStatus.COMPLETE ||
+                                run.status.toLowerCase() === 'stopped' ||
+                                run.status.toLowerCase() === 'paused';
               const canRespond = [
                 AgentRunStatus.FAILED,
                 AgentRunStatus.ERROR,
@@ -519,9 +513,29 @@ export default function ListAgentRuns() {
                         />
                         <StatusIcon className={`h-5 w-5 ${statusDisplay.color}`} />
                       </div>
-                      <div>
-                        <h3 className="text-lg font-medium text-white">Agent Run #{run.id}</h3>
-                        <p className="text-sm text-gray-500">Created {formatDate(run.created_at)}</p>
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="text-lg font-medium text-white">Agent Run #{run.id}</h3>
+                          {/* Monitoring indicator */}
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-900/50 text-green-300 border border-green-500/30">
+                            🔍 Monitored
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <span>Created {formatDate(run.created_at)}</span>
+                          {run.result && (
+                            <span className="text-blue-400">• Has Response</span>
+                          )}
+                          {run.web_url && (
+                            <span className="text-purple-400">• Web URL Available</span>
+                          )}
+                        </div>
+                        {/* Show brief result preview if available */}
+                        {run.result && (
+                          <p className="text-sm text-gray-400 mt-1 line-clamp-2 max-w-md">
+                            {run.result.length > 100 ? `${run.result.substring(0, 100)}...` : run.result}
+                          </p>
+                        )}
                       </div>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusDisplay.color.replace('text-', 'bg-').replace('-600', '-100')} ${statusDisplay.color}`}>
                         {run.status}
@@ -606,6 +620,17 @@ export default function ListAgentRuns() {
             run={responseModalRun}
             isOpen={!!responseModalRun}
             onClose={() => setResponseModalRun(null)}
+          />
+        )}
+        
+        {/* Resume Agent Run Dialog */}
+        {isDialogOpen('resume-run') && dialogData && (
+          <ResumeAgentRunDialog
+            isOpen={isDialogOpen('resume-run')}
+            onClose={closeDialog}
+            agentRunId={dialogData.agentRunId}
+            organizationId={dialogData.organizationId}
+            onResumed={refresh}
           />
         )}
       </div>
