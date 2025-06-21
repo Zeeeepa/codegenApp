@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AgentRunWithLogsResponse, AgentRunLog, AgentRunLogMessageType } from '../api/types';
 import { getAPIClient } from '../api/client';
 import { showToast, ToastStyle } from '../utils/toast';
@@ -24,7 +24,7 @@ export function AgentRunLogsViewer({ organizationId, agentRunId, onClose }: Agen
   const apiClient = getAPIClient();
 
   // Load logs data
-  const loadLogs = async (page: number = 1, limit: number = 50) => {
+  const loadLogs = useCallback(async (page: number = 1, limit: number = 50) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -49,7 +49,7 @@ export function AgentRunLogsViewer({ organizationId, agentRunId, onClose }: Agen
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [organizationId, agentRunId]);
 
   // Filter logs based on selected message types
   useEffect(() => {
@@ -71,7 +71,7 @@ export function AgentRunLogsViewer({ organizationId, agentRunId, onClose }: Agen
   // Initial load
   useEffect(() => {
     loadLogs(1, 50);
-  }, [organizationId, agentRunId]);
+  }, [loadLogs]);
 
   // Handle page change
   const handlePageChange = (page: number) => {
@@ -222,4 +222,3 @@ export function AgentRunLogsViewer({ organizationId, agentRunId, onClose }: Agen
     </div>
   );
 }
-
