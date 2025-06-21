@@ -155,13 +155,25 @@ export class CodegenAPIClient {
     organizationId: number,
     request: ResumeAgentRunRequest
   ): Promise<AgentRunResponse> {
-    return this.makeRequest<AgentRunResponse>(
-      API_ENDPOINTS.AGENT_RUN_RESUME(organizationId),
-      {
-        method: "POST",
-        body: JSON.stringify(request),
+    try {
+      return await this.makeRequest<AgentRunResponse>(
+        API_ENDPOINTS.AGENT_RUN_RESUME(organizationId),
+        {
+          method: "POST",
+          body: JSON.stringify(request),
+        }
+      );
+    } catch (error) {
+      // If the resume endpoint doesn't exist, create a new agent run as a workaround
+      if (error instanceof Error && error.message.includes("404")) {
+        console.log("Resume endpoint not available, creating new agent run as workaround");
+        return await this.createAgentRun(organizationId, {
+          prompt: `[Resume agent run #${request.agent_run_id}] ${request.prompt}`,
+          images: request.images
+        });
       }
-    );
+      throw error;
+    }
   }
 
   async stopAgentRun(
@@ -181,13 +193,25 @@ export class CodegenAPIClient {
     organizationId: number,
     request: MessageAgentRunRequest
   ): Promise<AgentRunResponse> {
-    return this.makeRequest<AgentRunResponse>(
-      API_ENDPOINTS.AGENT_RUN_MESSAGE(organizationId),
-      {
-        method: "POST",
-        body: JSON.stringify(request),
+    try {
+      return await this.makeRequest<AgentRunResponse>(
+        API_ENDPOINTS.AGENT_RUN_MESSAGE(organizationId),
+        {
+          method: "POST",
+          body: JSON.stringify(request),
+        }
+      );
+    } catch (error) {
+      // If the message endpoint doesn't exist, create a new agent run as a workaround
+      if (error instanceof Error && error.message.includes("404")) {
+        console.log("Message endpoint not available, creating new agent run as workaround");
+        return await this.createAgentRun(organizationId, {
+          prompt: `[Follow-up to agent run #${request.agent_run_id}] ${request.prompt}`,
+          images: request.images
+        });
       }
-    );
+      throw error;
+    }
   }
 
   async listAgentRuns(
