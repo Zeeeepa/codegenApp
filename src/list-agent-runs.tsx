@@ -165,7 +165,20 @@ export default function ListAgentRuns() {
       // Refresh to get updated status
       await refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to stop agent run");
+      console.error("Stop agent run error:", error);
+      
+      // Enhanced error handling with more specific messages
+      if (error instanceof Error) {
+        if (error.message.includes('404')) {
+          toast.error(`Stop endpoint not found. The stop feature may not be available for agent run #${agentRunId}.`);
+        } else if (error.message.includes('403')) {
+          toast.error(`Permission denied. You may not have access to stop agent run #${agentRunId}.`);
+        } else {
+          toast.error(`Failed to stop agent run: ${error.message}`);
+        }
+      } else {
+        toast.error("Failed to stop agent run: Unknown error");
+      }
     }
   };
 
@@ -199,7 +212,20 @@ export default function ListAgentRuns() {
 
       await refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to respond to agent run");
+      console.error("Respond to agent run error:", error);
+      
+      // Enhanced error handling with more specific messages
+      if (error instanceof Error) {
+        if (error.message.includes('404')) {
+          toast.error(`Resume endpoint not found. The respond feature may not be available for agent run #${agentRunId}.`);
+        } else if (error.message.includes('403')) {
+          toast.error(`Permission denied. You may not have access to respond to agent run #${agentRunId}.`);
+        } else {
+          toast.error(`Failed to respond to agent run: ${error.message}`);
+        }
+      } else {
+        toast.error("Failed to respond to agent run: Unknown error");
+      }
     }
   };
 
