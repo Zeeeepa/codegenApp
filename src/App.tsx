@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import ListAgentRuns from './list-agent-runs';
@@ -8,6 +8,7 @@ import { DialogProvider, useDialog } from './contexts/DialogContext';
 import { CreateAgentRunDialog } from './components/CreateAgentRunDialog';
 import { SettingsDialog } from './components/SettingsDialog';
 import { validateEnvironmentConfiguration } from './utils/preferences';
+import { getBackgroundMonitoringService } from './utils/backgroundMonitoring';
 import './App.css';
 
 // Simple header component
@@ -69,6 +70,23 @@ function AppContent() {
 }
 
 function App() {
+  // Initialize monitoring service on app startup
+  useEffect(() => {
+    const initializeMonitoring = async () => {
+      try {
+        const monitoringService = getBackgroundMonitoringService();
+        if (!monitoringService.isMonitoring()) {
+          await monitoringService.start();
+          console.log('✅ Background monitoring initialized on app startup');
+        }
+      } catch (error) {
+        console.error('Failed to initialize background monitoring:', error);
+      }
+    };
+
+    initializeMonitoring();
+  }, []);
+
   return (
     <Router
       future={{

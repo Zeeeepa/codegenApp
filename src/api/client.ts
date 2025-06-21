@@ -1,6 +1,8 @@
 import { showToast, ToastStyle } from "../utils/toast";
 import { getCredentials, showCredentialsError, validateCredentials } from "../utils/credentials";
 import { clearStoredUserInfo } from "../storage/userStorage";
+import { getBackgroundMonitoringService } from "../utils/backgroundMonitoring";
+import { getAgentRunCache } from "../storage/agentRunCache";
 import { API_ENDPOINTS, DEFAULT_API_BASE_URL } from "./constants";
 import {
   AgentRunResponse,
@@ -91,6 +93,7 @@ export class CodegenAPIClient {
 
   private async handleAPIError(response: Response): Promise<never> {
     let errorMessage = `Request failed with status ${response.status}`;
+    let userFriendlyMessage = '';
     
     try {
       const errorData = await response.json() as APIError;
@@ -109,6 +112,18 @@ export class CodegenAPIClient {
       throw new Error("Access denied");
     }
 
+    if (response.status === 404) {
+      if (response.url?.includes('/resume')) {
+        userFriendlyMessage = "Resume endpoint not found. The agent run may not support resuming, or the API structure has changed.";
+        await showToast({
+          style: ToastStyle.Failure,
+          title: "Endpoint Not Found",
+          message: userFriendlyMessage,
+        });
+        throw new Error(userFriendlyMessage);
+      }
+    }
+
     if (response.status === 429) {
       await showToast({
         style: ToastStyle.Failure,
@@ -118,10 +133,29 @@ export class CodegenAPIClient {
       throw new Error("Rate limit exceeded");
     }
 
+    // Handle server errors
+    if (response.status >= 500) {
+      userFriendlyMessage = "Server error occurred. Please try again later.";
+      await showToast({
+        style: ToastStyle.Failure,
+        title: "Server Error",
+        message: userFriendlyMessage,
+      });
+      throw new Error(userFriendlyMessage);
+    }
+
     await showToast({
       style: ToastStyle.Failure,
       title: "API Error",
       message: errorMessage,
+    });
+
+    // Log detailed error for debugging
+    console.error(`❌ API request failed for ${response.url}:`, {
+      status: response.status,
+      statusText: response.statusText,
+      message: errorMessage,
+      url: response.url,
     });
 
     throw new Error(errorMessage);
@@ -132,13 +166,46 @@ export class CodegenAPIClient {
     organizationId: number,
     request: CreateAgentRunRequest
   ): Promise<AgentRunResponse> {
-    return this.makeRequest<AgentRunResponse>(
+    const response = await this.makeRequest<AgentRunResponse>(
       API_ENDPOINTS.AGENT_RUN_CREATE(organizationId),
       {
         method: "POST",
         body: JSON.stringify(request),
       }
     );
+
+    // Automatically add the new agent run to monitoring
+    try {
+      const cache = getAgentRunCache();
+      const monitoringService = getBackgroundMonitoringService();
+      
+      // Add to cache and tracking
+      await cache.updateAgentRun(organizationId, response);
+      
+      // Start monitoring service if not already running
+      if (!monitoringService.isMonitoring()) {
+        await monitoringService.start();
+      }
+      
+      console.log(`✅ Agent run #${response.id} automatically added to monitoring`);
+      
+      await showToast({
+        style: ToastStyle.Success,
+        title: "Agent Run Created",
+        message: `Run #${response.id} created and added to monitoring`,
+      });
+      
+    } catch (monitoringError) {
+      console.error('Failed to add agent run to monitoring:', monitoringError);
+      // Don't fail the creation if monitoring fails
+      await showToast({
+        style: ToastStyle.Warning,
+        title: "Monitoring Setup Failed",
+        message: `Run #${response.id} created but monitoring setup failed`,
+      });
+    }
+
+    return response;
   }
 
   async getAgentRun(
@@ -154,24 +221,71 @@ export class CodegenAPIClient {
     organizationId: number,
     request: ResumeAgentRunRequest
   ): Promise<AgentRunResponse> {
-    return this.makeRequest<AgentRunResponse>(
-      API_ENDPOINTS.AGENT_RUN_RESUME(organizationId),
-      {
-        method: "POST",
-        body: JSON.stringify(request),
+    const { agent_run_id, ...requestBody } = request;
+    
+    // Try the primary endpoint first (RESTful pattern)
+    try {
+      return await this.makeRequest<AgentRunResponse>(
+        API_ENDPOINTS.AGENT_RUN_RESUME(organizationId, agent_run_id),
+        {
+          method: "POST",
+          body: JSON.stringify(requestBody),
+        }
+      );
+    } catch (error) {
+      console.log('Primary resume endpoint failed, trying alternatives...');
+      
+      // Try alternative endpoint patterns
+      const alternatives = [
+        {
+          endpoint: API_ENDPOINTS.AGENT_RUN_RESUME_ALT1(organizationId, agent_run_id),
+          method: "POST"
+        },
+        {
+          endpoint: API_ENDPOINTS.AGENT_RUN_RESUME_ALT2(organizationId),
+          method: "POST"
+        },
+        {
+          endpoint: API_ENDPOINTS.AGENT_RUN_RESUME(organizationId, agent_run_id),
+          method: "PUT"
+        },
+        {
+          endpoint: API_ENDPOINTS.AGENT_RUN_RESUME(organizationId, agent_run_id),
+          method: "PATCH"
+        }
+      ];
+      
+      for (const alt of alternatives) {
+        try {
+          console.log(`Trying ${alt.method} ${alt.endpoint}`);
+          return await this.makeRequest<AgentRunResponse>(
+            alt.endpoint,
+            {
+              method: alt.method,
+              body: JSON.stringify(alt.method === "POST" ? requestBody : request),
+            }
+          );
+        } catch (altError) {
+          console.log(`Alternative ${alt.method} ${alt.endpoint} failed:`, altError instanceof Error ? altError.message : altError);
+          continue;
+        }
       }
-    );
+      
+      // If all alternatives fail, throw the original error
+      throw error;
+    }
   }
 
   async stopAgentRun(
     organizationId: number,
     request: StopAgentRunRequest
   ): Promise<AgentRunResponse> {
+    const { agent_run_id } = request;
     return this.makeRequest<AgentRunResponse>(
-      API_ENDPOINTS.AGENT_RUN_STOP(organizationId),
+      API_ENDPOINTS.AGENT_RUN_STOP(organizationId, agent_run_id),
       {
         method: "POST",
-        body: JSON.stringify(request),
+        body: JSON.stringify({}), // Empty body for stop request
       }
     );
   }

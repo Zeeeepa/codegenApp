@@ -36,6 +36,95 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// API discovery endpoint - test common endpoint patterns
+app.get('/api-discovery', async (req, res) => {
+  const { organizationId = 323 } = req.query;
+  const testEndpoints = [
+    // Agent run endpoints to test
+    { method: 'GET', path: `/v1/organizations/${organizationId}/agent/runs` },
+    { method: 'GET', path: `/v1/organizations/${organizationId}/agent-runs` },
+    { method: 'POST', path: `/v1/organizations/${organizationId}/agent/run` },
+    { method: 'POST', path: `/v1/organizations/${organizationId}/agent-runs` },
+    { method: 'POST', path: `/v1/beta/organizations/${organizationId}/agent/run/resume` },
+    { method: 'POST', path: `/v1/organizations/${organizationId}/agent/run/resume` },
+    { method: 'PUT', path: `/v1/organizations/${organizationId}/agent/run/resume` },
+    { method: 'POST', path: `/v1/organizations/${organizationId}/agent-runs/resume` },
+    // Organization endpoints
+    { method: 'GET', path: '/v1/organizations' },
+    { method: 'GET', path: `/v1/organizations/${organizationId}` },
+    // User endpoints
+    { method: 'GET', path: '/v1/users/me' },
+    { method: 'GET', path: `/v1/organizations/${organizationId}/users` },
+  ];
+
+  const results = [];
+  const authHeader = req.headers.authorization || 'Bearer sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99';
+
+  for (const endpoint of testEndpoints) {
+    try {
+      const testUrl = `${CODEGEN_API_BASE}${endpoint.path}`;
+      console.log(`🔍 Testing ${endpoint.method} ${endpoint.path}`);
+      
+      const testResponse = await fetch(testUrl, {
+        method: endpoint.method,
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+          'User-Agent': 'Agent-Run-Manager-Discovery/1.0'
+        },
+        // Add minimal body for POST requests
+        body: endpoint.method === 'POST' ? JSON.stringify({}) : undefined
+      });
+
+      results.push({
+        method: endpoint.method,
+        path: endpoint.path,
+        status: testResponse.status,
+        statusText: testResponse.statusText,
+        available: testResponse.status < 500 && testResponse.status !== 404
+      });
+
+    } catch (error) {
+      results.push({
+        method: endpoint.method,
+        path: endpoint.path,
+        status: 'ERROR',
+        statusText: error.message,
+        available: false
+      });
+    }
+  }
+
+  res.json({
+    discoveryResults: results,
+    workingEndpoints: results.filter(r => r.available),
+    notFoundEndpoints: results.filter(r => r.status === 404),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// API endpoint logging for discovery
+const logAPICall = (method, path, status, targetUrl, requestBody = null) => {
+  const timestamp = new Date().toISOString();
+  const logEntry = {
+    timestamp,
+    method,
+    path,
+    status,
+    targetUrl,
+    requestBody: requestBody ? JSON.stringify(requestBody).substring(0, 200) : null
+  };
+  
+  console.log(`📊 API Call Log:`, JSON.stringify(logEntry, null, 2));
+  
+  // Store successful endpoints for documentation
+  if (status >= 200 && status < 300) {
+    console.log(`✅ WORKING ENDPOINT: ${method} ${path}`);
+  } else if (status === 404) {
+    console.log(`❌ 404 ENDPOINT: ${method} ${path} - Endpoint not found`);
+  }
+};
+
 // Proxy all API requests to Codegen API
 app.use('/api/v1', async (req, res) => {
   try {
@@ -43,6 +132,9 @@ app.use('/api/v1', async (req, res) => {
     
     console.log(`🔄 Proxying ${req.method} ${req.path} to ${targetUrl}`);
     console.log(`🔑 Authorization: ${req.headers.authorization ? req.headers.authorization.substring(0, 20) + '...' : 'MISSING'}`);
+    if (req.body && Object.keys(req.body).length > 0) {
+      console.log(`📦 Request Body:`, JSON.stringify(req.body, null, 2));
+    }
     
     // Forward the request to Codegen API
     const response = await fetch(targetUrl + (req.url.includes('?') ? '&' + req.url.split('?')[1] : ''), {
@@ -72,6 +164,9 @@ app.use('/api/v1', async (req, res) => {
 
     res.set(responseHeaders);
     res.status(response.status);
+
+    // Log the API call for discovery
+    logAPICall(req.method, req.path, response.status, targetUrl, req.body);
 
     // Handle different content types
     const contentType = response.headers.get('content-type');
@@ -108,6 +203,7 @@ app.use('*', (req, res) => {
     message: `Route ${req.method} ${req.originalUrl} not found`,
     availableRoutes: [
       'GET /health',
+      'GET /api-discovery',
       'ALL /api/v1/*'
     ]
   });

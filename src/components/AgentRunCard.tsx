@@ -18,6 +18,8 @@ import { CachedAgentRun, AgentRunStatus } from '../api/types';
 import { useAgentRunSelection } from '../contexts/AgentRunSelectionContext';
 import { AgentRunResponseModal } from './AgentRunResponseModal';
 import { RespondToRunDialog } from './RespondToRunDialog';
+import { MonitoringStatusBadge } from './MonitoringStatusBadge';
+import { MonitoringContextPanel } from './MonitoringContextPanel';
 
 interface AgentRunCardProps {
   run: CachedAgentRun;
@@ -121,6 +123,7 @@ export function AgentRunCard({ run, onStop, onResume, onDelete, onCopyUrl, onRes
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColor}`}>
                     {run.status}
                   </span>
+                  <MonitoringStatusBadge agentRun={run} isMonitored={true} />
                 </div>
                 <div className="flex items-center space-x-4 mt-1">
                   <p className="text-sm text-gray-400">Created {formatDate(run.created_at)}</p>
@@ -245,12 +248,22 @@ export function AgentRunCard({ run, onStop, onResume, onDelete, onCopyUrl, onRes
                         <span className="text-white">{new Date(run.lastUpdated).toLocaleString()}</span>
                       </div>
                     )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Web URL:</span>
+                      <button
+                        onClick={() => onCopyUrl(run.web_url, 'URL copied')}
+                        className="text-blue-400 hover:text-blue-300 underline text-xs truncate max-w-48"
+                        title={run.web_url}
+                      >
+                        {run.web_url.replace('https://', '').substring(0, 30)}...
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Monitoring Status */}
+                {/* Quick Status */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-300 mb-3">Monitoring Status</h4>
+                  <h4 className="text-sm font-medium text-gray-300 mb-3">Quick Status</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-400">Auto-Monitored:</span>
@@ -264,18 +277,16 @@ export function AgentRunCard({ run, onStop, onResume, onDelete, onCopyUrl, onRes
                         </span>
                       </div>
                     )}
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Web URL:</span>
-                      <button
-                        onClick={() => onCopyUrl(run.web_url, 'URL copied')}
-                        className="text-blue-400 hover:text-blue-300 underline text-xs truncate max-w-48"
-                        title={run.web_url}
-                      >
-                        {run.web_url.replace('https://', '').substring(0, 30)}...
-                      </button>
-                    </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Monitoring Context Panel */}
+              <div className="mt-6">
+                <MonitoringContextPanel 
+                  agentRun={run} 
+                  organizationId={run.organization_id} 
+                />
               </div>
 
               {/* Result Preview */}

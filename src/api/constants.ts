@@ -19,10 +19,15 @@ export const API_ENDPOINTS = {
     `/v1/organizations/${organizationId}/agent/run`,
   AGENT_RUN_GET: (organizationId: number, agentRunId: number) => 
     `/v1/organizations/${organizationId}/agent/run/${agentRunId}`,
-  AGENT_RUN_RESUME: (organizationId: number) => 
-    `/v1/beta/organizations/${organizationId}/agent/run/resume`,
-  AGENT_RUN_STOP: (organizationId: number) => 
-    `/v1/beta/organizations/${organizationId}/agent/run/stop`,
+  AGENT_RUN_RESUME: (organizationId: number, agentRunId: number) => 
+    `/v1/organizations/${organizationId}/agent/run/${agentRunId}/resume`,
+  AGENT_RUN_STOP: (organizationId: number, agentRunId: number) => 
+    `/v1/organizations/${organizationId}/agent/run/${agentRunId}/stop`,
+  // Alternative endpoints to try if the above don't work
+  AGENT_RUN_RESUME_ALT1: (organizationId: number, agentRunId: number) => 
+    `/v1/organizations/${organizationId}/agent/run/${agentRunId}/continue`,
+  AGENT_RUN_RESUME_ALT2: (organizationId: number) => 
+    `/v1/organizations/${organizationId}/agent/run/resume`,
 } as const;
 
 // API Base URL - uses environment variable with fallback to production API
