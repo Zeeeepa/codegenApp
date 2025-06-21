@@ -20,7 +20,51 @@ This application is a React-based frontend that connects directly to the Codegen
 - Node.js 16+ and npm
 - A Codegen API token (get one from [Codegen Dashboard](https://app.codegen.com/settings))
 
-## 🛠️ Installation & Setup
+## 🚀 Quick Start
+
+### One-Command Launch (Recommended)
+```bash
+./start.sh
+```
+This will automatically:
+- ✅ Check prerequisites (Node.js, npm)
+- ✅ Install dependencies if needed
+- ✅ Set up environment files
+- ✅ Start backend server (port 8001)
+- ✅ Start frontend server (port 8000)
+- ✅ Open browser automatically
+- ✅ Handle graceful shutdown with Ctrl+C
+
+### Alternative Launch Methods
+```bash
+# Using npm scripts
+npm run launch              # Same as ./start.sh
+npm run launch:dev          # Development mode with hot reload
+npm run launch:clean        # Clean install and start
+
+# Development mode (hot reload)
+./start.sh --dev
+
+# Clean install
+./start.sh --clean
+
+# Start without opening browser
+./start.sh --no-browser
+```
+
+### Health Check
+```bash
+./health-check.sh
+# or
+npm run health
+```
+
+### Access Points
+- **Frontend**: http://localhost:8000
+- **Backend API**: http://localhost:8001
+- **Health Check**: http://localhost:8001/health
+
+## 🛠�� Installation & Setup
 
 ### 1. Clone the repository
 
@@ -66,7 +110,21 @@ The application will be available at `http://localhost:3000` (or the next availa
 
 ### Available Scripts
 
-- `npm start` - Start the React development server
+#### Startup Scripts
+- `./start.sh` - Full application startup with UI
+- `./start.sh --dev` - Development mode with hot reload
+- `./start.sh --clean` - Clean install and start
+- `./start.sh --no-browser` - Start without opening browser
+- `./start.sh --help` - Show help
+
+#### NPM Scripts
+- `npm run launch` - Launch application (same as ./start.sh)
+- `npm run launch:dev` - Launch in development mode
+- `npm run launch:clean` - Clean install and launch
+- `npm run health` - Check if services are running
+- `npm run setup` - Install all dependencies
+- `npm run clean` - Clean install everything
+- `npm start` - Start the React development server only
 - `npm run build` - Build the React app for production
 - `npm test` - Run the test suite
 - `npm run eject` - Eject from Create React App (not recommended)
@@ -161,28 +219,52 @@ The test suite includes:
 
 ## 🐛 Troubleshooting
 
+### Startup Issues
+
+#### Port Conflicts
+The startup script automatically handles port conflicts by killing existing processes on ports 8000 and 8001.
+
+#### Dependencies Issues
+```bash
+./start.sh --clean  # Clean install and start
+npm run clean       # Alternative clean install
+```
+
+#### Check Service Status
+```bash
+./health-check.sh   # Check if services are running
+npm run health      # Alternative health check
+```
+
+#### View Logs
+```bash
+tail -f logs/frontend.log   # Frontend logs
+tail -f logs/backend.log    # Backend logs
+```
+
 ### Missing Environment Variables
 
 If you see errors about missing environment variables:
 
 1. Ensure your `.env` file is in the project root
-2. Restart the development server after creating/modifying `.env`
-3. Check the Settings page for validation status
+2. The startup script will copy from `.env.example` if `.env` doesn't exist
+3. Edit `.env` with your actual API credentials
+4. Restart the application: `./start.sh`
 
 ### API Connection Issues
 
 If API calls are failing:
 
 1. Verify your API token is correct
-2. Check that the API base URL is accessible (`https://api.codegen.com`)
+2. Check that the backend proxy is running on port 8001
 3. Ensure your organization ID is valid
-4. Check browser console for detailed error messages
+4. Check browser console and backend logs for detailed error messages
 
 ### Development Server Issues
 
-- Make sure port 3000 is available
-- Try restarting the server: `npm start`
-- Check the console for detailed error messages
+- The startup script handles port management automatically
+- If manual startup fails, try: `./start.sh --clean`
+- Check logs in the `logs/` directory for detailed error messages
 
 ## 📝 API Token Setup
 

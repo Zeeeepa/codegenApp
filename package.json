@@ -28,7 +28,13 @@
     "server:install": "cd server && npm install",
     "server:start": "cd server && npm start",
     "server:dev": "cd server && npm run dev",
-    "postinstall": "npm run server:install"
+    "postinstall": "npm run server:install",
+    "launch": "./start.sh",
+    "launch:dev": "./start.sh --dev",
+    "launch:clean": "./start.sh --clean",
+    "health": "./health-check.sh",
+    "setup": "npm install && npm run server:install",
+    "clean": "rm -rf node_modules server/node_modules logs && npm run setup"
   },
   "eslintConfig": {
     "extends": [
