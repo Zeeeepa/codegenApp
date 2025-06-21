@@ -154,8 +154,19 @@ export function AgentRunCard({ run, onStop, onResume, onDelete, onCopyUrl, onRes
                 <ExternalLink className="h-4 w-4" />
               </button>
               
-              {/* Respond button - only show for completed runs */}
-              {run.status === 'COMPLETE' && (
+              {/* Respond button - only show for completed, failed, cancelled, or stopped runs */}
+              {(run.status === AgentRunStatus.COMPLETE || 
+                run.status === AgentRunStatus.FAILED ||
+                run.status === AgentRunStatus.ERROR ||
+                run.status === AgentRunStatus.CANCELLED ||
+                run.status === AgentRunStatus.TIMEOUT ||
+                run.status === AgentRunStatus.MAX_ITERATIONS_REACHED ||
+                run.status === AgentRunStatus.OUT_OF_TOKENS ||
+                run.status.toLowerCase() === 'complete' ||
+                run.status.toLowerCase() === 'completed' ||
+                run.status.toLowerCase() === 'failed' ||
+                run.status.toLowerCase() === 'cancelled' ||
+                run.status.toLowerCase() === 'stopped') && (
                 <button
                   onClick={() => setRespondDialogRun(run)}
                   className="inline-flex items-center px-3 py-1.5 border border-blue-600 text-sm font-medium rounded text-blue-300 bg-blue-900 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"

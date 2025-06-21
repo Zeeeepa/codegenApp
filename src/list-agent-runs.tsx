@@ -468,16 +468,37 @@ export default function ListAgentRuns() {
               const StatusIcon = statusDisplay.icon;
               const canStop = run.status === AgentRunStatus.ACTIVE;
               const canResume = run.status === AgentRunStatus.PAUSED;
-              const canMessage = [
-                AgentRunStatus.COMPLETE,
-                AgentRunStatus.FAILED,
-                AgentRunStatus.ERROR,
-                AgentRunStatus.CANCELLED,
-                AgentRunStatus.TIMEOUT,
-                AgentRunStatus.MAX_ITERATIONS_REACHED,
-                AgentRunStatus.OUT_OF_TOKENS
-              ].includes(run.status as AgentRunStatus) || 
-              run.status.toLowerCase() === 'stopped';
+              // Message button should only appear for completed, failed, cancelled, or stopped runs
+              // NOT for active, pending, paused, or evaluation runs
+              const isActiveStatus = run.status === AgentRunStatus.ACTIVE || 
+                                   run.status.toLowerCase() === 'active' ||
+                                   run.status.toLowerCase() === 'running';
+              
+              const isPendingStatus = run.status === AgentRunStatus.PENDING ||
+                                    run.status.toLowerCase() === 'pending';
+              
+              const isPausedStatus = run.status === AgentRunStatus.PAUSED ||
+                                   run.status.toLowerCase() === 'paused';
+              
+              const isEvaluationStatus = run.status === AgentRunStatus.EVALUATION ||
+                                       run.status.toLowerCase() === 'evaluation';
+              
+              // Explicitly exclude active, pending, paused, and evaluation statuses
+              const canMessage = !isActiveStatus && !isPendingStatus && !isPausedStatus && !isEvaluationStatus && (
+                [
+                  AgentRunStatus.COMPLETE,
+                  AgentRunStatus.FAILED,
+                  AgentRunStatus.ERROR,
+                  AgentRunStatus.CANCELLED,
+                  AgentRunStatus.TIMEOUT,
+                  AgentRunStatus.MAX_ITERATIONS_REACHED,
+                  AgentRunStatus.OUT_OF_TOKENS
+                ].includes(run.status as AgentRunStatus) || 
+                run.status.toLowerCase() === 'stopped' ||
+                run.status.toLowerCase() === 'completed' ||
+                run.status.toLowerCase() === 'failed' ||
+                run.status.toLowerCase() === 'cancelled'
+              );
 
               const isSelected = selection.isSelected(run.id);
               const canViewResponse = run.status === AgentRunStatus.COMPLETE && run.result;
