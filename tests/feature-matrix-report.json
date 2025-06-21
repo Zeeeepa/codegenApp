@@ -1,0 +1,315 @@
+{
+  "timestamp": "2025-06-21T10:27:24.822Z",
+  "summary": {
+    "totalFeatures": 57,
+    "implementedFeatures": 57,
+    "missingFeatures": 0,
+    "completionRate": "100.0"
+  },
+  "featureMatrix": {
+    "endpoints": {
+      "GET /v1/organizations/{org_id}/agent/run/{agent_run_id}/logs": {
+        "implemented": true,
+        "location": "src/api/constants.ts:AGENT_RUN_LOGS",
+        "notes": "Uses /v1/alpha/ prefix"
+      }
+    },
+    "parameters": {
+      "org_id (integer, required)": {
+        "implemented": true,
+        "location": "src/api/client.ts:getAgentRunLogs",
+        "notes": "Properly typed and validated"
+      },
+      "agent_run_id (integer, required)": {
+        "implemented": true,
+        "location": "src/api/client.ts:getAgentRunLogs",
+        "notes": "Properly typed and validated"
+      },
+      "skip (integer, optional, default: 0)": {
+        "implemented": true,
+        "location": "src/api/client.ts:getAgentRunLogs",
+        "notes": "Supports pagination"
+      },
+      "limit (integer, optional, default: 100, max: 100)": {
+        "implemented": true,
+        "location": "src/api/client.ts:getAgentRunLogs",
+        "notes": "Supports pagination with limits"
+      }
+    },
+    "responseStructure": {
+      "AgentRunWithLogsResponse interface": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunWithLogsResponse",
+        "notes": "Complete interface matching documentation"
+      },
+      "id field": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunWithLogsResponse",
+        "notes": "number type"
+      },
+      "organization_id field": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunWithLogsResponse",
+        "notes": "number type"
+      },
+      "status field": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunWithLogsResponse",
+        "notes": "string type"
+      },
+      "created_at field": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunWithLogsResponse",
+        "notes": "string type (ISO 8601)"
+      },
+      "web_url field": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunWithLogsResponse",
+        "notes": "string type"
+      },
+      "result field": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunWithLogsResponse",
+        "notes": "optional string type"
+      },
+      "logs array": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunWithLogsResponse",
+        "notes": "AgentRunLog[] type"
+      },
+      "total_logs field": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunWithLogsResponse",
+        "notes": "number type for pagination"
+      },
+      "page field": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunWithLogsResponse",
+        "notes": "number type for pagination"
+      },
+      "size field": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunWithLogsResponse",
+        "notes": "number type for pagination"
+      },
+      "pages field": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunWithLogsResponse",
+        "notes": "number type for pagination"
+      }
+    },
+    "logFields": {
+      "agent_run_id (integer)": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLog",
+        "notes": "Core field"
+      },
+      "created_at (string)": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLog",
+        "notes": "ISO 8601 timestamp"
+      },
+      "message_type (string)": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLog",
+        "notes": "AgentRunLogMessageType enum"
+      },
+      "thought (string | null)": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLog",
+        "notes": "Agent reasoning field"
+      },
+      "tool_name (string | null)": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLog",
+        "notes": "Tool execution field"
+      },
+      "tool_input (object | null)": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLog",
+        "notes": "Tool execution field"
+      },
+      "tool_output (object | null)": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLog",
+        "notes": "Tool execution field"
+      },
+      "observation (object | string | null)": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLog",
+        "notes": "Tool execution field"
+      }
+    },
+    "messageTypes": {
+      "ACTION": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLogMessageType",
+        "notes": "Tool execution"
+      },
+      "PLAN_EVALUATION": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLogMessageType",
+        "notes": "Agent planning"
+      },
+      "FINAL_ANSWER": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLogMessageType",
+        "notes": "Final response"
+      },
+      "ERROR": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLogMessageType",
+        "notes": "Error handling"
+      },
+      "USER_MESSAGE": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLogMessageType",
+        "notes": "User input"
+      },
+      "USER_GITHUB_ISSUE_COMMENT": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLogMessageType",
+        "notes": "GitHub integration"
+      },
+      "INITIAL_PR_GENERATION": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLogMessageType",
+        "notes": "PR workflow"
+      },
+      "DETECT_PR_ERRORS": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLogMessageType",
+        "notes": "PR workflow"
+      },
+      "FIX_PR_ERRORS": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLogMessageType",
+        "notes": "PR workflow"
+      },
+      "PR_CREATION_FAILED": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLogMessageType",
+        "notes": "PR workflow"
+      },
+      "PR_EVALUATION": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLogMessageType",
+        "notes": "PR workflow"
+      },
+      "COMMIT_EVALUATION": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLogMessageType",
+        "notes": "Commit workflow"
+      },
+      "AGENT_RUN_LINK": {
+        "implemented": true,
+        "location": "src/api/types.ts:AgentRunLogMessageType",
+        "notes": "Agent linking"
+      }
+    },
+    "uiComponents": {
+      "Agent Run Logs Modal": {
+        "implemented": true,
+        "location": "src/components/AgentRunLogsModal.tsx",
+        "notes": "Modal wrapper for logs display"
+      },
+      "Agent Run Logs Viewer": {
+        "implemented": true,
+        "location": "src/components/AgentRunLogsViewer.tsx",
+        "notes": "Main logs container with pagination"
+      },
+      "Log Entry Component": {
+        "implemented": true,
+        "location": "src/components/LogEntry.tsx",
+        "notes": "Individual log entry display"
+      },
+      "Log Filters Component": {
+        "implemented": true,
+        "location": "src/components/LogFilters.tsx",
+        "notes": "Message type filtering"
+      },
+      "Log Pagination Component": {
+        "implemented": true,
+        "location": "src/components/LogPagination.tsx",
+        "notes": "Navigation controls"
+      },
+      "View Logs Button Integration": {
+        "implemented": true,
+        "location": "src/components/AgentRunCard.tsx",
+        "notes": "Purple button in agent run cards"
+      }
+    },
+    "usageExamples": {
+      "Basic Log Retrieval": {
+        "implemented": true,
+        "location": "src/api/client.ts:getAgentRunLogs",
+        "notes": "Supported via API client"
+      },
+      "Filtering by Log Type": {
+        "implemented": true,
+        "location": "src/components/LogFilters.tsx",
+        "notes": "UI filtering by message type"
+      },
+      "Pagination Example": {
+        "implemented": true,
+        "location": "src/components/LogPagination.tsx",
+        "notes": "UI pagination with skip/limit"
+      },
+      "Debugging Failed Runs": {
+        "implemented": true,
+        "location": "src/components/LogEntry.tsx",
+        "notes": "Error log display and filtering"
+      }
+    },
+    "useCases": {
+      "Building Monitoring Dashboards": {
+        "implemented": true,
+        "location": "src/components/AgentRunLogsViewer.tsx",
+        "notes": "Real-time log viewing with metrics"
+      },
+      "Debugging Agent Behavior": {
+        "implemented": true,
+        "location": "src/components/LogEntry.tsx",
+        "notes": "Detailed tool execution and thought display"
+      },
+      "Audit and Compliance": {
+        "implemented": true,
+        "location": "src/api/types.ts + UI components",
+        "notes": "Complete log history with timestamps"
+      },
+      "Performance Analysis": {
+        "implemented": true,
+        "location": "src/components/AgentRunLogsViewer.tsx",
+        "notes": "Tool usage patterns and execution flow"
+      }
+    },
+    "errorHandling": {
+      "400 Bad Request": {
+        "implemented": true,
+        "location": "src/api/client.ts + UI error handling",
+        "notes": "Invalid parameters handling"
+      },
+      "401 Unauthorized": {
+        "implemented": true,
+        "location": "src/api/client.ts + UI error handling",
+        "notes": "Authentication error handling"
+      },
+      "403 Forbidden": {
+        "implemented": true,
+        "location": "src/api/client.ts + UI error handling",
+        "notes": "Permission error handling"
+      },
+      "404 Not Found": {
+        "implemented": true,
+        "location": "src/api/client.ts + UI error handling",
+        "notes": "Agent run not found handling"
+      },
+      "429 Too Many Requests": {
+        "implemented": true,
+        "location": "src/api/client.ts + UI error handling",
+        "notes": "Rate limit error handling"
+      }
+    }
+  },
+  "missingFeatures": []
+}
