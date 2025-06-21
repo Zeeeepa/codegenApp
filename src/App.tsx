@@ -6,6 +6,7 @@ import CreateAgentRun from './create-agent-run';
 import ListAgentRuns from './list-agent-runs';
 import { SetupGuide } from './components/SetupGuide';
 import { AgentRunSelectionProvider } from './contexts/AgentRunSelectionContext';
+import { DialogProvider } from './contexts/DialogContext';
 import { getPreferenceValues, setPreferenceValues, getEnvFileContent, validateEnvironmentConfiguration } from './utils/preferences';
 import './App.css';
 
@@ -307,37 +308,39 @@ function App() {
         v7_relativeSplatPath: true,
       }}
     >
-      <AgentRunSelectionProvider>
-        <div className="min-h-screen bg-black">
-          <Navigation />
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-              },
-              success: {
-                duration: 3000,
-                iconTheme: {
-                  primary: '#4ade80',
-                  secondary: '#fff',
+      <DialogProvider>
+        <AgentRunSelectionProvider>
+          <div className="min-h-screen bg-black">
+            <Navigation />
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: '#363636',
+                  color: '#fff',
                 },
-              },
-              error: {
-                duration: 5000,
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
+                success: {
+                  duration: 3000,
+                  iconTheme: {
+                    primary: '#4ade80',
+                    secondary: '#fff',
+                  },
                 },
-              },
-            }}
-          />
-          
-          <AppContent />
-        </div>
-      </AgentRunSelectionProvider>
+                error: {
+                  duration: 5000,
+                  iconTheme: {
+                    primary: '#ef4444',
+                    secondary: '#fff',
+                  },
+                },
+              }}
+            />
+            
+            <AppContent />
+          </div>
+        </AgentRunSelectionProvider>
+      </DialogProvider>
     </Router>
   );
 }
