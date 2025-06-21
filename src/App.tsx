@@ -274,6 +274,7 @@ function Settings() {
                 </div>
               </div>
             </div>
+            </div>
           )}
           
           {activeTab === 'database' && (
