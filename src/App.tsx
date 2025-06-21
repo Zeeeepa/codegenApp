@@ -5,6 +5,7 @@ import ListOrganizations from './list-organizations';
 import CreateAgentRun from './create-agent-run';
 import ListAgentRuns from './list-agent-runs';
 import { SetupGuide } from './components/SetupGuide';
+import DatabaseSettings from './components/DatabaseSettings';
 import { AgentRunSelectionProvider } from './contexts/AgentRunSelectionContext';
 import { getPreferenceValues, setPreferenceValues, getEnvFileContent, validateEnvironmentConfiguration } from './utils/preferences';
 import './App.css';
@@ -71,13 +72,19 @@ function Navigation() {
   );
 }
 
-// Settings component with dark theme
+// Settings component with dark theme and tabs
 function Settings() {
+  const [activeTab, setActiveTab] = React.useState('general');
   const [orgId, setOrgId] = React.useState('');
   const [token, setToken] = React.useState('');
   const [saved, setSaved] = React.useState(false);
   const [envContent, setEnvContent] = React.useState('');
   const [envValidation, setEnvValidation] = React.useState(validateEnvironmentConfiguration());
+
+  const tabs = [
+    { id: 'general', label: 'General', icon: '⚙️' },
+    { id: 'database', label: 'Database', icon: '🗄️' },
+  ];
 
   const handleSave = async () => {
     try {
@@ -146,8 +153,33 @@ function Settings() {
     <div className="min-h-screen bg-black p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-white mb-8">Settings</h1>
+        
+        {/* Tab Navigation */}
+        <div className="mb-6">
+          <div className="border-b border-gray-700">
+            <nav className="-mb-px flex space-x-8">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-400'
+                      : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                  }`}
+                >
+                  <span className="mr-2">{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* Tab Content */}
         <div className="bg-black rounded-lg shadow-lg p-6 border border-gray-700">
-          <div className="space-y-6">
+          {activeTab === 'general' && (
+            <div className="space-y-6">
             <div>
               <label htmlFor="org_id" className="block text-sm font-medium text-gray-300 mb-2">
                 Organization ID
@@ -266,7 +298,11 @@ function Settings() {
                 </div>
               </div>
             </div>
-          </div>
+          )}
+          
+          {activeTab === 'database' && (
+            <DatabaseSettings apiBaseUrl={process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001/api'} />
+          )}
         </div>
       </div>
     </div>
