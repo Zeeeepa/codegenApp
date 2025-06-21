@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-
 import toast from "react-hot-toast";
 import { 
   RefreshCw, 
@@ -8,11 +6,20 @@ import {
   Plus, 
   AlertCircle,
   CheckCircle,
-  Settings
+  Settings,
+  FileText,
+  ExternalLink,
+  Copy,
+  Square,
+  Play,
+  Trash2,
+  Clock,
+  XCircle,
+  Pause
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
-import { AgentRunCard } from "./components/AgentRunCard";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
+import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
 import { getAPIClient } from "./api/client";
 import { getAgentRunCache } from "./storage/agentRunCache";
 import { AgentRunStatus, CachedAgentRun } from "./api/types";
@@ -582,6 +589,15 @@ export default function ListAgentRuns() {
           </div>
         )}
       </div>
+      
+      {/* Response Modal */}
+      {responseModalRun && (
+        <AgentRunResponseModal
+          run={responseModalRun}
+          isOpen={!!responseModalRun}
+          onClose={() => setResponseModalRun(null)}
+        />
+      )}
     </div>
   );
 }
