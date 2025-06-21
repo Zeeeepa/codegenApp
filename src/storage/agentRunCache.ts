@@ -315,6 +315,28 @@ export class AgentRunCache {
     // Check each tracked run for status changes
     for (const trackedRun of trackedRuns) {
       try {
+        // Skip monitoring completed runs unless they were recently responded to
+        if (trackedRun.lastKnownStatus === 'COMPLETE') {
+          // Check if this run was recently responded to (within last 5 minutes)
+          const key = this.getTrackedRunKey(organizationId, trackedRun.id);
+          const cached = this.cache.get(key);
+          
+          if (cached) {
+            try {
+              const entry: TrackedAgentRunCacheEntry = JSON.parse(cached);
+              const lastUpdated = new Date(entry.timestamp);
+              const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+              
+              if (lastUpdated < fiveMinutesAgo) {
+                console.log(`Skipping monitoring for completed run ${trackedRun.id} (no recent activity)`);
+                continue;
+              }
+            } catch (error) {
+              console.error(`Error checking last updated time for run ${trackedRun.id}:`, error);
+            }
+          }
+        }
+
         const currentRun = await apiClient.getAgentRun(organizationId, trackedRun.id);
         if (currentRun && currentRun.status !== trackedRun.lastKnownStatus) {
           // Status has changed!
@@ -496,6 +518,28 @@ export class AgentRunCache {
         this.metadata = JSON.parse(stored);
       } catch (error) {
         console.error("Error loading cache metadata:", error);
+      }
+    }
+  }
+
+  /**
+   * Resume monitoring for a specific agent run (used when user responds to a completed run)
+   */
+  async resumeMonitoring(organizationId: number, agentRunId: number): Promise<void> {
+    const key = this.getTrackedRunKey(organizationId, agentRunId);
+    const cached = this.cache.get(key);
+    
+    if (cached) {
+      try {
+        const entry: TrackedAgentRunCacheEntry = JSON.parse(cached);
+        // Mark as actively monitored again
+        entry.data.lastKnownStatus = "ACTIVE"; // Assume it becomes active when user responds
+        entry.timestamp = new Date().toISOString();
+        
+        this.cache.set(key, JSON.stringify(entry));
+        console.log(`Resumed monitoring for agent run ${agentRunId} in org ${organizationId}`);
+      } catch (error) {
+        console.error(`Error resuming monitoring for run ${agentRunId}:`, error);
       }
     }
   }

@@ -1,31 +1,24 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+
 import toast from "react-hot-toast";
 import { 
-  Play, 
-  Square, 
   RefreshCw, 
-  ExternalLink, 
-  Copy, 
-  Trash2, 
   Filter, 
   Plus, 
   AlertCircle,
   CheckCircle,
-  Clock,
-  XCircle,
-  Pause,
-  FileText
+  Settings
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
-import { MonitorSelectedButton, AddToMonitorButton } from "./components/MonitorSelectedButton";
-import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
+import { AgentRunCard } from "./components/AgentRunCard";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
 import { getAPIClient } from "./api/client";
 import { getAgentRunCache } from "./storage/agentRunCache";
 import { AgentRunStatus, CachedAgentRun } from "./api/types";
 import { getDateRanges, getStatusFilterOptions, hasActiveFilters, clearFilters } from "./utils/filtering";
 import { SyncStatus } from "./storage/cacheTypes";
+import { useDialog } from "./contexts/DialogContext";
 
 export default function ListAgentRuns() {
   const {
@@ -44,8 +37,10 @@ export default function ListAgentRuns() {
   const [searchText, setSearchText] = useState("");
   const [dateRanges] = useState(() => getDateRanges());
   const [responseModalRun, setResponseModalRun] = useState<CachedAgentRun | null>(null);
+
   const apiClient = getAPIClient();
   const cache = getAgentRunCache();
+  const { openDialog } = useDialog();
 
   // Memoize status filter options to prevent infinite loops
   const statusFilterOptions = useMemo(() => {
@@ -266,8 +261,6 @@ export default function ListAgentRuns() {
     }
   };
 
-  const navigate = useNavigate();
-
   if (error && !isLoading) {
     return (
       <div className="container mx-auto p-6 max-w-4xl">
@@ -311,24 +304,19 @@ export default function ListAgentRuns() {
               })()}
             </div>
             <div className="flex items-center space-x-3">
-              {selection.hasSelection && organizationId && (
-                <MonitorSelectedButton 
-                  organizationId={organizationId} 
-                  onMonitoringComplete={refresh}
-                />
-              )}
-              {organizationId && (
-                <AddToMonitorButton 
-                  organizationId={organizationId} 
-                  onAddComplete={refresh}
-                />
-              )}
               <button
-                onClick={() => navigate('/create-agent-run')}
+                onClick={() => openDialog('create-run')}
                 className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Run
+              </button>
+              <button
+                onClick={() => openDialog('settings')}
+                className="inline-flex items-center px-3 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
               </button>
               {selection.hasSelection && (
                 <button
@@ -442,14 +430,8 @@ export default function ListAgentRuns() {
                 : "Create your first agent run to get started"}
             </p>
             <div className="flex justify-center space-x-3">
-              {organizationId && (
-                <AddToMonitorButton 
-                  organizationId={organizationId} 
-                  onAddComplete={refresh}
-                />
-              )}
               <button
-                onClick={() => navigate('/create-agent-run')}
+                onClick={() => openDialog('create-run')}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -470,7 +452,7 @@ export default function ListAgentRuns() {
 
         {/* Agent runs list */}
         {filteredRuns.length > 0 && !isLoading && (
-          <div className="divide-y divide-gray-200">
+          <div className="space-y-4 p-6">
             {filteredRuns.map((run) => {
               const statusDisplay = getStatusDisplay(run.status);
               const StatusIcon = statusDisplay.icon;
@@ -494,7 +476,7 @@ export default function ListAgentRuns() {
                 ...run,
                 lastUpdated: new Date().toISOString(),
                 organizationName: undefined, // Will be populated by cache if available
-                isPolling: false
+                isPolling: run.status === AgentRunStatus.ACTIVE || run.status === AgentRunStatus.EVALUATION
               };
 
               return (
@@ -598,15 +580,6 @@ export default function ListAgentRuns() {
               );
             })}
           </div>
-        )}
-        
-        {/* Response Modal */}
-        {responseModalRun && (
-          <AgentRunResponseModal
-            run={responseModalRun}
-            isOpen={!!responseModalRun}
-            onClose={() => setResponseModalRun(null)}
-          />
         )}
       </div>
     </div>
