@@ -49,7 +49,7 @@ export function AgentRunLogsViewer({ organizationId, agentRunId, onClose }: Agen
     } finally {
       setIsLoading(false);
     }
-  }, [organizationId, agentRunId]);
+  }, [organizationId, agentRunId, apiClient]);
 
   // Filter logs based on selected message types
   useEffect(() => {
