@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
-import { X, MessageSquare, Send, Loader } from "lucide-react";
+import { X, MessageSquare, Send, Loader, Info } from "lucide-react";
 import { getAPIClient } from "../api/client";
-import { AgentRunResponse } from "../api/types";
+import { AgentRunResponse, AgentRunStatus } from "../api/types";
 
 interface MessageAgentRunDialogProps {
   isOpen: boolean;
@@ -52,14 +52,56 @@ export function MessageAgentRunDialog({
       return;
     }
 
+    if (!agentRunDetails) {
+      toast.error("Agent run details not loaded");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await apiClient.resumeAgentRun(organizationId, {
-        agent_run_id: agentRunId,
-        prompt: message.trim(),
-      });
+      const isActiveStatus = agentRunDetails.status === AgentRunStatus.ACTIVE || 
+                            agentRunDetails.status.toLowerCase() === 'active' ||
+                            agentRunDetails.status.toLowerCase() === 'running';
+      
+      const isPausedStatus = agentRunDetails.status === AgentRunStatus.PAUSED ||
+                            agentRunDetails.status.toLowerCase() === 'paused';
 
-      toast.success(`Message sent to agent run #${agentRunId}`);
+      const isCompletedStatus = agentRunDetails.status === AgentRunStatus.COMPLETE ||
+                               agentRunDetails.status.toLowerCase() === 'complete' ||
+                               agentRunDetails.status.toLowerCase() === 'completed';
+
+      const isCancelledStatus = agentRunDetails.status === AgentRunStatus.CANCELLED ||
+                               agentRunDetails.status.toLowerCase() === 'cancelled';
+
+      const isFailedStatus = agentRunDetails.status === AgentRunStatus.FAILED ||
+                             agentRunDetails.status.toLowerCase() === 'failed' ||
+                             agentRunDetails.status.toLowerCase() === 'error';
+
+      // Use resume endpoint for PAUSED runs, message endpoint for COMPLETED/CANCELLED/FAILED runs
+      if (isPausedStatus) {
+        await apiClient.resumeAgentRun(organizationId, {
+          agent_run_id: agentRunId,
+          prompt: message.trim(),
+        });
+        toast.success(`Resumed agent run #${agentRunId} with your message`);
+      } else if (isCompletedStatus || isCancelledStatus || isFailedStatus) {
+        await apiClient.messageAgentRun(organizationId, {
+          agent_run_id: agentRunId,
+          prompt: message.trim(),
+        });
+        toast.success(`Message sent to agent run #${agentRunId}`);
+      } else if (isActiveStatus) {
+        // For active runs, we can try the message endpoint
+        await apiClient.messageAgentRun(organizationId, {
+          agent_run_id: agentRunId,
+          prompt: message.trim(),
+        });
+        toast.success(`Message sent to active agent run #${agentRunId}`);
+      } else {
+        toast.error(`Cannot send message to agent run with status: ${agentRunDetails.status}`);
+        return;
+      }
+
       setMessage("");
       onMessageSent?.();
       onClose();
@@ -112,7 +154,28 @@ export function MessageAgentRunDialog({
                 </div>
               ) : agentRunDetails ? (
                 <div className="space-y-4">
-                  {/* Note: Original prompt is not available in the API response */}
+                  {/* Status Info Banner */}
+                  <div className="p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Info className="h-4 w-4 text-blue-400" />
+                      <span className="text-blue-300 text-sm">
+                        {agentRunDetails.status === AgentRunStatus.PAUSED && 
+                          "This agent run is paused. Your message will resume it."}
+                        {(agentRunDetails.status === AgentRunStatus.COMPLETE || 
+                          agentRunDetails.status.toLowerCase() === 'complete') && 
+                          "This agent run is completed. Your message will continue the conversation."}
+                        {(agentRunDetails.status === AgentRunStatus.CANCELLED || 
+                          agentRunDetails.status.toLowerCase() === 'cancelled') && 
+                          "This agent run was cancelled. Your message will restart the conversation."}
+                        {(agentRunDetails.status === AgentRunStatus.FAILED || 
+                          agentRunDetails.status.toLowerCase() === 'failed') && 
+                          "This agent run failed. Your message will attempt to continue from where it left off."}
+                        {(agentRunDetails.status === AgentRunStatus.ACTIVE || 
+                          agentRunDetails.status.toLowerCase() === 'active') && 
+                          "This agent run is currently active. Your message will be added to the conversation."}
+                      </span>
+                    </div>
+                  </div>
 
                   {/* Status and Result */}
                   <div className="grid grid-cols-2 gap-4">

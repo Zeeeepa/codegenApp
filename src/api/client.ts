@@ -9,6 +9,7 @@ import {
   CreateAgentRunRequest,
   ResumeAgentRunRequest,
   StopAgentRunRequest,
+  MessageAgentRunRequest,
   PaginatedResponse,
   APIError,
 } from "./types";
@@ -173,6 +174,29 @@ export class CodegenAPIClient {
         method: "POST",
         body: JSON.stringify(request),
       }
+    );
+  }
+
+  async messageAgentRun(
+    organizationId: number,
+    request: MessageAgentRunRequest
+  ): Promise<AgentRunResponse> {
+    return this.makeRequest<AgentRunResponse>(
+      API_ENDPOINTS.AGENT_RUN_MESSAGE(organizationId),
+      {
+        method: "POST",
+        body: JSON.stringify(request),
+      }
+    );
+  }
+
+  async listAgentRuns(
+    organizationId: number,
+    page = 1,
+    size = 50
+  ): Promise<PaginatedResponse<AgentRunResponse>> {
+    return this.makeRequest<PaginatedResponse<AgentRunResponse>>(
+      API_ENDPOINTS.AGENT_RUN_LIST(organizationId, page, size)
     );
   }
 

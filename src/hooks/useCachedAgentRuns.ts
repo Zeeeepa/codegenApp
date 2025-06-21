@@ -194,7 +194,7 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
         syncWithAPI(false);
       });
     }
-  }, [organizationId, loadCachedData, syncWithAPI]);
+  }, [organizationId]); // Remove loadCachedData and syncWithAPI from dependencies to prevent infinite loops
 
   // Polling for active runs
   useEffect(() => {
@@ -227,7 +227,8 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
 
         if (statusChanged) {
           // Reload all cached data to reflect changes
-          await loadCachedData();
+          const cachedRuns = await cache.getAgentRuns(organizationId);
+          setAgentRuns(cachedRuns);
         }
       } catch (err) {
         console.error("Error polling active runs:", err);

@@ -22,6 +22,7 @@ import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
 import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
 import { MessageAgentRunDialog } from "./components/MessageAgentRunDialog";
+import { MonitoringDashboard } from "./components/MonitoringDashboard";
 import { getAPIClient } from "./api/client";
 import { getAgentRunCache } from "./storage/agentRunCache";
 import { AgentRunStatus, CachedAgentRun } from "./api/types";
@@ -294,6 +295,11 @@ export default function ListAgentRuns() {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
+      {/* Monitoring Dashboard */}
+      <div className="mb-8">
+        <MonitoringDashboard />
+      </div>
+
       <div className="bg-gray-800 rounded-lg border border-gray-700">
         {/* Header with search and filters */}
         <div className="p-6 border-b border-gray-700">
@@ -468,8 +474,7 @@ export default function ListAgentRuns() {
               const StatusIcon = statusDisplay.icon;
               const canStop = run.status === AgentRunStatus.ACTIVE;
               const canResume = run.status === AgentRunStatus.PAUSED;
-              // Message button should only appear for completed, failed, cancelled, or stopped runs
-              // NOT for active, pending, paused, or evaluation runs
+              // Enhanced status checking for better messaging support
               const isActiveStatus = run.status === AgentRunStatus.ACTIVE || 
                                    run.status.toLowerCase() === 'active' ||
                                    run.status.toLowerCase() === 'running';
@@ -482,22 +487,30 @@ export default function ListAgentRuns() {
               
               const isEvaluationStatus = run.status === AgentRunStatus.EVALUATION ||
                                        run.status.toLowerCase() === 'evaluation';
+
+              const isCompletedStatus = run.status === AgentRunStatus.COMPLETE ||
+                                       run.status.toLowerCase() === 'complete' ||
+                                       run.status.toLowerCase() === 'completed';
+
+              const isFailedStatus = run.status === AgentRunStatus.FAILED ||
+                                    run.status === AgentRunStatus.ERROR ||
+                                    run.status.toLowerCase() === 'failed' ||
+                                    run.status.toLowerCase() === 'error';
+
+              const isCancelledStatus = run.status === AgentRunStatus.CANCELLED ||
+                                       run.status.toLowerCase() === 'cancelled';
               
-              // Explicitly exclude active, pending, paused, and evaluation statuses
-              const canMessage = !isActiveStatus && !isPendingStatus && !isPausedStatus && !isEvaluationStatus && (
+              // Allow messaging for completed, failed, cancelled, and stopped runs
+              // Also allow messaging for active runs (to add to conversation)
+              // Only exclude pending and evaluation statuses
+              const canMessage = !isPendingStatus && !isEvaluationStatus && (
+                isActiveStatus || isCompletedStatus || isFailedStatus || isCancelledStatus || isPausedStatus ||
                 [
-                  AgentRunStatus.COMPLETE,
-                  AgentRunStatus.FAILED,
-                  AgentRunStatus.ERROR,
-                  AgentRunStatus.CANCELLED,
                   AgentRunStatus.TIMEOUT,
                   AgentRunStatus.MAX_ITERATIONS_REACHED,
                   AgentRunStatus.OUT_OF_TOKENS
                 ].includes(run.status as AgentRunStatus) || 
-                run.status.toLowerCase() === 'stopped' ||
-                run.status.toLowerCase() === 'completed' ||
-                run.status.toLowerCase() === 'failed' ||
-                run.status.toLowerCase() === 'cancelled'
+                run.status.toLowerCase() === 'stopped'
               );
 
               const isSelected = selection.isSelected(run.id);
@@ -603,9 +616,24 @@ export default function ListAgentRuns() {
                         <button
                           onClick={() => openMessageDialog(run.id)}
                           className="inline-flex items-center px-3 py-1.5 border border-purple-600 text-sm font-medium rounded text-purple-300 bg-purple-900 hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 focus:ring-offset-gray-800"
-                          title="Send Message to Agent Run"
+                          title={
+                            isActiveStatus ? "Send Message to Active Agent Run" :
+                            isPausedStatus ? "Resume Agent Run with Message" :
+                            isCompletedStatus ? "Continue Conversation from Completed Run" :
+                            isFailedStatus ? "Retry Agent Run with Message" :
+                            isCancelledStatus ? "Restart Cancelled Agent Run" :
+                            "Send Message to Agent Run"
+                          }
                         >
                           <MessageSquare className="h-4 w-4" />
+                          {!isActiveStatus && !isPausedStatus && (
+                            <span className="ml-1 text-xs">
+                              {isCompletedStatus ? "Continue" :
+                               isFailedStatus ? "Retry" :
+                               isCancelledStatus ? "Restart" :
+                               "Respond"}
+                            </span>
+                          )}
                         </button>
                       )}
                       

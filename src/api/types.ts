@@ -43,6 +43,12 @@ export interface StopAgentRunRequest {
   agent_run_id: number;
 }
 
+export interface MessageAgentRunRequest {
+  agent_run_id: number;
+  prompt: string;
+  images?: string[];
+}
+
 // Paginated Response Type
 export interface PaginatedResponse<T> {
   items: T[];
