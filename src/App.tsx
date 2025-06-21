@@ -3,11 +3,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import ListAgentRuns from './list-agent-runs';
 import { SetupGuide } from './components/SetupGuide';
+import DatabaseSettings from './components/DatabaseSettings';
 import { AgentRunSelectionProvider } from './contexts/AgentRunSelectionContext';
 import { DialogProvider, useDialog } from './contexts/DialogContext';
 import { CreateAgentRunDialog } from './components/CreateAgentRunDialog';
 import { SettingsDialog } from './components/SettingsDialog';
-import { validateEnvironmentConfiguration } from './utils/preferences';
+import { validateEnvironmentConfiguration, getPreferenceValues, setPreferenceValues, getEnvFileContent } from './utils/preferences';
 import './App.css';
 
 // Simple header component
@@ -47,6 +48,244 @@ function Dialogs() {
   );
 }
 
+// Settings component with dark theme and tabs
+function Settings() {
+  const [activeTab, setActiveTab] = React.useState('general');
+  const [orgId, setOrgId] = React.useState('');
+  const [token, setToken] = React.useState('');
+  const [saved, setSaved] = React.useState(false);
+  const [envContent, setEnvContent] = React.useState('');
+  const [envValidation, setEnvValidation] = React.useState(validateEnvironmentConfiguration());
+
+  const tabs = [
+    { id: 'general', label: 'General', icon: '⚙️' },
+    { id: 'database', label: 'Database', icon: '🗄️' },
+  ];
+
+  const handleSave = async () => {
+    try {
+      // Save using the preference storage system
+      await setPreferenceValues({
+        apiToken: token,
+        defaultOrganization: orgId,
+      });
+      
+      // Get the updated .env content
+      const content = await getEnvFileContent();
+      setEnvContent(content);
+      
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    }
+  };
+
+  React.useEffect(() => {
+    // Load existing values using the preference system
+    const loadPreferences = async () => {
+      try {
+        const preferences = await getPreferenceValues();
+        setOrgId(preferences.defaultOrganization || '');
+        setToken(preferences.apiToken || '');
+        
+        console.log('Loaded preferences:', {
+          hasToken: !!preferences.apiToken,
+          hasOrgId: !!preferences.defaultOrganization,
+          apiBaseUrl: preferences.apiBaseUrl
+        });
+        
+        // Always generate and show .env content based on current preferences
+        const envLines: string[] = [];
+        if (preferences.defaultOrganization) {
+          envLines.push(`org_id=${preferences.defaultOrganization}`);
+        } else {
+          envLines.push('org_id=');
+        }
+        if (preferences.apiToken) {
+          envLines.push(`token=${preferences.apiToken}`);
+        } else {
+          envLines.push('token=');
+        }
+        const generatedContent = envLines.join('\n') + '\n';
+        setEnvContent(generatedContent);
+        
+        // Also try to load any previously saved .env content
+        const savedContent = await getEnvFileContent();
+        if (savedContent) {
+          setEnvContent(savedContent);
+        }
+        
+        // Update environment validation
+        setEnvValidation(validateEnvironmentConfiguration());
+      } catch (error) {
+        console.error('Failed to load preferences:', error);
+      }
+    };
+    loadPreferences();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-black p-8">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold text-white mb-8">Settings</h1>
+        
+        {/* Tab Navigation */}
+        <div className="mb-6">
+          <div className="border-b border-gray-700">
+            <nav className="-mb-px flex space-x-8">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-400'
+                      : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                  }`}
+                >
+                  <span className="mr-2">{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="bg-black rounded-lg shadow-lg p-6 border border-gray-700">
+          {activeTab === 'general' && (
+            <div className="space-y-6">
+            <div>
+              <label htmlFor="org_id" className="block text-sm font-medium text-gray-300 mb-2">
+                Organization ID
+              </label>
+              <input
+                type="text"
+                id="org_id"
+                value={orgId}
+                onChange={(e) => setOrgId(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your organization ID"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="token" className="block text-sm font-medium text-gray-300 mb-2">
+                API Token
+              </label>
+              <input
+                type="text"
+                id="token"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your API token"
+              />
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleSave}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
+              >
+                Save Settings
+              </button>
+              
+              {saved && (
+                <span className="text-green-400 text-sm font-medium">
+                  ✓ Settings saved successfully!
+                </span>
+              )}
+            </div>
+            
+            {envContent && (
+              <div className="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
+                <h3 className="text-lg font-semibold text-white mb-3">📄 .env File Content</h3>
+                <p className="text-gray-300 text-sm mb-3">
+                  Please update your <code className="bg-gray-700 px-1 rounded">.env</code> file at{' '}
+                  <code className="bg-gray-700 px-1 rounded">c:\Users\L\Desktop\raycast-extension-main\.env</code>{' '}
+                  with the following content:
+                </p>
+                <div className="bg-gray-900 p-3 rounded border border-gray-600">
+                  <pre className="text-green-400 text-sm whitespace-pre-wrap font-mono">
+                    {envContent}
+                  </pre>
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    onClick={() => navigator.clipboard.writeText(envContent)}
+                    className="px-3 py-1 bg-gray-700 text-white text-sm rounded hover:bg-gray-600 transition-colors"
+                  >
+                    📋 Copy to Clipboard
+                  </button>
+                  <span className="text-gray-400 text-xs">
+                    After updating the .env file, refresh the page to load the new settings.
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            <div className="pt-4 border-t border-gray-700">
+              <h3 className="text-lg font-medium text-white mb-2">Environment Variables Status</h3>
+              <div className="space-y-3 text-sm">
+                {envValidation.missingVars.length > 0 && (
+                  <div className="p-3 bg-red-900/20 border border-red-700 rounded-lg">
+                    <div className="text-red-400 font-medium mb-1">❌ Missing Required Variables:</div>
+                    <ul className="text-red-300 text-xs space-y-1">
+                      {envValidation.missingVars.map(varName => (
+                        <li key={varName}>• {varName}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {envValidation.warnings.length > 0 && (
+                  <div className="p-3 bg-yellow-900/20 border border-yellow-700 rounded-lg">
+                    <div className="text-yellow-400 font-medium mb-1">⚠️ Warnings:</div>
+                    <ul className="text-yellow-300 text-xs space-y-1">
+                      {envValidation.warnings.map((warning, index) => (
+                        <li key={index}>• {warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {envValidation.isValid && envValidation.warnings.length === 0 && (
+                  <div className="p-3 bg-green-900/20 border border-green-700 rounded-lg">
+                    <div className="text-green-400 font-medium">✅ All environment variables are properly configured!</div>
+                  </div>
+                )}
+              </div>
+              
+              <h3 className="text-lg font-medium text-white mb-2 mt-6">Current Configuration</h3>
+              <div className="space-y-2 text-sm">
+                <div className="text-gray-300">
+                  <span className="font-medium">Org ID:</span> 
+                  <span className="ml-2 text-gray-400">{orgId || 'Not set'}</span>
+                </div>
+                <div className="text-gray-300">
+                  <span className="font-medium">Token:</span> 
+                  <span className="ml-2 text-gray-400">{token ? `${token.substring(0, 8)}...` : 'Not set'}</span>
+                </div>
+                <div className="text-gray-300">
+                  <span className="font-medium">API Base URL:</span> 
+                  <span className="ml-2 text-gray-400">{import.meta.env.VITE_API_BASE_URL || 'Using default'}</span>
+                </div>
+              </div>
+            </div>
+            </div>
+          )}
+          
+          {activeTab === 'database' && (
+            <DatabaseSettings />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Wrapper component that shows setup guide when needed
 function AppContent() {
   const envValidation = validateEnvironmentConfiguration();
@@ -60,10 +299,10 @@ function AppContent() {
     <Routes>
       <Route path="/" element={<Navigate to="/agent-runs" replace />} />
       <Route path="/agent-runs" element={<ListAgentRuns />} />
+      <Route path="/settings" element={<Settings />} />
       {/* Redirect old routes to main page */}
       <Route path="/create-agent-run" element={<Navigate to="/agent-runs" replace />} />
       <Route path="/organizations" element={<Navigate to="/agent-runs" replace />} />
-      <Route path="/settings" element={<Navigate to="/agent-runs" replace />} />
     </Routes>
   );
 }
