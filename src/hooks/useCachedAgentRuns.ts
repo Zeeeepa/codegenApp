@@ -188,13 +188,44 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
   useEffect(() => {
     if (organizationId) {
       setIsLoading(true);
-      loadCachedData().finally(() => {
-        setIsLoading(false);
-        // Background sync without showing loading state
-        syncWithAPI(false);
-      });
+      
+      // Load cached data
+      const loadData = async () => {
+        try {
+          const cachedRuns = await cache.getAgentRuns(organizationId);
+          setAgentRuns(cachedRuns);
+          
+          const status = await cache.getSyncStatus(organizationId);
+          setSyncStatus(status.status);
+        } catch (err) {
+          console.error("Error loading cached data:", err);
+          setError(err instanceof Error ? err.message : "Failed to load cached data");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      // Background sync
+      const syncData = async () => {
+        try {
+          const syncResult = await cache.syncAgentRuns(organizationId);
+          setSyncStatus(syncResult.status);
+
+          if (syncResult.status === SyncStatus.SUCCESS) {
+            const updatedRuns = await cache.getAgentRuns(organizationId);
+            setAgentRuns(updatedRuns);
+          } else if (syncResult.error) {
+            setError(syncResult.error);
+          }
+        } catch (err) {
+          console.error("Background sync error:", err);
+        }
+      };
+      
+      loadData();
+      syncData();
     }
-  }, [organizationId, loadCachedData, syncWithAPI]);
+  }, [organizationId, cache]); // Only depend on organizationId and cache
 
   // Polling for active runs
   useEffect(() => {
@@ -227,21 +258,22 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
 
         if (statusChanged) {
           // Reload all cached data to reflect changes
-          await loadCachedData();
+          const cachedRuns = await cache.getAgentRuns(organizationId);
+          setAgentRuns(cachedRuns);
         }
       } catch (err) {
         console.error("Error polling active runs:", err);
       }
     };
 
-    // Poll every 30 seconds for active runs
-    const pollInterval = setInterval(pollActiveRuns, 30000);
+    // Poll every 5 seconds for active runs (faster updates)
+    const pollInterval = setInterval(pollActiveRuns, 5000);
     
     // Initial poll
     pollActiveRuns();
 
     return () => clearInterval(pollInterval);
-  }, [organizationId, cache, apiClient, loadCachedData]);
+  }, [organizationId, cache, apiClient]); // Removed loadCachedData to prevent infinite loops
 
   // Apply filters and sorting - memoized for performance
   const filteredRuns = useMemo(() => {

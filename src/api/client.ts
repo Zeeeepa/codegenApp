@@ -9,6 +9,8 @@ import {
   CreateAgentRunRequest,
   ResumeAgentRunRequest,
   StopAgentRunRequest,
+  MessageAgentRunRequest,
+  AgentRunWithLogsResponse,
   PaginatedResponse,
   APIError,
 } from "./types";
@@ -154,13 +156,25 @@ export class CodegenAPIClient {
     organizationId: number,
     request: ResumeAgentRunRequest
   ): Promise<AgentRunResponse> {
-    return this.makeRequest<AgentRunResponse>(
-      API_ENDPOINTS.AGENT_RUN_RESUME(organizationId),
-      {
-        method: "POST",
-        body: JSON.stringify(request),
+    try {
+      return await this.makeRequest<AgentRunResponse>(
+        API_ENDPOINTS.AGENT_RUN_RESUME(organizationId),
+        {
+          method: "POST",
+          body: JSON.stringify(request),
+        }
+      );
+    } catch (error) {
+      // If the resume endpoint doesn't exist, create a new agent run as a workaround
+      if (error instanceof Error && error.message.includes("404")) {
+        console.log("Resume endpoint not available, creating new agent run as workaround");
+        return await this.createAgentRun(organizationId, {
+          prompt: `[Resume agent run #${request.agent_run_id}] ${request.prompt}`,
+          images: request.images
+        });
       }
-    );
+      throw error;
+    }
   }
 
   async stopAgentRun(
@@ -174,6 +188,72 @@ export class CodegenAPIClient {
         body: JSON.stringify(request),
       }
     );
+  }
+
+  async messageAgentRun(
+    organizationId: number,
+    request: MessageAgentRunRequest
+  ): Promise<AgentRunResponse> {
+    try {
+      return await this.makeRequest<AgentRunResponse>(
+        API_ENDPOINTS.AGENT_RUN_MESSAGE(organizationId),
+        {
+          method: "POST",
+          body: JSON.stringify(request),
+        }
+      );
+    } catch (error) {
+      // If the message endpoint doesn't exist, create a new agent run as a workaround
+      if (error instanceof Error && error.message.includes("404")) {
+        console.log("Message endpoint not available, creating new agent run as workaround");
+        return await this.createAgentRun(organizationId, {
+          prompt: `[Follow-up to agent run #${request.agent_run_id}] ${request.prompt}`,
+          images: request.images
+        });
+      }
+      throw error;
+    }
+  }
+
+  async listAgentRuns(
+    organizationId: number,
+    page = 1,
+    size = 50
+  ): Promise<PaginatedResponse<AgentRunResponse>> {
+    return this.makeRequest<PaginatedResponse<AgentRunResponse>>(
+      API_ENDPOINTS.AGENT_RUN_LIST(organizationId, page, size)
+    );
+  }
+
+  async getAgentRunLogs(
+    organizationId: number,
+    agentRunId: number,
+    skip?: number,
+    limit?: number
+  ): Promise<AgentRunWithLogsResponse> {
+    try {
+      return await this.makeRequest<AgentRunWithLogsResponse>(
+        API_ENDPOINTS.AGENT_RUN_LOGS(organizationId, agentRunId, skip, limit),
+        {
+          method: "GET",
+        }
+      );
+    } catch (error) {
+      // If the logs endpoint doesn't exist, return a mock response with basic agent run data
+      if (error instanceof Error && error.message.includes("404")) {
+        console.log("Logs endpoint not available, returning basic agent run data");
+        const agentRun = await this.getAgentRun(organizationId, agentRunId);
+        return {
+          ...agentRun,
+          logs: [],
+          total_logs: 0,
+          page: 1,
+          size: limit || 100,
+          pages: 0
+        };
+      }
+      throw error;
+    }
   }
 
   // Organization Methods
@@ -218,6 +298,35 @@ export class CodegenAPIClient {
   // Get current user info from alpha /me endpoint
   async getMe(): Promise<UserResponse> {
     return this.makeRequest<UserResponse>(API_ENDPOINTS.USER_ME);
+  }
+
+  // Get agent run logs
+  async getAgentRunLogs(
+    organizationId: number,
+    agentRunId: number,
+    skip?: number,
+    limit?: number
+  ): Promise<AgentRunWithLogsResponse> {
+    try {
+      return await this.makeRequest<AgentRunWithLogsResponse>(
+        API_ENDPOINTS.AGENT_RUN_LOGS(organizationId, agentRunId, skip, limit)
+      );
+    } catch (error) {
+      // If the logs endpoint doesn't exist, return empty logs as fallback
+      if (error instanceof Error && error.message.includes("404")) {
+        console.log("Logs endpoint not available, returning empty logs");
+        const agentRun = await this.getAgentRun(organizationId, agentRunId);
+        return {
+          ...agentRun,
+          logs: [],
+          total_logs: 0,
+          page: 1,
+          size: limit || 50,
+          pages: 0
+        };
+      }
+      throw error;
+    }
   }
 
   // Validation Method

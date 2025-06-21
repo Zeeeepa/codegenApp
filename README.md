@@ -1,222 +1,307 @@
 # Codegen Agent Run Manager
 
-A web application for managing Codegen agent runs, converted from a Raycast extension. This application provides a user-friendly interface to create, monitor, and manage Codegen AI agent runs.
+A React web application for managing and monitoring Codegen agent runs. This application provides a clean, modern interface to create, track, and interact with AI agent runs through the Codegen API.
 
 ## 🚀 Features
 
-- **Agent Run Management**: Create and monitor AI agent runs
-- **Organization Support**: Work with multiple organizations
-- **Real-time Updates**: Live status updates for running agents
-- **Credential Management**: Secure API token handling
-- **Environment Variable Validation**: Visual status indicators for configuration
-- **Responsive Design**: Works on desktop and mobile devices
+- **Create Agent Runs**: Start new AI agent tasks with custom prompts and image uploads
+- **Real-time Monitoring**: Track agent run status with automatic polling and updates
+- **Interactive Dashboard**: View all agent runs with filtering, sorting, and search capabilities
+- **Status Management**: Stop running agents and continue conversations with completed ones
+- **Responsive Design**: Modern, dark-themed UI that works on all devices
+- **Local Caching**: Efficient data management with background synchronization
 
-## 🏗️ Architecture
+## 📋 API Endpoints
 
-This application is a React-based frontend that connects directly to the Codegen API using environment variables for configuration. The application supports both development and production deployments.
+### ✅ Working Endpoints
 
-## 📋 Prerequisites
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/v1/organizations/{id}/agent/run` | POST | Create new agent run | ✅ Working |
+| `/v1/organizations/{id}/agent/run/{id}` | GET | Get agent run details | ✅ Working |
+| `/v1/organizations/{id}/agent/runs` | GET | List all agent runs | ✅ Working |
+| `/v1/beta/organizations/{id}/agent/run/stop` | POST | Stop running agent | ✅ Working |
 
-- Node.js 16+ and npm
-- A Codegen API token (get one from [Codegen Dashboard](https://app.codegen.com/settings))
+### ⚠️ Endpoints with Fallbacks
 
-## 🛠️ Installation & Setup
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/v1/beta/organizations/{id}/agent/run/resume` | POST | Resume paused agent | ⚠️ Fallback to new run |
+| `/v1/beta/organizations/{id}/agent/run/message` | POST | Send message to agent | ⚠️ Fallback to new run |
 
-### 1. Clone the repository
+*Note: Resume and message endpoints currently return 404. The application gracefully handles this by creating new agent runs with contextual prompts.*
 
-```bash
-git clone https://github.com/Zeeeepa/codegenApp.git
-cd codegenApp
+## 🛠️ Functions & Components
+
+### Core Functions
+
+#### API Client (`src/api/client.ts`)
+- `createAgentRun(organizationId, request)` - Create new agent run
+- `getAgentRun(organizationId, agentRunId)` - Get agent run details
+- `listAgentRuns(organizationId, page?, size?)` - List agent runs with pagination
+- `stopAgentRun(organizationId, request)` - Stop running agent
+- `resumeAgentRun(organizationId, request)` - Resume agent (with fallback)
+- `messageAgentRun(organizationId, request)` - Send message (with fallback)
+
+#### Cache Management (`src/storage/agentRunCache.ts`)
+- `syncAgentRuns(organizationId)` - Sync with API
+- `getAgentRuns(organizationId)` - Get cached runs
+- `updateAgentRun(organizationId, agentRun)` - Update single run
+- `getPollingRuns(organizationId)` - Get runs needing updates
+
+#### Background Monitoring (`src/utils/backgroundMonitoring.ts`)
+- `start()` - Start background monitoring
+- `stop()` - Stop background monitoring
+- `addAgentRun(agentRun)` - Track new agent run
+- `removeAgentRun(agentRunId)` - Stop tracking agent run
+
+### React Components
+
+#### Main Components
+- `ListAgentRuns` - Main dashboard with agent run list
+- `CreateAgentRunDialog` - Modal for creating new agent runs
+- `MessageAgentRunDialog` - Modal for messaging/resuming agent runs
+- `AgentRunCard` - Individual agent run display card
+
+#### Utility Components
+- `StatusBadge` - Agent run status indicator
+- `LoadingSpinner` - Loading state indicator
+- `ErrorBoundary` - Error handling wrapper
+
+### Custom Hooks
+
+#### `useCachedAgentRuns`
+Main hook for agent run management:
+```typescript
+const {
+  agentRuns,           // All agent runs
+  filteredRuns,        // Filtered and sorted runs
+  isLoading,           // Initial loading state
+  isRefreshing,        // Sync in progress
+  error,               // Error message
+  syncStatus,          // Sync status
+  refresh,             // Manual refresh function
+  updateFilters,       // Update filter criteria
+  updateSort,          // Update sort options
+  organizationId,      // Current organization
+  setOrganizationId    // Change organization
+} = useCachedAgentRuns();
 ```
 
-### 2. Install dependencies
+## 🔧 Interfaces & Types
 
-```bash
-npm install
+### Core Types (`src/api/types.ts`)
+
+#### Agent Run Response
+```typescript
+interface AgentRunResponse {
+  id: number;
+  organization_id: number;
+  status: string;
+  created_at: string;
+  web_url: string;
+  result?: string;
+}
 ```
 
-### 3. Environment Configuration
+#### Request Types
+```typescript
+interface CreateAgentRunRequest {
+  prompt: string;
+  images?: string[]; // Base64 encoded data URIs
+}
 
-Create a `.env` file in the project root with your Codegen API credentials:
+interface ResumeAgentRunRequest {
+  agent_run_id: number;
+  prompt: string;
+  images?: string[];
+}
 
-```bash
-# Required: Your Codegen API token
-# Get it from https://app.codegen.com/settings
+interface StopAgentRunRequest {
+  agent_run_id: number;
+}
+
+interface MessageAgentRunRequest {
+  agent_run_id: number;
+  prompt: string;
+  images?: string[];
+}
+```
+
+#### Status Enum
+```typescript
+enum AgentRunStatus {
+  ACTIVE = "ACTIVE",
+  ERROR = "ERROR",
+  EVALUATION = "EVALUATION",
+  COMPLETE = "COMPLETE",
+  CANCELLED = "CANCELLED",
+  TIMEOUT = "TIMEOUT",
+  MAX_ITERATIONS_REACHED = "MAX_ITERATIONS_REACHED",
+  OUT_OF_TOKENS = "OUT_OF_TOKENS",
+  FAILED = "FAILED",
+  PAUSED = "PAUSED",
+  PENDING = "PENDING"
+}
+```
+
+#### Filtering & Sorting
+```typescript
+interface AgentRunFilters {
+  status?: AgentRunStatus[];
+  organizationId?: number;
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+  searchQuery?: string;
+}
+
+interface SortOptions {
+  field: "created_at" | "status" | "organization_id";
+  direction: "asc" | "desc";
+}
+```
+
+## ⚙️ Setup & Installation
+
+### Prerequisites
+- Node.js 16+ 
+- npm or yarn
+- Codegen API access token
+
+### Environment Configuration
+
+Create a `.env` file in the root directory:
+
+```env
+# Your Codegen API token (required)
 REACT_APP_API_TOKEN=your_api_token_here
 
-# Optional: Your default organization ID
-REACT_APP_DEFAULT_ORGANIZATION=your_org_id_here
+# Your default organization ID (optional)
+REACT_APP_DEFAULT_ORGANIZATION=323
 
-# Optional: API Base URL (defaults to https://api.codegen.com)
+# API Base URL - direct connection to Codegen API
 REACT_APP_API_BASE_URL=https://api.codegen.com
 
-# Optional: Your user ID for personalized features
+# User ID for personalized features (optional)
 REACT_APP_USER_ID=your_user_id_here
 ```
 
-### 4. Start the development server
+### Installation
 
 ```bash
+# Clone the repository
+git clone <repository-url>
+cd codegenApp
+
+# Install dependencies
+npm install
+
+# Start the development server
 npm start
 ```
 
-The application will be available at `http://localhost:3000` (or the next available port).
+The application will be available at `http://localhost:8000`.
 
-## 🔧 Development
+### Production Build
 
-### Available Scripts
-
-- `npm start` - Start the React development server
-- `npm run build` - Build the React app for production
-- `npm test` - Run the test suite
-- `npm run eject` - Eject from Create React App (not recommended)
-
-### Project Structure
-
-```
-codegenApp/
-├── public/                 # Static assets
-│   ├── manifest.json      # PWA manifest
-│   ├── favicon.ico        # App icon
-│   └── logo*.png          # App logos
-├── src/                   # React source code
-│   ├── api/              # API client and types
-│   ├── utils/            # Utility functions
-│   ├── hooks/            # Custom React hooks
-│   ├── storage/          # Local storage utilities
-│   └── *.tsx             # React components
-├── .env                  # Environment variables
-└── README.md            # This file
-```
-
-## ⚙️ Configuration
-
-The application supports multiple configuration methods:
-
-1. **Environment Variables** (recommended): Set `REACT_APP_*` variables in `.env` file
-2. **Settings Page**: Configure credentials through the web interface
-3. **LocalStorage**: Automatically saves settings for future sessions
-
-### Environment Variable Validation
-
-The Settings page will show the status of your environment variables:
-
-- ✅ **Green**: All required variables are set
-- ⚠️ **Yellow**: Optional variables missing (warnings)
-- ❌ **Red**: Required variables missing (will prevent API calls)
-
-## 🚀 Deployment
-
-### Frontend Deployment
-
-The React app can be deployed to any static hosting service:
-
-#### Vercel
 ```bash
+# Build for production
 npm run build
-# Deploy the 'build' folder to Vercel
+
+# The build folder contains the production-ready files
 ```
 
-#### Netlify
-```bash
-npm run build
-# Deploy the 'build' folder to Netlify
+## 🏗️ Architecture
+
+### Application Structure
+```
+src/
+├── api/                 # API client and types
+│   ├── client.ts       # Main API client
+│   ├── constants.ts    # API endpoints
+│   └── types.ts        # TypeScript interfaces
+├── components/         # React components
+│   ├── ListAgentRuns.tsx
+│   ├── CreateAgentRunDialog.tsx
+│   └── MessageAgentRunDialog.tsx
+├── hooks/              # Custom React hooks
+│   └── useCachedAgentRuns.ts
+├── storage/            # Local storage and caching
+│   ├── agentRunCache.ts
+│   └── cacheTypes.ts
+├── utils/              # Utility functions
+│   ├── backgroundMonitoring.ts
+│   ├── credentials.ts
+│   ├── filtering.ts
+│   └── toast.ts
+└── styles/             # CSS and styling
 ```
 
-#### GitHub Pages
-```bash
-npm run build
-# Deploy the 'build' folder to GitHub Pages
-```
+### Data Flow
+1. **Initial Load**: App loads cached data from localStorage
+2. **Background Sync**: Automatic sync with Codegen API
+3. **Real-time Updates**: Polling for active agent runs
+4. **User Actions**: Create, stop, message agent runs
+5. **Cache Updates**: Local cache updated with API responses
 
-### Environment Variables for Production
+### Error Handling
+- **Network Errors**: Graceful degradation with cached data
+- **Missing Endpoints**: Fallback to alternative approaches
+- **Rate Limiting**: Automatic retry with exponential backoff
+- **User Feedback**: Toast notifications for all operations
 
-Set these environment variables in your hosting platform:
+## 🔍 Troubleshooting
 
+### Common Issues
+
+#### "Request failed with status 404" for message/resume
+This is expected - these endpoints are not yet implemented in the API. The app creates new agent runs as a workaround.
+
+#### React infinite loop warnings
+Fixed in the latest version by properly managing useEffect dependencies.
+
+#### CORS errors
+The app connects directly to the Codegen API. Ensure your API token is valid and has proper permissions.
+
+#### Agent runs not appearing immediately
+Check that:
+1. Your API token is valid
+2. Organization ID is correct
+3. Network connection is stable
+4. Browser console for any errors
+
+### Debug Mode
+
+Enable debug logging by adding to your `.env`:
 ```env
-REACT_APP_API_TOKEN=your_production_api_token
-REACT_APP_DEFAULT_ORGANIZATION=your_org_id
-REACT_APP_API_BASE_URL=https://api.codegen.com
-REACT_APP_USER_ID=your_user_id
+REACT_APP_DEBUG=true
 ```
 
-## 🔐 Authentication
-
-1. Get your API token from the [Codegen Dashboard](https://app.codegen.com/settings)
-2. Add it to your `.env` file or enter it in the application's Settings page
-3. The application will validate your credentials and load your organizations
-
-## 🧪 Testing
-
-Run the test suite to ensure everything is working correctly:
-
-```bash
-npm test
-```
-
-The test suite includes:
-- Environment variable validation tests
-- Component rendering tests
-- API configuration tests
-
-## 🐛 Troubleshooting
-
-### Missing Environment Variables
-
-If you see errors about missing environment variables:
-
-1. Ensure your `.env` file is in the project root
-2. Restart the development server after creating/modifying `.env`
-3. Check the Settings page for validation status
-
-### API Connection Issues
-
-If API calls are failing:
-
-1. Verify your API token is correct
-2. Check that the API base URL is accessible (`https://api.codegen.com`)
-3. Ensure your organization ID is valid
-4. Check browser console for detailed error messages
-
-### Development Server Issues
-
-- Make sure port 3000 is available
-- Try restarting the server: `npm start`
-- Check the console for detailed error messages
-
-## 📝 API Token Setup
-
-1. Visit [Codegen Dashboard](https://app.codegen.com/settings)
-2. Navigate to API settings
-3. Generate a new API token
-4. Copy the token and add it to your `.env` file or Settings page
+This will show detailed API requests and cache operations in the browser console.
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
 ## 🆘 Support
 
-If you encounter any issues:
-
+For issues and questions:
 1. Check the troubleshooting section above
-2. Look for existing issues in the GitHub repository
-3. Create a new issue with detailed information about the problem
+2. Review browser console for errors
+3. Verify API token and organization access
+4. Create an issue with detailed error information
 
-## 🔄 Updates
+---
 
-To update the application:
+**Built with ❤️ for the Codegen community**
 
-```bash
-git pull origin main
-npm install  # Updates dependencies
-npm start    # Restart the development server
-```
