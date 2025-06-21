@@ -614,7 +614,7 @@ export default function ListAgentRuns() {
       )}
 
       {/* Message Dialog */}
-      {messageDialogAgentRunId && organizationId && (
+      {messageDialogAgentRunId && organizationId !== null && (
         <MessageAgentRunDialog
           isOpen={isMessageDialogOpen}
           onClose={() => {

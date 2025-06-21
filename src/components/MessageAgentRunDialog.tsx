@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import { X, MessageSquare, Send, Loader } from "lucide-react";
 import { getAPIClient } from "../api/client";
@@ -8,7 +8,7 @@ interface MessageAgentRunDialogProps {
   isOpen: boolean;
   onClose: () => void;
   agentRunId: number;
-  organizationId: string;
+  organizationId: number;
   onMessageSent?: () => void;
 }
 
@@ -26,14 +26,7 @@ export function MessageAgentRunDialog({
 
   const apiClient = getAPIClient();
 
-  // Load agent run details when dialog opens
-  useEffect(() => {
-    if (isOpen && agentRunId && organizationId) {
-      loadAgentRunDetails();
-    }
-  }, [isOpen, agentRunId, organizationId]);
-
-  const loadAgentRunDetails = async () => {
+  const loadAgentRunDetails = useCallback(async () => {
     setIsLoadingDetails(true);
     try {
       const details = await apiClient.getAgentRun(organizationId, agentRunId);
@@ -44,7 +37,14 @@ export function MessageAgentRunDialog({
     } finally {
       setIsLoadingDetails(false);
     }
-  };
+  }, [apiClient, organizationId, agentRunId]);
+
+  // Load agent run details when dialog opens
+  useEffect(() => {
+    if (isOpen && agentRunId && organizationId) {
+      loadAgentRunDetails();
+    }
+  }, [isOpen, agentRunId, organizationId, loadAgentRunDetails]);
 
   const handleSendMessage = async () => {
     if (!message.trim()) {
@@ -112,15 +112,7 @@ export function MessageAgentRunDialog({
                 </div>
               ) : agentRunDetails ? (
                 <div className="space-y-4">
-                  {/* Original Prompt */}
-                  {agentRunDetails.prompt && (
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-300 mb-2">Original Request:</h4>
-                      <div className="bg-blue-900/20 border border-blue-500/30 rounded p-3">
-                        <p className="text-blue-200 text-sm whitespace-pre-wrap">{agentRunDetails.prompt}</p>
-                      </div>
-                    </div>
-                  )}
+                  {/* Note: Original prompt is not available in the API response */}
 
                   {/* Status and Result */}
                   <div className="grid grid-cols-2 gap-4">
