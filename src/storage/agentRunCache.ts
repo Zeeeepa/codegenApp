@@ -98,6 +98,8 @@ export class AgentRunCache {
     const existingRuns = await this.getAgentRuns(organizationId);
     const runIndex = existingRuns.findIndex(run => run.id === agentRun.id);
     
+    const isNewRun = runIndex < 0;
+    
     if (runIndex >= 0) {
       existingRuns[runIndex] = agentRun;
     } else {
@@ -105,6 +107,17 @@ export class AgentRunCache {
     }
 
     await this.setAgentRuns(organizationId, existingRuns);
+    
+    // Automatically add new agent runs to monitoring by default
+    if (isNewRun) {
+      try {
+        await this.addToTracking(organizationId, agentRun);
+        console.log(`🔍 Automatically added agent run #${agentRun.id} to monitoring`);
+      } catch (error) {
+        console.warn(`Failed to add agent run #${agentRun.id} to monitoring:`, error);
+        // Don't throw error - monitoring failure shouldn't break the update
+      }
+    }
   }
 
   /**
