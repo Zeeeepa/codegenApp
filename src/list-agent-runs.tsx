@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import toast from "react-hot-toast";
 import { 
   RefreshCw, 
@@ -13,7 +13,7 @@ import { AgentRunCard } from "./components/AgentRunCard";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
 import { getAPIClient } from "./api/client";
 import { getAgentRunCache } from "./storage/agentRunCache";
-import { AgentRunStatus, AgentRunFilters, CachedAgentRun } from "./api/types";
+import { AgentRunStatus, CachedAgentRun } from "./api/types";
 import { getDateRanges, getStatusFilterOptions, hasActiveFilters, clearFilters } from "./utils/filtering";
 import { SyncStatus } from "./storage/cacheTypes";
 import { useDialog } from "./contexts/DialogContext";
@@ -34,33 +34,28 @@ export default function ListAgentRuns() {
   const selection = useAgentRunSelection();
   const [searchText, setSearchText] = useState("");
   const [dateRanges] = useState(() => getDateRanges());
-  const [statusFilterOptions, setStatusFilterOptions] = useState(() => getStatusFilterOptions([]));
   const apiClient = getAPIClient();
   const cache = getAgentRunCache();
   const { openDialog } = useDialog();
 
-  // Initialize component and update status filter options when runs change
-  useEffect(() => {
-    // Component initialization logic
-    console.log('Agent runs component initialized');
-    console.log('Current filters:', filters as AgentRunFilters);
-  }, [filters]);
-
-  // Update status filter options when filteredRuns change
-  useEffect(() => {
-    if (filteredRuns.length > 0) {
-      setStatusFilterOptions(getStatusFilterOptions(filteredRuns));
-    }
+  // Memoize status filter options to prevent infinite loops
+  const statusFilterOptions = useMemo(() => {
+    return getStatusFilterOptions(filteredRuns);
   }, [filteredRuns]);
 
-  // Update search filter when search text changes
-  const handleSearchTextChange = (text: string) => {
+  // Initialize component - only run once
+  useEffect(() => {
+    console.log('Agent runs component initialized');
+  }, []); // Empty dependency array - only run once
+
+  // Update search filter when search text changes - memoized to prevent re-renders
+  const handleSearchTextChange = useCallback((text: string) => {
     setSearchText(text);
     updateFilters({
       ...filters,
       searchQuery: text,
     });
-  };
+  }, [filters, updateFilters]);
 
   const copyToClipboard = async (text: string, successMessage: string) => {
     try {
@@ -153,14 +148,14 @@ export default function ListAgentRuns() {
     }
   };
 
-  // Clear all filters
-  const handleClearFilters = () => {
+  // Clear all filters - memoized
+  const handleClearFilters = useCallback(() => {
     updateFilters(clearFilters());
     setSearchText("");
-  };
+  }, [updateFilters]);
 
-  // Filter by status
-  const filterByStatus = (status: AgentRunStatus) => {
+  // Filter by status - memoized
+  const filterByStatus = useCallback((status: AgentRunStatus) => {
     const currentStatuses = filters.status || [];
     const newStatuses = currentStatuses.includes(status)
       ? currentStatuses.filter(s => s !== status)
@@ -170,7 +165,7 @@ export default function ListAgentRuns() {
       ...filters,
       status: newStatuses.length > 0 ? newStatuses : undefined,
     });
-  };
+  }, [filters, updateFilters]);
 
   // Get sync status display
   const getSyncStatusAccessory = () => {
