@@ -9,6 +9,56 @@ export interface AgentRunResponse {
   result?: string;
 }
 
+// Agent Run Log Types
+export interface AgentRunLog {
+  agent_run_id: number;
+  created_at: string;
+  message_type: AgentRunLogMessageType;
+  thought?: string | null;
+  tool_name?: string | null;
+  tool_input?: object | null;
+  tool_output?: object | null;
+  observation?: object | string | null;
+}
+
+export interface AgentRunWithLogsResponse {
+  id: number;
+  organization_id: number;
+  status: string;
+  created_at: string;
+  web_url: string;
+  result?: string;
+  logs: AgentRunLog[];
+  total_logs: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
+// Agent Run Log Message Types
+export enum AgentRunLogMessageType {
+  // Plan Agent Types
+  ACTION = "ACTION",
+  PLAN_EVALUATION = "PLAN_EVALUATION",
+  FINAL_ANSWER = "FINAL_ANSWER",
+  ERROR = "ERROR",
+  USER_MESSAGE = "USER_MESSAGE",
+  USER_GITHUB_ISSUE_COMMENT = "USER_GITHUB_ISSUE_COMMENT",
+  
+  // PR Agent Types
+  INITIAL_PR_GENERATION = "INITIAL_PR_GENERATION",
+  DETECT_PR_ERRORS = "DETECT_PR_ERRORS",
+  FIX_PR_ERRORS = "FIX_PR_ERRORS",
+  PR_CREATION_FAILED = "PR_CREATION_FAILED",
+  PR_EVALUATION = "PR_EVALUATION",
+  
+  // Commit Agent Types
+  COMMIT_EVALUATION = "COMMIT_EVALUATION",
+  
+  // Link Types
+  AGENT_RUN_LINK = "AGENT_RUN_LINK",
+}
+
 export interface UserResponse {
   id: number;
   email?: string;
@@ -41,6 +91,11 @@ export interface ResumeAgentRunRequest {
 
 export interface StopAgentRunRequest {
   agent_run_id: number;
+}
+
+export interface GetAgentRunLogsRequest {
+  skip?: number;
+  limit?: number;
 }
 
 // Paginated Response Type

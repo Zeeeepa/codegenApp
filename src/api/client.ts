@@ -4,11 +4,13 @@ import { clearStoredUserInfo } from "../storage/userStorage";
 import { API_ENDPOINTS, DEFAULT_API_BASE_URL } from "./constants";
 import {
   AgentRunResponse,
+  AgentRunWithLogsResponse,
   UserResponse,
   OrganizationResponse,
   CreateAgentRunRequest,
   ResumeAgentRunRequest,
   StopAgentRunRequest,
+  GetAgentRunLogsRequest,
   PaginatedResponse,
   APIError,
 } from "./types";
@@ -148,6 +150,27 @@ export class CodegenAPIClient {
     return this.makeRequest<AgentRunResponse>(
       API_ENDPOINTS.AGENT_RUN_GET(organizationId, agentRunId)
     );
+  }
+
+  async getAgentRunLogs(
+    organizationId: number,
+    agentRunId: number,
+    request: GetAgentRunLogsRequest = {}
+  ): Promise<AgentRunWithLogsResponse> {
+    const { skip = 0, limit = 100 } = request;
+    const queryParams = new URLSearchParams();
+    
+    if (skip > 0) {
+      queryParams.append('skip', skip.toString());
+    }
+    if (limit !== 100) {
+      queryParams.append('limit', limit.toString());
+    }
+    
+    const endpoint = API_ENDPOINTS.AGENT_RUN_LOGS(organizationId, agentRunId);
+    const url = queryParams.toString() ? `${endpoint}?${queryParams.toString()}` : endpoint;
+    
+    return this.makeRequest<AgentRunWithLogsResponse>(url);
   }
 
   async resumeAgentRun(
