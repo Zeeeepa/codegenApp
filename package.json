@@ -7,7 +7,6 @@
     "@types/react": "^18.2.6",
     "@types/react-dom": "^18.2.4",
     "autoprefixer": "^10.4.14",
-    "concurrently": "^8.2.0",
     "lucide-react": "^0.263.1",
     "node-fetch": "^3.3.2",
     "postcss": "^8.4.24",
@@ -24,11 +23,11 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "dev": "concurrently \"npm run server:dev\" \"npm run start\"",
-    "server:install": "cd server && npm install",
-    "server:start": "cd server && npm start",
-    "server:dev": "cd server && npm run dev",
-    "postinstall": "npm run server:install"
+    "dev": "npm run start",
+    "validate": "node tests/run-all-validations.js",
+    "validate:features": "node tests/feature-matrix-validation.js",
+    "validate:ui": "node tests/ui-component-validation.js",
+    "validate:api": "node tests/comprehensive-api-validation.js"
   },
   "eslintConfig": {
     "extends": [
@@ -47,15 +46,6 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "proxy": "http://localhost:3001",
-  "devServer": {
-    "headers": {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-      "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Authorization, Accept, Origin",
-      "Access-Control-Allow-Credentials": "true"
-    }
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
