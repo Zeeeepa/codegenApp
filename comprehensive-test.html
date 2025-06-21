@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Comprehensive API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button { margin: 5px; padding: 10px; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Comprehensive Codegen API Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Test Agent Run Creation</h2>
+        <button onclick="testCreateAgentRun()">Create Agent Run: 2+2</button>
+        <div id="create-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test Agent Run Retrieval</h2>
+        <input type="number" id="agent-run-id" placeholder="Agent Run ID" value="41893">
+        <button onclick="testGetAgentRun()">Get Agent Run</button>
+        <div id="get-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Test Agent Run Logs</h2>
+        <input type="number" id="logs-agent-run-id" placeholder="Agent Run ID" value="41893">
+        <button onclick="testGetAgentRunLogs()">Get Agent Run Logs</button>
+        <div id="logs-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Test Agent Run Resume (Beta)</h2>
+        <input type="number" id="resume-agent-run-id" placeholder="Agent Run ID" value="41894">
+        <input type="text" id="resume-prompt" placeholder="Follow-up prompt" value="What is 3+3?">
+        <button onclick="testResumeAgentRun()">Resume Agent Run</button>
+        <div id="resume-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Test Cache Integration</h2>
+        <button onclick="testCacheIntegration()">Add Agent Run to Cache</button>
+        <div id="cache-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://api.codegen.com';
+        const ORG_ID = 323;
+        const API_TOKEN = 'sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99';
+        
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${API_TOKEN}`
+        };
+        
+        const fetchOptions = {
+            mode: 'cors',
+            credentials: 'omit',
+            headers
+        };
+
+        async function testCreateAgentRun() {
+            const resultDiv = document.getElementById('create-result');
+            resultDiv.innerHTML = '<div class="info">Creating agent run...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/v1/organizations/${ORG_ID}/agent/run`, {
+                    method: 'POST',
+                    ...fetchOptions,
+                    body: JSON.stringify({ prompt: '2+2' })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Agent Run Created Successfully!</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                // Store the ID for other tests
+                document.getElementById('agent-run-id').value = data.id;
+                document.getElementById('logs-agent-run-id').value = data.id;
+                document.getElementById('resume-agent-run-id').value = data.id;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                console.error('Create agent run failed:', error);
+            }
+        }
+
+        async function testGetAgentRun() {
+            const agentRunId = document.getElementById('agent-run-id').value;
+            const resultDiv = document.getElementById('get-result');
+            
+            if (!agentRunId) {
+                resultDiv.innerHTML = '<div class="error">Please enter an Agent Run ID</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="info">Fetching agent run...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/v1/organizations/${ORG_ID}/agent/run/${agentRunId}`, {
+                    method: 'GET',
+                    ...fetchOptions
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Agent Run Retrieved Successfully!</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                console.error('Get agent run failed:', error);
+            }
+        }
+
+        async function testGetAgentRunLogs() {
+            const agentRunId = document.getElementById('logs-agent-run-id').value;
+            const resultDiv = document.getElementById('logs-result');
+            
+            if (!agentRunId) {
+                resultDiv.innerHTML = '<div class="error">Please enter an Agent Run ID</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="info">Fetching agent run logs...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/v1/alpha/organizations/${ORG_ID}/agent/run/${agentRunId}/logs`, {
+                    method: 'GET',
+                    ...fetchOptions
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Agent Run Logs Retrieved Successfully!</div>
+                    <div class="info">Total logs: ${data.total_logs}, Pages: ${data.pages}</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                console.error('Get agent run logs failed:', error);
+            }
+        }
+
+        async function testResumeAgentRun() {
+            const agentRunId = document.getElementById('resume-agent-run-id').value;
+            const prompt = document.getElementById('resume-prompt').value;
+            const resultDiv = document.getElementById('resume-result');
+            
+            if (!agentRunId || !prompt) {
+                resultDiv.innerHTML = '<div class="error">Please enter both Agent Run ID and prompt</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="info">Resuming agent run...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/v1/beta/organizations/${ORG_ID}/agent/run/resume`, {
+                    method: 'POST',
+                    ...fetchOptions,
+                    body: JSON.stringify({
+                        agent_run_id: parseInt(agentRunId),
+                        prompt: prompt
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Agent Run Resumed Successfully!</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                if (error.message.includes('404') || error.message.includes('Not Found')) {
+                    resultDiv.innerHTML += '<div class="info">Note: Resume endpoint might not be fully implemented yet (beta feature)</div>';
+                }
+                console.error('Resume agent run failed:', error);
+            }
+        }
+
+        async function testCacheIntegration() {
+            const resultDiv = document.getElementById('cache-result');
+            resultDiv.innerHTML = '<div class="info">Testing cache integration...</div>';
+            
+            try {
+                // First create an agent run
+                const response = await fetch(`${API_BASE}/v1/organizations/${ORG_ID}/agent/run`, {
+                    method: 'POST',
+                    ...fetchOptions,
+                    body: JSON.stringify({ prompt: 'Test cache integration' })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const agentRun = await response.json();
+                
+                // Add to cache
+                const cacheKey = `agent-runs-cache-org-${ORG_ID}`;
+                const now = new Date();
+                const entry = {
+                    data: agentRun,
+                    timestamp: now.toISOString(),
+                    expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+                    version: "1.0.0",
+                    organizationId: ORG_ID,
+                    isPolling: agentRun.status === 'ACTIVE'
+                };
+                
+                // Get existing cache or create new
+                const existingCache = localStorage.getItem(cacheKey);
+                let cacheEntries = [];
+                if (existingCache) {
+                    try {
+                        cacheEntries = JSON.parse(existingCache);
+                    } catch (e) {
+                        console.error('Error parsing existing cache:', e);
+                    }
+                }
+                
+                // Add new entry at the beginning
+                cacheEntries.unshift(entry);
+                
+                // Store back to cache
+                localStorage.setItem(cacheKey, JSON.stringify(cacheEntries));
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Cache Integration Test Successful!</div>
+                    <div class="info">Agent Run ${agentRun.id} added to cache</div>
+                    <div class="info">Cache now contains ${cacheEntries.length} entries</div>
+                    <div class="info">Refresh the main app to see the agent run</div>
+                    <pre>${JSON.stringify(agentRun, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                console.error('Cache integration test failed:', error);
+            }
+        }
+
+        // Auto-run basic tests on page load
+        window.onload = function() {
+            console.log('Comprehensive API Test loaded');
+            console.log('API Base:', API_BASE);
+            console.log('Organization ID:', ORG_ID);
+        };
+    </script>
+</body>
+</html>
