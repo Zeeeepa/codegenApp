@@ -157,14 +157,14 @@ export class CodegenAPIClient {
     console.log("🔄 Resume Agent Run API Call:", {
       organizationId,
       request,
-      endpoint: API_ENDPOINTS.AGENT_RUN_RESUME(organizationId)
+      endpoint: API_ENDPOINTS.AGENT_RUN_RESUME(organizationId, request.agent_run_id)
     });
     
     return this.makeRequest<AgentRunResponse>(
-      API_ENDPOINTS.AGENT_RUN_RESUME(organizationId),
+      API_ENDPOINTS.AGENT_RUN_RESUME(organizationId, request.agent_run_id),
       {
         method: "POST",
-        body: JSON.stringify(request),
+        body: JSON.stringify({ prompt: request.prompt }),
       }
     );
   }
