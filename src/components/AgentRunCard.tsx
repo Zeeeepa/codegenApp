@@ -12,12 +12,14 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  ScrollText
 } from 'lucide-react';
 import { CachedAgentRun, AgentRunStatus } from '../api/types';
 import { useAgentRunSelection } from '../contexts/AgentRunSelectionContext';
 import { AgentRunResponseModal } from './AgentRunResponseModal';
 import { RespondToRunDialog } from './RespondToRunDialog';
+import { AgentRunLogsModal } from './AgentRunLogsModal';
 
 interface AgentRunCardProps {
   run: CachedAgentRun;
@@ -26,12 +28,14 @@ interface AgentRunCardProps {
   onDelete: (agentRunId: number) => void;
   onCopyUrl: (url: string, message: string) => void;
   onRespond: (runId: number, prompt: string) => Promise<void>;
+  onViewLogs?: (agentRunId: number) => void;
 }
 
-export function AgentRunCard({ run, onStop, onResume, onDelete, onCopyUrl, onRespond }: AgentRunCardProps) {
+export function AgentRunCard({ run, onStop, onResume, onDelete, onCopyUrl, onRespond, onViewLogs }: AgentRunCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [responseModalRun, setResponseModalRun] = useState<CachedAgentRun | null>(null);
   const [respondDialogRun, setRespondDialogRun] = useState<CachedAgentRun | null>(null);
+  const [showLogsModal, setShowLogsModal] = useState(false);
   const selection = useAgentRunSelection();
 
   const getStatusIcon = (status: string) => {
@@ -152,6 +156,15 @@ export function AgentRunCard({ run, onStop, onResume, onDelete, onCopyUrl, onRes
                 title="Open in Browser"
               >
                 <ExternalLink className="h-4 w-4" />
+              </button>
+              
+              {/* View Logs Button */}
+              <button
+                onClick={() => setShowLogsModal(true)}
+                className="inline-flex items-center px-3 py-1.5 border border-purple-600 text-sm font-medium rounded text-purple-300 bg-purple-900 hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 focus:ring-offset-gray-800"
+                title="View Agent Run Logs"
+              >
+                <ScrollText className="h-4 w-4" />
               </button>
               
               {/* Respond button - only show for completed, failed, cancelled, or stopped runs */}
@@ -320,6 +333,14 @@ export function AgentRunCard({ run, onStop, onResume, onDelete, onCopyUrl, onRes
           onSendResponse={onRespond}
         />
       )}
+
+      {/* Agent Run Logs Modal */}
+      <AgentRunLogsModal
+        isOpen={showLogsModal}
+        onClose={() => setShowLogsModal(false)}
+        agentRunId={run.id}
+        organizationId={run.organization_id}
+      />
     </>
   );
 }

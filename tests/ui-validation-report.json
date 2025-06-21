@@ -1,0 +1,81 @@
+{
+  "timestamp": "2025-06-21T10:27:24.881Z",
+  "summary": {
+    "totalComponents": 6,
+    "existingComponents": 6,
+    "totalFeatures": 26,
+    "implementedFeatures": 25,
+    "overallCompletion": "96.2"
+  },
+  "componentResults": {
+    "AgentRunLogsModal.tsx": {
+      "exists": true,
+      "foundFeatures": [
+        "Modal wrapper functionality",
+        "Props interface definition",
+        "Close handler"
+      ],
+      "missingFeatures": [
+        "Modal state management"
+      ],
+      "completionRate": "75.0"
+    },
+    "AgentRunLogsViewer.tsx": {
+      "exists": true,
+      "foundFeatures": [
+        "API client integration",
+        "Pagination state management",
+        "Loading states",
+        "Error handling",
+        "Log filtering",
+        "Real-time data fetching"
+      ],
+      "missingFeatures": [],
+      "completionRate": "100.0"
+    },
+    "LogEntry.tsx": {
+      "exists": true,
+      "foundFeatures": [
+        "Message type display",
+        "Tool execution details",
+        "Thought process display",
+        "Timestamp formatting",
+        "JSON data formatting"
+      ],
+      "missingFeatures": [],
+      "completionRate": "100.0"
+    },
+    "LogFilters.tsx": {
+      "exists": true,
+      "foundFeatures": [
+        "Message type filtering",
+        "Filter state management",
+        "UI controls for filters",
+        "Clear filters functionality"
+      ],
+      "missingFeatures": [],
+      "completionRate": "100.0"
+    },
+    "LogPagination.tsx": {
+      "exists": true,
+      "foundFeatures": [
+        "Page navigation",
+        "Page size controls",
+        "Navigation state",
+        "Pagination info display"
+      ],
+      "missingFeatures": [],
+      "completionRate": "100.0"
+    },
+    "AgentRunCard.tsx": {
+      "exists": true,
+      "foundFeatures": [
+        "View Logs button integration",
+        "Modal trigger functionality",
+        "Agent run data display"
+      ],
+      "missingFeatures": [],
+      "completionRate": "100.0"
+    }
+  }
+}
