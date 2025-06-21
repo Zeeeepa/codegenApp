@@ -2,22 +2,33 @@
 > agent-run-manager-web@1.0.0 start
 > PORT=8000 react-scripts start
 
-(node:15759) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:13697) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-(node:15759) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:13697) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
 Starting the development server...
 
-Compiled successfully!
+Compiled with warnings.
 
-You can now view agent-run-manager-web in the browser.
+[eslint] 
+src/components/MonitoringDashboard.tsx
+  Line 5:10:   'AgentRunStatus' is defined but never used                                                                                                        @typescript-eslint/no-unused-vars
+  Line 66:22:  Function declared in a loop contains unsafe references to variable(s) 'activeRuns', 'completedRuns', 'failedRuns', 'cancelledRuns', 'pausedRuns'  no-loop-func
+  Line 159:6:  React Hook useEffect has a missing dependency: 'loadMonitoringStats'. Either include it or remove the dependency array                            react-hooks/exhaustive-deps
 
-  Local:            http://localhost:8000
-  On Your Network:  http://172.20.58.150:8000
+src/hooks/useCachedAgentRuns.ts
+  Line 197:6:  React Hook useEffect has missing dependencies: 'loadCachedData' and 'syncWithAPI'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
 
-Note that the development build is not optimized.
-To create a production build, use npm run build.
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
 
-webpack compiled successfully
-Files successfully emitted, waiting for typecheck results...
-Issues checking in progress...
+WARNING in [eslint] 
+src/components/MonitoringDashboard.tsx
+  Line 5:10:   'AgentRunStatus' is defined but never used                                                                                                        @typescript-eslint/no-unused-vars
+  Line 66:22:  Function declared in a loop contains unsafe references to variable(s) 'activeRuns', 'completedRuns', 'failedRuns', 'cancelledRuns', 'pausedRuns'  no-loop-func
+  Line 159:6:  React Hook useEffect has a missing dependency: 'loadMonitoringStats'. Either include it or remove the dependency array                            react-hooks/exhaustive-deps
+
+src/hooks/useCachedAgentRuns.ts
+  Line 197:6:  React Hook useEffect has missing dependencies: 'loadCachedData' and 'syncWithAPI'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+webpack compiled with 1 warning
 No issues found.

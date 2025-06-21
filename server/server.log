@@ -1,24 +1,45 @@
-node:events:496
-      throw er; // Unhandled 'error' event
-      ^
 
-Error: listen EADDRINUSE: address already in use :::3001
-    at Server.setupListenHandle [as _listen2] (node:net:1937:16)
-    at listenInCluster (node:net:1994:12)
-    at Server.listen (node:net:2099:7)
-    at Function.listen (/tmp/Zeeeepa/codegenApp/server/node_modules/express/lib/application.js:635:24)
-    at file:///tmp/Zeeeepa/codegenApp/server/index.js:126:5
-    at ModuleJob.run (node:internal/modules/esm/module_job:271:25)
-    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:578:26)
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5)
-Emitted 'error' event on Server instance at:
-    at emitErrorNT (node:net:1973:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
-  code: 'EADDRINUSE',
-  errno: -98,
-  syscall: 'listen',
-  address: '::',
-  port: 3001
-}
+> agent-run-manager-server@1.0.0 start
+> node index.js
 
-Node.js v22.14.0
+🚀 Proxy server running on port 3001
+🎯 Proxying to: https://api.codegen.com
+🌐 Health check: http://localhost:3001/health
+📋 Mock AGENT RUNS LIST for org 323 (page: 1, size: 10)
+🔑 Authorization: Bearer sk-ce027fa7-3...
+✅ Returning 4 agent runs
+🔄 Proxying POST /organizations/323/agent/run to https://api.codegen.com/v1/organizations/323/agent/run
+🔑 Authorization: Bearer sk-ce027fa7-3...
+💬 Mock MESSAGE endpoint for org 323, run 41854
+🔑 Authorization: Bearer sk-ce027fa7-3...
+📝 Prompt: This is a test message for the new endpoint implementation....
+✅ Created follow-up agent run: 41855
+▶️ Mock RESUME endpoint for org 323, run 99999
+🔑 Authorization: Bearer sk-ce027fa7-3...
+📝 Resume prompt: Test resume message...
+✅ Created resume agent run: 41856
+🔄 Proxying POST /organizations/323/agent/run to https://api.codegen.com/v1/organizations/323/agent/run
+🔑 Authorization: Bearer sk-ce027fa7-3...
+🔄 Proxying GET /organizations/323/agent/run/41857 to https://api.codegen.com/v1/organizations/323/agent/run/41857
+🔑 Authorization: Bearer sk-ce027fa7-3...
+🔄 Proxying GET /organizations/323/agent/run/41857 to https://api.codegen.com/v1/organizations/323/agent/run/41857
+🔑 Authorization: Bearer sk-ce027fa7-3...
+🔄 Proxying GET /organizations/323/agent/run/41857 to https://api.codegen.com/v1/organizations/323/agent/run/41857
+🔑 Authorization: Bearer sk-ce027fa7-3...
+🔄 Proxying GET /organizations/323/agent/run/41857 to https://api.codegen.com/v1/organizations/323/agent/run/41857
+🔑 Authorization: Bearer sk-ce027fa7-3...
+🔄 Proxying GET /organizations/323/agent/run/41857 to https://api.codegen.com/v1/organizations/323/agent/run/41857
+🔑 Authorization: Bearer sk-ce027fa7-3...
+🔄 Proxying GET /organizations/323/agent/run/41857 to https://api.codegen.com/v1/organizations/323/agent/run/41857
+🔑 Authorization: Bearer sk-ce027fa7-3...
+🔄 Proxying GET /organizations/323/agent/run/41857 to https://api.codegen.com/v1/organizations/323/agent/run/41857
+🔑 Authorization: Bearer sk-ce027fa7-3...
+🔄 Proxying GET /organizations/323/agent/run/41857 to https://api.codegen.com/v1/organizations/323/agent/run/41857
+🔑 Authorization: Bearer sk-ce027fa7-3...
+💬 Mock MESSAGE endpoint for org 323, run 41857
+🔑 Authorization: Bearer sk-ce027fa7-3...
+📝 Prompt: This is a test message sent via the "Respond to agent run" button functionality....
+✅ Created follow-up agent run: 41858
+📋 Mock AGENT RUNS LIST for org 323 (page: 1, size: 50)
+🔑 Authorization: Bearer sk-ce027fa7-3...
+✅ Returning 6 agent runs
