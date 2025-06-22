@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ResumeAgentRunDialog } from '../src/components/ResumeAgentRunDialog';
+import { ResumeAgentRunDialog } from '../components/ResumeAgentRunDialog';
 
 // Mock react-hot-toast
 jest.mock('react-hot-toast', () => ({
@@ -13,7 +13,7 @@ jest.mock('react-hot-toast', () => ({
 }));
 
 // Mock API client
-jest.mock('../src/api/client', () => ({
+jest.mock('../api/client', () => ({
   getAPIClient: () => ({
     getAgentRun: jest.fn().mockResolvedValue({
       id: 123,
@@ -514,4 +514,3 @@ describe('Browser Automation Tests', () => {
     });
   });
 });
-

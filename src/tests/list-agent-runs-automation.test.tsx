@@ -12,7 +12,7 @@ jest.mock('react-hot-toast', () => ({
 }));
 
 // Mock API client
-jest.mock('../src/api/client', () => ({
+jest.mock('../api/client', () => ({
   getAPIClient: () => ({
     getAgentRuns: jest.fn().mockResolvedValue({
       data: [
@@ -37,7 +37,7 @@ jest.mock('../src/api/client', () => ({
 }));
 
 // Mock preferences
-jest.mock('../src/utils/preferences', () => ({
+jest.mock('../utils/preferences', () => ({
   validateEnvironmentConfiguration: () => ({
     isValid: true,
     missingVars: [],
@@ -77,7 +77,7 @@ Object.defineProperty(window, 'prompt', {
 });
 
 // Import the component after mocking
-import ListAgentRuns from '../src/list-agent-runs';
+import ListAgentRuns from '../list-agent-runs';
 
 describe('List Agent Runs Browser Automation Tests', () => {
   beforeEach(() => {
@@ -537,4 +537,3 @@ describe('List Agent Runs Browser Automation Tests', () => {
     });
   });
 });
-
