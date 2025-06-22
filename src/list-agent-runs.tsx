@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
 import { useDialog } from "./contexts/DialogContext";
-import { MonitorSelectedButton, AddToMonitorButton } from "./components/MonitorSelectedButton";
+import { MonitorSelectedButton } from "./components/MonitorSelectedButton";
 import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
 import { ResumeAgentRunDialog } from "./components/ResumeAgentRunDialog";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
@@ -191,7 +191,7 @@ export default function ListAgentRuns() {
     openDialog('resume-run', { agentRunId, organizationId });
   };
 
-  // Respond to an agent run (for stopped/failed runs) - now uses browser automation
+  // Respond to an agent run (for stopped/failed runs) - now uses API
   const respondToAgentRun = async (agentRunId: number) => {
     if (!organizationId) return;
 
@@ -203,140 +203,27 @@ export default function ListAgentRuns() {
     if (!prompt || !prompt.trim()) return;
 
     try {
-      console.log("🚀 Automating browser to respond to agent run:", {
+      console.log("🚀 Responding to agent run via API:", {
         organizationId,
         agentRunId,
         prompt: prompt.trim()
       });
-      
-      // Construct the Codegen chat URL for this agent run
-      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
-      
-      // Open INVISIBLE browser window (not small)
-      const browserWindow = window.open(chatUrl, '_blank', 'width=0,height=0,left=-2000,top=-2000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no,directories=no');
-      
-      if (!browserWindow) {
-        throw new Error("Failed to open browser window - popup blocked?");
-      }
 
-      // Wait for page to load and then automate the chat input
-      setTimeout(async () => {
-        try {
-          const doc = browserWindow.document;
-          
-          // Wait a bit more for the page to fully load
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          
-          // Try primary XPath selector first
-          let chatInput = doc.evaluate(
-            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div',
-            doc,
-            null,
-            XPathResult.FIRST_ORDERED_NODE_TYPE,
-            null
-          ).singleNodeValue as HTMLElement;
-          
-          // Fallback to CSS selector if XPath fails
-          if (!chatInput) {
-            chatInput = doc.querySelector('#chat-bar > div > div.sidebar-inset.flex.justify-center > div > form > fieldset > div') as HTMLElement;
-          }
-          
-          // If still not found, try to find any textarea or input in the chat area
-          if (!chatInput) {
-            chatInput = doc.querySelector('#chat-bar textarea, #chat-bar input[type="text"]') as HTMLElement;
-          }
-          
-          if (!chatInput) {
-            throw new Error("Could not find chat input element");
-          }
-          
-          // Focus and set the text
-          chatInput.focus();
-          if (chatInput.tagName.toLowerCase() === 'textarea' || chatInput.tagName.toLowerCase() === 'input') {
-            (chatInput as HTMLInputElement | HTMLTextAreaElement).value = prompt.trim();
-            
-            // Trigger input events to ensure React state updates
-            chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-            chatInput.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-          
-          // Wait a moment for React to process the input
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Find and click the send button
-          let sendButton = doc.evaluate(
-            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div/div[2]/div[2]/button',
-            doc,
-            null,
-            XPathResult.FIRST_ORDERED_NODE_TYPE,
-            null
-          ).singleNodeValue as HTMLButtonElement;
-          
-          // Fallback CSS selector for send button
-          if (!sendButton) {
-            sendButton = doc.querySelector('#chat-bar > div > div.sidebar-inset.flex.justify-center > div > form > fieldset > div > div.flex.items-center.justify-between > div.flex.items-center.gap-3 > button') as HTMLButtonElement;
-          }
-          
-          // Generic fallback - look for any submit button in the chat area
-          if (!sendButton) {
-            sendButton = doc.querySelector('#chat-bar button[type="submit"], #chat-bar button:last-child') as HTMLButtonElement;
-          }
-          
-          if (sendButton) {
-            sendButton.click();
-            
-            // Wait for message to be sent
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Close the browser window
-            browserWindow.close();
-            
-            toast.success(`Response sent to agent run #${agentRunId} successfully!`);
-            
-            // Refresh to show updated status
-            await refresh();
-          } else {
-            throw new Error("Could not find send button");
-          }
-          
-        } catch (automationError) {
-          console.error("Browser automation failed:", automationError);
-          browserWindow.close();
-          
-          // Ensure main window is focused before clipboard operation
-          window.focus();
-          
-          // Fallback to the manual approach
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
-          
-          try {
-            await navigator.clipboard.writeText(prompt.trim());
-            toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
-          } catch (clipboardError) {
-            console.error("Clipboard error:", clipboardError);
-            toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
-          }
-        }
-      }, 2000); // Wait 2 seconds for initial page load
+      // Use the API to resume the agent run directly
+      const apiClient = getAPIClient();
+      await apiClient.resumeAgentRun(organizationId, {
+        agent_run_id: agentRunId,
+        prompt: prompt.trim(),
+      });
 
+      toast.success(`Response sent to agent run #${agentRunId} successfully!`);
+      
+      // Refresh to show updated status
+      await refresh();
+      
     } catch (error) {
-      console.error("Failed to automate browser:", error);
-      
-      // Ensure main window is focused before clipboard operation
-      window.focus();
-      
-      // Fallback to manual approach
-      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
-      window.open(chatUrl, '_blank', 'noopener,noreferrer');
-      
-      try {
-        await navigator.clipboard.writeText(prompt.trim());
-        toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
-      } catch (clipboardError) {
-        console.error("Clipboard error:", clipboardError);
-        toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
-      }
+      console.error("Failed to respond to agent run:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to respond to agent run");
     }
   };
 
@@ -435,11 +322,8 @@ export default function ListAgentRuns() {
                 }
                 return null;
               })()}
-              {/* Real-time monitoring statistics */}
+              {/* Real-time status statistics */}
               <div className="flex items-center space-x-2 text-sm">
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-900/30 text-green-300 border border-green-500/20">
-                  🔍 {filteredRuns.length} Monitored
-                </span>
                 {filteredRuns.filter(run => run.status === AgentRunStatus.ACTIVE).length > 0 && (
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-900/30 text-blue-300 border border-blue-500/20 animate-pulse">
                     ⚡ {filteredRuns.filter(run => run.status === AgentRunStatus.ACTIVE).length} Active
@@ -454,12 +338,7 @@ export default function ListAgentRuns() {
                   onMonitoringComplete={refresh}
                 />
               )}
-              {organizationId && (
-                <AddToMonitorButton 
-                  organizationId={organizationId} 
-                  onAddComplete={refresh}
-                />
-              )}
+
               <button
                 onClick={() => openDialog('create-run', { organizationId })}
                 className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -579,12 +458,6 @@ export default function ListAgentRuns() {
                 : "Create your first agent run to get started"}
             </p>
             <div className="flex justify-center space-x-3">
-              {organizationId && (
-                <AddToMonitorButton 
-                  organizationId={organizationId} 
-                  onAddComplete={refresh}
-                />
-              )}
               <button
                 onClick={() => navigate('/create-agent-run')}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -664,10 +537,7 @@ export default function ListAgentRuns() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
                           <h3 className="text-lg font-medium text-white">Agent Run #{run.id}</h3>
-                          {/* Enhanced monitoring indicator with real-time status */}
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-900/50 text-green-300 border border-green-500/30">
-                            🔍 Monitored
-                          </span>
+
                           {/* Real-time status indicator */}
                           {run.status === AgentRunStatus.ACTIVE && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-900/50 text-blue-300 border border-blue-500/30 animate-pulse">
