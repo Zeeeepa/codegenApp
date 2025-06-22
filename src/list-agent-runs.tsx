@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
 import { useDialog } from "./contexts/DialogContext";
-import { MonitorSelectedButton } from "./components/MonitorSelectedButton";
+
 import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
 import { ResumeAgentRunDialog } from "./components/ResumeAgentRunDialog";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
@@ -135,19 +135,49 @@ export default function ListAgentRuns() {
 
   // Format date for display
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    try {
+      // Handle various date formats
+      let date: Date;
+      if (dateString.includes('T') || dateString.includes('Z')) {
+        // ISO format
+        date = new Date(dateString);
+      } else {
+        // Try parsing as is
+        date = new Date(dateString);
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateString);
+        return dateString; // Return original string if parsing fails
+      }
+      
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return date.toLocaleDateString();
+      // Debug logging for timestamp issues
+      console.log('Date formatting:', {
+        original: dateString,
+        parsed: date.toISOString(),
+        now: now.toISOString(),
+        diffMs,
+        diffMins,
+        diffHours
+      });
+
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      
+      return date.toLocaleDateString();
+    } catch (error) {
+      console.error('Error formatting date:', error, dateString);
+      return dateString; // Return original string if error occurs
+    }
   };
 
   // Stop an agent run
@@ -449,12 +479,7 @@ export default function ListAgentRuns() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              {selection.hasSelection && organizationId && (
-                <MonitorSelectedButton 
-                  organizationId={organizationId} 
-                  onMonitoringComplete={refresh}
-                />
-              )}
+
 
               <button
                 onClick={() => openDialog('create-run', { organizationId })}
