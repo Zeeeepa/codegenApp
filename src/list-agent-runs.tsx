@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { 
   Play, 
@@ -211,8 +210,8 @@ export default function ListAgentRuns() {
       // Construct the Codegen chat URL for this agent run
       const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
       
-      // Open invisible browser window
-      const browserWindow = window.open(chatUrl, '_blank', 'width=1,height=1,left=-1000,top=-1000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no');
+      // Open INVISIBLE browser window (not small)
+      const browserWindow = window.open(chatUrl, '_blank', 'width=0,height=0,left=-2000,top=-2000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no,directories=no');
       
       if (!browserWindow) {
         throw new Error("Failed to open browser window - popup blocked?");
@@ -302,16 +301,27 @@ export default function ListAgentRuns() {
           console.error("Browser automation failed:", automationError);
           browserWindow.close();
           
+          // Ensure main window is focused before clipboard operation
+          window.focus();
+          
           // Fallback to the manual approach
           const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
-          await navigator.clipboard.writeText(prompt.trim());
           
-          toast.error(`Automation failed. Opened agent run in browser - please paste your message: "${prompt.trim()}"`);
+          try {
+            await navigator.clipboard.writeText(prompt.trim());
+            toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
+          } catch (clipboardError) {
+            console.error("Clipboard error:", clipboardError);
+            toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
+          }
         }
       }, 2000); // Wait 2 seconds for initial page load
 
     } catch (error) {
       console.error("Failed to automate browser:", error);
+      
+      // Ensure main window is focused before clipboard operation
+      window.focus();
       
       // Fallback to manual approach
       const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
@@ -320,7 +330,8 @@ export default function ListAgentRuns() {
       try {
         await navigator.clipboard.writeText(prompt.trim());
         toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
-      } catch {
+      } catch (clipboardError) {
+        console.error("Clipboard error:", clipboardError);
         toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
       }
     }
@@ -380,8 +391,6 @@ export default function ListAgentRuns() {
     }
   };
 
-  const navigate = useNavigate();
-
   if (error && !isLoading) {
     return (
       <div className="container mx-auto p-6 max-w-4xl">
@@ -423,6 +432,17 @@ export default function ListAgentRuns() {
                 }
                 return null;
               })()}
+              {/* Real-time monitoring statistics */}
+              <div className="flex items-center space-x-2 text-sm">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-900/30 text-green-300 border border-green-500/20">
+                  🔍 {filteredRuns.length} Monitored
+                </span>
+                {filteredRuns.filter(run => run.status === AgentRunStatus.ACTIVE).length > 0 && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-900/30 text-blue-300 border border-blue-500/20 animate-pulse">
+                    ⚡ {filteredRuns.filter(run => run.status === AgentRunStatus.ACTIVE).length} Active
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center space-x-3">
               {selection.hasSelection && organizationId && (
@@ -438,7 +458,7 @@ export default function ListAgentRuns() {
                 />
               )}
               <button
-                onClick={() => navigate('/create-agent-run')}
+                onClick={() => openDialog('create-run', { organizationId })}
                 className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -591,8 +611,10 @@ export default function ListAgentRuns() {
               const canStop = run.status === AgentRunStatus.ACTIVE;
               const canResume = run.status === AgentRunStatus.PAUSED || 
                                 run.status === AgentRunStatus.COMPLETE ||
+                                run.status === AgentRunStatus.CANCELLED ||
                                 run.status.toLowerCase() === 'stopped' ||
-                                run.status.toLowerCase() === 'paused';
+                                run.status.toLowerCase() === 'paused' ||
+                                run.status.toLowerCase() === 'cancelled';
               const canRespond = [
                 AgentRunStatus.FAILED,
                 AgentRunStatus.ERROR,
@@ -639,13 +661,22 @@ export default function ListAgentRuns() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
                           <h3 className="text-lg font-medium text-white">Agent Run #{run.id}</h3>
-                          {/* Monitoring indicator */}
+                          {/* Enhanced monitoring indicator with real-time status */}
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-900/50 text-green-300 border border-green-500/30">
                             🔍 Monitored
                           </span>
+                          {/* Real-time status indicator */}
+                          {run.status === AgentRunStatus.ACTIVE && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-900/50 text-blue-300 border border-blue-500/30 animate-pulse">
+                              ⚡ Live
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center space-x-4 text-sm text-gray-500">
                           <span>Created {formatDate(run.created_at)}</span>
+                          {run.updated_at && run.updated_at !== run.created_at && (
+                            <span className="text-yellow-400">• Updated {formatDate(run.updated_at)}</span>
+                          )}
                           {run.result && (
                             <span className="text-blue-400">• Has Response</span>
                           )}
@@ -706,9 +737,10 @@ export default function ListAgentRuns() {
                         <button
                           onClick={() => resumeAgentRun(run.id)}
                           className="inline-flex items-center px-3 py-1.5 border border-green-600 text-sm font-medium rounded text-green-300 bg-green-900 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-gray-800"
-                          title="Resume Agent Run (Cmd+R)"
+                          title={`Resume Agent Run #${run.id}`}
                         >
-                          <Play className="h-4 w-4" />
+                          <Play className="h-4 w-4 mr-1" />
+                          Resume
                         </button>
                       )}
                       

@@ -66,8 +66,8 @@ export function ResumeAgentRunDialog({
       // Construct the Codegen chat URL for this agent run
       const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
       
-      // Open invisible browser window
-      const browserWindow = window.open(chatUrl, '_blank', 'width=1,height=1,left=-1000,top=-1000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no');
+      // Open INVISIBLE browser window (not small)
+      const browserWindow = window.open(chatUrl, '_blank', 'width=0,height=0,left=-2000,top=-2000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no,directories=no');
       
       if (!browserWindow) {
         throw new Error("Failed to open browser window - popup blocked?");
@@ -159,11 +159,19 @@ export function ResumeAgentRunDialog({
           console.error("Browser automation failed:", automationError);
           browserWindow.close();
           
+          // Ensure main window is focused before clipboard operation
+          window.focus();
+          
           // Fallback to the manual approach
           const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
-          await navigator.clipboard.writeText(prompt.trim());
           
-          toast.error(`Automation failed. Opened agent run in browser - please paste your message: "${prompt.trim()}"`);
+          try {
+            await navigator.clipboard.writeText(prompt.trim());
+            toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
+          } catch (clipboardError) {
+            console.error("Clipboard error:", clipboardError);
+            toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
+          }
           
           setPrompt("Continue with the previous task");
           onResumed?.();
@@ -174,6 +182,9 @@ export function ResumeAgentRunDialog({
     } catch (error) {
       console.error("Failed to automate browser:", error);
       
+      // Ensure main window is focused before clipboard operation
+      window.focus();
+      
       // Fallback to manual approach
       const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
       window.open(chatUrl, '_blank', 'noopener,noreferrer');
@@ -181,7 +192,8 @@ export function ResumeAgentRunDialog({
       try {
         await navigator.clipboard.writeText(prompt.trim());
         toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
-      } catch {
+      } catch (clipboardError) {
+        console.error("Clipboard error:", clipboardError);
         toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
       }
       

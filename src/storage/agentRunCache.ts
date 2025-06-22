@@ -156,6 +156,14 @@ export class AgentRunCache {
         try {
           const updatedRun = await apiClient.getAgentRun(organizationId, cachedRun.id);
           updatedRuns.push(updatedRun);
+          
+          // Ensure all runs are added to monitoring by default
+          try {
+            await this.addToTracking(organizationId, updatedRun);
+          } catch (trackingError) {
+            // Don't fail sync if tracking fails, just log it
+            console.warn(`Failed to add agent run #${updatedRun.id} to tracking:`, trackingError);
+          }
         } catch (error) {
           // If we can't fetch a run, keep the cached version
           console.warn(`Failed to update agent run ${cachedRun.id}:`, error);
