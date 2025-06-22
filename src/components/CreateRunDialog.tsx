@@ -6,7 +6,7 @@ import { getAgentRunCache } from "../storage/agentRunCache";
 import { validateCredentials, hasCredentials } from "../utils/credentials";
 import { OrganizationResponse } from "../api/types";
 import { useCachedAgentRuns } from "../hooks/useCachedAgentRuns";
-import { getBackgroundMonitoringService } from "../utils/backgroundMonitoring";
+
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { useDialog } from "../contexts/DialogContext";
 
