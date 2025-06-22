@@ -14,13 +14,16 @@ import {
   Clock,
   XCircle,
   Pause,
-  FileText
+  FileText,
+  Settings
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
 import { useDialog } from "./contexts/DialogContext";
 import { MonitorSelectedButton, AddToMonitorButton } from "./components/MonitorSelectedButton";
 import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
 import { ResumeAgentRunDialog } from "./components/ResumeAgentRunDialog";
+import { CreateRunDialog } from "./components/CreateRunDialog";
+import { SettingsDialog } from "./components/SettingsDialog";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
 import { getAPIClient } from "./api/client";
 import { getAgentRunCache } from "./storage/agentRunCache";
@@ -458,11 +461,18 @@ export default function ListAgentRuns() {
                 />
               )}
               <button
-                onClick={() => openDialog('create-run', { organizationId })}
+                onClick={() => openDialog('createRun', { organizationId })}
                 className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Run
+              </button>
+              <button
+                onClick={() => openDialog('settings')}
+                className="inline-flex items-center px-3 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+                title="Settings"
+              >
+                <Settings className="h-4 w-4" />
               </button>
               {selection.hasSelection && (
                 <button
@@ -583,7 +593,7 @@ export default function ListAgentRuns() {
                 />
               )}
               <button
-                onClick={() => navigate('/create-agent-run')}
+                onClick={() => openDialog('createRun', { organizationId })}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -674,9 +684,6 @@ export default function ListAgentRuns() {
                         </div>
                         <div className="flex items-center space-x-4 text-sm text-gray-500">
                           <span>Created {formatDate(run.created_at)}</span>
-                          {run.updated_at && run.updated_at !== run.created_at && (
-                            <span className="text-yellow-400">• Updated {formatDate(run.updated_at)}</span>
-                          )}
                           {run.result && (
                             <span className="text-blue-400">• Has Response</span>
                           )}
@@ -787,6 +794,16 @@ export default function ListAgentRuns() {
             organizationId={dialogData.organizationId}
             onResumed={refresh}
           />
+        )}
+
+        {/* Create Run Dialog */}
+        {isDialogOpen('createRun') && (
+          <CreateRunDialog />
+        )}
+
+        {/* Settings Dialog */}
+        {isDialogOpen('settings') && (
+          <SettingsDialog />
         )}
       </div>
     </div>
