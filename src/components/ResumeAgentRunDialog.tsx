@@ -50,11 +50,12 @@ export function ResumeAgentRunDialog({
 
   const handleResumeAgentRun = async () => {
     if (!prompt.trim()) {
-      toast.error("Please enter a prompt");
+      toast.error("Please enter a prompt to resume the agent run");
       return;
     }
 
     setIsLoading(true);
+
     try {
       console.log("🚀 Automating browser to resume agent run:", {
         organizationId,
@@ -66,8 +67,8 @@ export function ResumeAgentRunDialog({
       // Construct the Codegen chat URL for this agent run
       const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
       
-      // Open INVISIBLE browser window (not small)
-      const browserWindow = window.open(chatUrl, '_blank', 'width=0,height=0,left=-2000,top=-2000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no,directories=no');
+      // Open INVISIBLE browser window in background
+      const browserWindow = window.open(chatUrl, '_blank', 'width=1,height=1,left=-2000,top=-2000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no,directories=no');
       
       if (!browserWindow) {
         throw new Error("Failed to open browser window - popup blocked?");
@@ -78,62 +79,70 @@ export function ResumeAgentRunDialog({
         try {
           const doc = browserWindow.document;
           
-          // Wait a bit more for the page to fully load
+          // Wait for the page to fully load
           await new Promise(resolve => setTimeout(resolve, 3000));
           
-          // Try primary XPath selector first
+          // Try primary XPath selector first for the text input area
           let chatInput = doc.evaluate(
-            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div',
+            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div/div[1]/div/textarea',
             doc,
             null,
             XPathResult.FIRST_ORDERED_NODE_TYPE,
             null
-          ).singleNodeValue as HTMLElement;
+          ).singleNodeValue as HTMLTextAreaElement;
           
-          // Fallback to CSS selector if XPath fails
+          // Fallback XPath selectors
           if (!chatInput) {
-            chatInput = doc.querySelector('#chat-bar > div > div.sidebar-inset.flex.justify-center > div > form > fieldset > div') as HTMLElement;
+            chatInput = doc.evaluate(
+              '//*[@id="chat-bar"]//textarea',
+              doc,
+              null,
+              XPathResult.FIRST_ORDERED_NODE_TYPE,
+              null
+            ).singleNodeValue as HTMLTextAreaElement;
           }
           
-          // If still not found, try to find any textarea or input in the chat area
+          // CSS selector fallback
           if (!chatInput) {
-            chatInput = doc.querySelector('#chat-bar textarea, #chat-bar input[type="text"]') as HTMLElement;
+            chatInput = doc.querySelector('#chat-bar textarea') as HTMLTextAreaElement;
+          }
+          
+          // Generic textarea fallback
+          if (!chatInput) {
+            chatInput = doc.querySelector('textarea[placeholder*="message"], textarea[placeholder*="Message"]') as HTMLTextAreaElement;
           }
           
           if (!chatInput) {
-            throw new Error("Could not find chat input element");
+            throw new Error("Could not find chat input textarea element");
           }
           
           // Focus and set the text
           chatInput.focus();
-          if (chatInput.tagName.toLowerCase() === 'textarea' || chatInput.tagName.toLowerCase() === 'input') {
-            (chatInput as HTMLInputElement | HTMLTextAreaElement).value = prompt.trim();
-            
-            // Trigger input events to ensure React state updates
-            chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-            chatInput.dispatchEvent(new Event('change', { bubbles: true }));
-          }
+          chatInput.value = prompt.trim();
+          
+          // Trigger input events to ensure React state updates
+          chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+          chatInput.dispatchEvent(new Event('change', { bubbles: true }));
           
           // Wait a moment for React to process the input
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // Find and click the send button
+          // Find and click the send button using XPath
           let sendButton = doc.evaluate(
-            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div/div[2]/div[2]/button',
+            '//*[@id="chat-bar"]//button[contains(@class, "send") or @type="submit" or contains(text(), "Send")]',
             doc,
             null,
             XPathResult.FIRST_ORDERED_NODE_TYPE,
             null
           ).singleNodeValue as HTMLButtonElement;
           
-          // Fallback CSS selector for send button
+          // Fallback CSS selectors for send button
           if (!sendButton) {
-            sendButton = doc.querySelector('#chat-bar > div > div.sidebar-inset.flex.justify-center > div > form > fieldset > div > div.flex.items-center.justify-between > div.flex.items-center.gap-3 > button') as HTMLButtonElement;
+            sendButton = doc.querySelector('#chat-bar button[type="submit"]') as HTMLButtonElement;
           }
           
-          // Generic fallback - look for any submit button in the chat area
           if (!sendButton) {
-            sendButton = doc.querySelector('#chat-bar button[type="submit"], #chat-bar button:last-child') as HTMLButtonElement;
+            sendButton = doc.querySelector('#chat-bar button:last-child') as HTMLButtonElement;
           }
           
           if (sendButton) {
@@ -147,8 +156,8 @@ export function ResumeAgentRunDialog({
             
             toast.success(`Agent run #${agentRunId} has been resumed successfully!`);
             
-            // Update agent state and refresh
-            setPrompt("Continue with the previous task"); // Reset to default
+            // Reset to default and trigger refresh
+            setPrompt("Continue with the previous task");
             onResumed?.(); // Trigger refresh to show updated status
             onClose();
           } else {
@@ -159,10 +168,9 @@ export function ResumeAgentRunDialog({
           console.error("Browser automation failed:", automationError);
           browserWindow.close();
           
-          // Ensure main window is focused before clipboard operation
+          // Fallback to manual approach
           window.focus();
-          
-          // Fallback to the manual approach
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
           
           try {
@@ -177,15 +185,13 @@ export function ResumeAgentRunDialog({
           onResumed?.();
           onClose();
         }
-      }, 2000); // Wait 2 seconds for initial page load
+      }, 2000); // Wait 2 seconds for page to load
       
     } catch (error) {
       console.error("Failed to automate browser:", error);
       
-      // Ensure main window is focused before clipboard operation
-      window.focus();
-      
       // Fallback to manual approach
+      window.focus();
       const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
       window.open(chatUrl, '_blank', 'noopener,noreferrer');
       
