@@ -482,28 +482,6 @@ export default function ListAgentRuns() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <button
-                onClick={() => openDialog('settings')}
-                className="inline-flex items-center px-3 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
-                title="Settings"
-              >
-                <Settings className="h-4 w-4" />
-              </button>
-
-              <button
-                onClick={() => openDialog('createRun', { organizationId })}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Run
-              </button>
-              <button
-                onClick={() => openDialog('settings')}
-                className="inline-flex items-center px-3 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
-                title="Settings"
-              >
-                <Settings className="h-4 w-4" />
-              </button>
               {selection.hasSelection && (
                 <button
                   onClick={selection.clearSelection}

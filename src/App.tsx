@@ -2,72 +2,15 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import ListOrganizations from './list-organizations';
+import CreateAgentRun from './create-agent-run';
 import ListAgentRuns from './list-agent-runs';
 import { SetupGuide } from './components/SetupGuide';
 import { AgentRunSelectionProvider } from './contexts/AgentRunSelectionContext';
 import { DialogProvider } from './contexts/DialogContext';
 import { getPreferenceValues, setPreferenceValues, getEnvFileContent, validateEnvironmentConfiguration } from './utils/preferences';
 import './App.css';
-// Navigation component
-function Navigation() {
-  const location = useLocation();
-  
-  const navItems = [
-    { path: '/agent-runs', label: 'Agent Runs', icon: '🤖' },
-    { path: '/organizations', label: 'Organizations', icon: '🏢' },
-    { path: '/settings', label: 'Settings', icon: '⚙️' },
-  ];
-  
-  return (
-    <nav className="bg-black border-b border-gray-700">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
-            <div className="flex-shrink-0 flex items-center">
-              <h1 className="text-xl font-bold text-white">Raycast Extension</h1>
-            </div>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              {navItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors ${
-                    location.pathname === item.path
-                      ? 'border-blue-500 text-white'
-                      : 'border-transparent text-gray-300 hover:border-gray-300 hover:text-white'
-                  }`}
-                >
-                  <span className="mr-2">{item.icon}</span>
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Mobile menu */}
-      <div className="sm:hidden">
-        <div className="pt-2 pb-3 space-y-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors ${
-                location.pathname === item.path
-                  ? 'bg-gray-800 border-blue-500 text-white'
-                  : 'border-transparent text-gray-300 hover:bg-gray-700 hover:border-gray-300 hover:text-white'
-              }`}
-            >
-              <span className="mr-2">{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-    </nav>
-  );
-}
+
+// Navigation component removed - tabs eliminated for cleaner UI
 // Settings component with dark theme
 function Settings() {
   const [orgId, setOrgId] = React.useState('');
@@ -282,6 +225,7 @@ function AppContent() {
     <Routes>
       <Route path="/" element={<Navigate to="/agent-runs" replace />} />
       <Route path="/organizations" element={<ListOrganizations />} />
+      <Route path="/create-agent-run" element={<CreateAgentRun />} />
       <Route path="/agent-runs" element={<ListAgentRuns />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>
@@ -298,7 +242,6 @@ function App() {
       <DialogProvider>
         <AgentRunSelectionProvider>
           <div className="min-h-screen bg-black">
-            <Navigation />
             <Toaster
               position="top-right"
               toastOptions={{

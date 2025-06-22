@@ -189,13 +189,15 @@ export class CodegenAPIClient {
   }
 
   // Organization Methods
-  async getOrganizations(
-    page = 1,
-    size = 50
-  ): Promise<PaginatedResponse<OrganizationResponse>> {
-    return this.makeRequest<PaginatedResponse<OrganizationResponse>>(
-      API_ENDPOINTS.ORGANIZATIONS_PAGINATED(page, size)
+  async getOrganizations(): Promise<{ items: OrganizationResponse[] }> {
+    const response = await this.makeRequest<{ items?: OrganizationResponse[] }>(
+      API_ENDPOINTS.ORGANIZATIONS
     );
+    
+    // Ensure we return the expected format
+    return {
+      items: response.items || []
+    };
   }
 
   // User Methods
