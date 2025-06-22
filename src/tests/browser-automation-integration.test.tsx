@@ -74,7 +74,7 @@ describe('Browser Automation Integration Tests', () => {
       );
 
       expect(result.singleNodeValue).toBeTruthy();
-      expect(result.singleNodeValue?.getAttribute('role')).toBe('textbox');
+      expect((result.singleNodeValue as Element)?.getAttribute('role')).toBe('textbox');
     });
 
     test('successfully finds send button using XPath selector', () => {
@@ -90,7 +90,7 @@ describe('Browser Automation Integration Tests', () => {
       );
 
       expect(result.singleNodeValue).toBeTruthy();
-      expect(result.singleNodeValue?.getAttribute('type')).toBe('submit');
+      expect((result.singleNodeValue as Element)?.getAttribute('type')).toBe('submit');
     });
   });
 
@@ -422,4 +422,3 @@ describe('Browser Automation Integration Tests', () => {
     });
   });
 });
-

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { 
   Play, 
@@ -43,6 +44,7 @@ export default function ListAgentRuns() {
 
   const selection = useAgentRunSelection();
   const { openDialog, closeDialog, isDialogOpen, dialogData } = useDialog();
+  const navigate = useNavigate();
   const [searchText, setSearchText] = useState("");
   const [dateRanges] = useState(() => getDateRanges());
   const [responseModalRun, setResponseModalRun] = useState<CachedAgentRun | null>(null);
@@ -305,6 +307,7 @@ export default function ListAgentRuns() {
           window.focus();
           
           // Fallback to the manual approach
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
           
           try {
@@ -674,8 +677,8 @@ export default function ListAgentRuns() {
                         </div>
                         <div className="flex items-center space-x-4 text-sm text-gray-500">
                           <span>Created {formatDate(run.created_at)}</span>
-                          {run.updated_at && run.updated_at !== run.created_at && (
-                            <span className="text-yellow-400">• Updated {formatDate(run.updated_at)}</span>
+                          {run.lastUpdated && run.lastUpdated !== run.created_at && (
+                            <span className="text-yellow-400">• Updated {formatDate(run.lastUpdated)}</span>
                           )}
                           {run.result && (
                             <span className="text-blue-400">• Has Response</span>

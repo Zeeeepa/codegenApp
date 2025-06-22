@@ -163,6 +163,7 @@ export function ResumeAgentRunDialog({
           window.focus();
           
           // Fallback to the manual approach
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
           
           try {

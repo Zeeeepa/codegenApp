@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { showToast, ToastStyle } from "../utils/toast";
-import { AgentRunResponse, AgentRunFilters, SortOptions } from "../api/types";
+import { CachedAgentRun, AgentRunFilters, SortOptions } from "../api/types";
 import { getAgentRunCache } from "../storage/agentRunCache";
 import { getAPIClient } from "../api/client";
 import { filterAgentRuns, sortAgentRuns } from "../utils/filtering";
@@ -9,8 +9,8 @@ import { SyncStatus } from "../storage/cacheTypes";
 import { getBackgroundMonitoringService } from "../utils/backgroundMonitoring";
 
 interface UseCachedAgentRunsResult {
-  agentRuns: AgentRunResponse[];
-  filteredRuns: AgentRunResponse[];
+  agentRuns: CachedAgentRun[];
+  filteredRuns: CachedAgentRun[];
   isLoading: boolean;
   isRefreshing: boolean;
   error: string | null;
@@ -25,7 +25,7 @@ interface UseCachedAgentRunsResult {
 }
 
 export function useCachedAgentRuns(): UseCachedAgentRunsResult {
-  const [agentRuns, setAgentRuns] = useState<AgentRunResponse[]>([]);
+  const [agentRuns, setAgentRuns] = useState<CachedAgentRun[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);

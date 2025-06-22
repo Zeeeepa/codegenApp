@@ -48,19 +48,20 @@ Object.defineProperty(window, 'open', {
 });
 
 describe('Browser Automation Tests', () => {
+  const defaultProps = {
+    isOpen: true,
+    onClose: jest.fn(),
+    agentRunId: 123,
+    organizationId: 456,
+    onResumed: jest.fn()
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockWindowOpen.mockReturnValue(mockBrowserWindow);
   });
 
   describe('ResumeAgentRunDialog Browser Automation', () => {
-    const defaultProps = {
-      isOpen: true,
-      onClose: jest.fn(),
-      agentRunId: 123,
-      organizationId: 456,
-      onResumed: jest.fn()
-    };
 
     test('opens invisible browser window with correct parameters', async () => {
       render(<ResumeAgentRunDialog {...defaultProps} />);

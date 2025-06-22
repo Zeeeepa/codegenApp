@@ -1,12 +1,12 @@
-import { AgentRunResponse, AgentRunStatus, AgentRunFilters, SortOptions } from "../api/types";
+import { CachedAgentRun, AgentRunStatus, AgentRunFilters, SortOptions } from "../api/types";
 
 /**
  * Filter agent runs based on provided criteria
  */
 export function filterAgentRuns(
-  runs: AgentRunResponse[],
+  runs: CachedAgentRun[],
   filters: AgentRunFilters
-): AgentRunResponse[] {
+): CachedAgentRun[] {
   let filteredRuns = [...runs];
 
   // Filter by status - handle case-insensitive comparison
@@ -51,7 +51,7 @@ export function filterAgentRuns(
 /**
  * Search within an agent run for a query string
  */
-export function searchInAgentRun(run: AgentRunResponse, query: string): boolean {
+export function searchInAgentRun(run: CachedAgentRun, query: string): boolean {
   const searchableText = [
     run.id.toString(),
     run.status.toLowerCase(),
@@ -66,9 +66,9 @@ export function searchInAgentRun(run: AgentRunResponse, query: string): boolean 
  * Sort agent runs based on provided options
  */
 export function sortAgentRuns(
-  runs: AgentRunResponse[],
+  runs: CachedAgentRun[],
   sortOptions: SortOptions
-): AgentRunResponse[] {
+): CachedAgentRun[] {
   const sortedRuns = [...runs];
 
   sortedRuns.sort((a, b) => {
@@ -134,7 +134,7 @@ export function getDateRanges(): Record<string, { start: Date; end: Date }> {
  * Get status filter options with counts
  */
 export function getStatusFilterOptions(
-  runs: AgentRunResponse[]
+  runs: CachedAgentRun[]
 ): Array<{ status: AgentRunStatus; count: number; label: string }> {
   const statusCounts = runs.reduce((acc, run) => {
     const status = run.status as AgentRunStatus;
