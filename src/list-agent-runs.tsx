@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
 import { useDialog } from "./contexts/DialogContext";
-import { MonitorSelectedButton } from "./components/MonitorSelectedButton";
+
 import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
 import { ResumeAgentRunDialog } from "./components/ResumeAgentRunDialog";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
@@ -135,19 +135,49 @@ export default function ListAgentRuns() {
 
   // Format date for display
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    try {
+      // Handle various date formats
+      let date: Date;
+      if (dateString.includes('T') || dateString.includes('Z')) {
+        // ISO format
+        date = new Date(dateString);
+      } else {
+        // Try parsing as is
+        date = new Date(dateString);
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateString);
+        return dateString; // Return original string if parsing fails
+      }
+      
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return date.toLocaleDateString();
+      // Debug logging for timestamp issues
+      console.log('Date formatting:', {
+        original: dateString,
+        parsed: date.toISOString(),
+        now: now.toISOString(),
+        diffMs,
+        diffMins,
+        diffHours
+      });
+
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      
+      return date.toLocaleDateString();
+    } catch (error) {
+      console.error('Error formatting date:', error, dateString);
+      return dateString; // Return original string if error occurs
+    }
   };
 
   // Stop an agent run
@@ -191,7 +221,7 @@ export default function ListAgentRuns() {
     openDialog('resume-run', { agentRunId, organizationId });
   };
 
-  // Respond to an agent run (for stopped/failed runs) - now uses API
+  // Respond to an agent run (for stopped/failed runs) - uses browser automation
   const respondToAgentRun = async (agentRunId: number) => {
     if (!organizationId) return;
 
@@ -203,27 +233,144 @@ export default function ListAgentRuns() {
     if (!prompt || !prompt.trim()) return;
 
     try {
-      console.log("🚀 Responding to agent run via API:", {
+      console.log("🚀 Automating browser to respond to agent run:", {
         organizationId,
         agentRunId,
         prompt: prompt.trim()
       });
-
-      // Use the API to resume the agent run directly
-      const apiClient = getAPIClient();
-      await apiClient.resumeAgentRun(organizationId, {
-        agent_run_id: agentRunId,
-        prompt: prompt.trim(),
-      });
-
-      toast.success(`Response sent to agent run #${agentRunId} successfully!`);
       
-      // Refresh to show updated status
-      await refresh();
+      // Construct the Codegen chat URL for this agent run
+      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
       
+      // Open INVISIBLE browser window in background
+      const browserWindow = window.open(chatUrl, '_blank', 'width=1,height=1,left=-2000,top=-2000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no,directories=no');
+      
+      if (!browserWindow) {
+        throw new Error("Failed to open browser window - popup blocked?");
+      }
+
+      // Wait for page to load and then automate the chat input
+      setTimeout(async () => {
+        try {
+          const doc = browserWindow.document;
+          
+          // Wait for the page to fully load
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Try primary XPath selector first for the text input area
+          let chatInput = doc.evaluate(
+            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div/div[1]/div/textarea',
+            doc,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null
+          ).singleNodeValue as HTMLTextAreaElement;
+          
+          // Fallback XPath selectors
+          if (!chatInput) {
+            chatInput = doc.evaluate(
+              '//*[@id="chat-bar"]//textarea',
+              doc,
+              null,
+              XPathResult.FIRST_ORDERED_NODE_TYPE,
+              null
+            ).singleNodeValue as HTMLTextAreaElement;
+          }
+          
+          // CSS selector fallback
+          if (!chatInput) {
+            chatInput = doc.querySelector('#chat-bar textarea') as HTMLTextAreaElement;
+          }
+          
+          // Generic textarea fallback
+          if (!chatInput) {
+            chatInput = doc.querySelector('textarea[placeholder*="message"], textarea[placeholder*="Message"]') as HTMLTextAreaElement;
+          }
+          
+          if (!chatInput) {
+            throw new Error("Could not find chat input textarea element");
+          }
+          
+          // Focus and set the text
+          chatInput.focus();
+          chatInput.value = prompt.trim();
+          
+          // Trigger input events to ensure React state updates
+          chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+          chatInput.dispatchEvent(new Event('change', { bubbles: true }));
+          
+          // Wait a moment for React to process the input
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Find and click the send button using XPath
+          let sendButton = doc.evaluate(
+            '//*[@id="chat-bar"]//button[contains(@class, "send") or @type="submit" or contains(text(), "Send")]',
+            doc,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null
+          ).singleNodeValue as HTMLButtonElement;
+          
+          // Fallback CSS selectors for send button
+          if (!sendButton) {
+            sendButton = doc.querySelector('#chat-bar button[type="submit"]') as HTMLButtonElement;
+          }
+          
+          if (!sendButton) {
+            sendButton = doc.querySelector('#chat-bar button:last-child') as HTMLButtonElement;
+          }
+          
+          if (sendButton) {
+            sendButton.click();
+            
+            // Wait for message to be sent
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Close the browser window
+            browserWindow.close();
+            
+            toast.success(`Response sent to agent run #${agentRunId} successfully!`);
+            
+            // Refresh to show updated status
+            await refresh();
+          } else {
+            throw new Error("Could not find send button");
+          }
+          
+        } catch (automationError) {
+          console.error("Browser automation failed:", automationError);
+          browserWindow.close();
+          
+          // Fallback to manual approach
+          window.focus();
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
+          
+          try {
+            await navigator.clipboard.writeText(prompt.trim());
+            toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
+          } catch (clipboardError) {
+            console.error("Clipboard error:", clipboardError);
+            toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
+          }
+        }
+      }, 2000); // Wait 2 seconds for page to load
+
     } catch (error) {
-      console.error("Failed to respond to agent run:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to respond to agent run");
+      console.error("Failed to automate browser:", error);
+      
+      // Fallback to manual approach
+      window.focus();
+      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
+      window.open(chatUrl, '_blank', 'noopener,noreferrer');
+      
+      try {
+        await navigator.clipboard.writeText(prompt.trim());
+        toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
+      } catch (clipboardError) {
+        console.error("Clipboard error:", clipboardError);
+        toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
+      }
     }
   };
 
@@ -332,12 +479,7 @@ export default function ListAgentRuns() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              {selection.hasSelection && organizationId && (
-                <MonitorSelectedButton 
-                  organizationId={organizationId} 
-                  onMonitoringComplete={refresh}
-                />
-              )}
+
 
               <button
                 onClick={() => openDialog('create-run', { organizationId })}
