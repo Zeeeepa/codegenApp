@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { 
   Play, 
@@ -19,7 +20,7 @@ import {
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
 import { useDialog } from "./contexts/DialogContext";
-import { MonitorSelectedButton, AddToMonitorButton } from "./components/MonitorSelectedButton";
+
 import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
 import { ResumeAgentRunDialog } from "./components/ResumeAgentRunDialog";
 import { CreateRunDialog } from "./components/CreateRunDialog";
@@ -46,6 +47,7 @@ export default function ListAgentRuns() {
 
   const selection = useAgentRunSelection();
   const { openDialog, closeDialog, isDialogOpen, dialogData } = useDialog();
+  const navigate = useNavigate();
   const [searchText, setSearchText] = useState("");
   const [dateRanges] = useState(() => getDateRanges());
   const [responseModalRun, setResponseModalRun] = useState<CachedAgentRun | null>(null);
@@ -136,19 +138,49 @@ export default function ListAgentRuns() {
 
   // Format date for display
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    try {
+      // Handle various date formats
+      let date: Date;
+      if (dateString.includes('T') || dateString.includes('Z')) {
+        // ISO format
+        date = new Date(dateString);
+      } else {
+        // Try parsing as is
+        date = new Date(dateString);
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateString);
+        return dateString; // Return original string if parsing fails
+      }
+      
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return date.toLocaleDateString();
+      // Debug logging for timestamp issues
+      console.log('Date formatting:', {
+        original: dateString,
+        parsed: date.toISOString(),
+        now: now.toISOString(),
+        diffMs,
+        diffMins,
+        diffHours
+      });
+
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      
+      return date.toLocaleDateString();
+    } catch (error) {
+      console.error('Error formatting date:', error, dateString);
+      return dateString; // Return original string if error occurs
+    }
   };
 
   // Stop an agent run
@@ -192,7 +224,7 @@ export default function ListAgentRuns() {
     openDialog('resume-run', { agentRunId, organizationId });
   };
 
-  // Respond to an agent run (for stopped/failed runs) - now uses browser automation
+  // Respond to an agent run (for stopped/failed runs) - uses browser automation
   const respondToAgentRun = async (agentRunId: number) => {
     if (!organizationId) return;
 
@@ -213,8 +245,8 @@ export default function ListAgentRuns() {
       // Construct the Codegen chat URL for this agent run
       const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
       
-      // Open INVISIBLE browser window (not small)
-      const browserWindow = window.open(chatUrl, '_blank', 'width=0,height=0,left=-2000,top=-2000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no,directories=no');
+      // Open INVISIBLE browser window in background
+      const browserWindow = window.open(chatUrl, '_blank', 'width=1,height=1,left=-2000,top=-2000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no,directories=no');
       
       if (!browserWindow) {
         throw new Error("Failed to open browser window - popup blocked?");
@@ -225,62 +257,70 @@ export default function ListAgentRuns() {
         try {
           const doc = browserWindow.document;
           
-          // Wait a bit more for the page to fully load
+          // Wait for the page to fully load
           await new Promise(resolve => setTimeout(resolve, 3000));
           
-          // Try primary XPath selector first
+          // Try primary XPath selector first for the text input area
           let chatInput = doc.evaluate(
-            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div',
+            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div/div[1]/div/textarea',
             doc,
             null,
             XPathResult.FIRST_ORDERED_NODE_TYPE,
             null
-          ).singleNodeValue as HTMLElement;
+          ).singleNodeValue as HTMLTextAreaElement;
           
-          // Fallback to CSS selector if XPath fails
+          // Fallback XPath selectors
           if (!chatInput) {
-            chatInput = doc.querySelector('#chat-bar > div > div.sidebar-inset.flex.justify-center > div > form > fieldset > div') as HTMLElement;
+            chatInput = doc.evaluate(
+              '//*[@id="chat-bar"]//textarea',
+              doc,
+              null,
+              XPathResult.FIRST_ORDERED_NODE_TYPE,
+              null
+            ).singleNodeValue as HTMLTextAreaElement;
           }
           
-          // If still not found, try to find any textarea or input in the chat area
+          // CSS selector fallback
           if (!chatInput) {
-            chatInput = doc.querySelector('#chat-bar textarea, #chat-bar input[type="text"]') as HTMLElement;
+            chatInput = doc.querySelector('#chat-bar textarea') as HTMLTextAreaElement;
+          }
+          
+          // Generic textarea fallback
+          if (!chatInput) {
+            chatInput = doc.querySelector('textarea[placeholder*="message"], textarea[placeholder*="Message"]') as HTMLTextAreaElement;
           }
           
           if (!chatInput) {
-            throw new Error("Could not find chat input element");
+            throw new Error("Could not find chat input textarea element");
           }
           
           // Focus and set the text
           chatInput.focus();
-          if (chatInput.tagName.toLowerCase() === 'textarea' || chatInput.tagName.toLowerCase() === 'input') {
-            (chatInput as HTMLInputElement | HTMLTextAreaElement).value = prompt.trim();
-            
-            // Trigger input events to ensure React state updates
-            chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-            chatInput.dispatchEvent(new Event('change', { bubbles: true }));
-          }
+          chatInput.value = prompt.trim();
+          
+          // Trigger input events to ensure React state updates
+          chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+          chatInput.dispatchEvent(new Event('change', { bubbles: true }));
           
           // Wait a moment for React to process the input
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // Find and click the send button
+          // Find and click the send button using XPath
           let sendButton = doc.evaluate(
-            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div/div[2]/div[2]/button',
+            '//*[@id="chat-bar"]//button[contains(@class, "send") or @type="submit" or contains(text(), "Send")]',
             doc,
             null,
             XPathResult.FIRST_ORDERED_NODE_TYPE,
             null
           ).singleNodeValue as HTMLButtonElement;
           
-          // Fallback CSS selector for send button
+          // Fallback CSS selectors for send button
           if (!sendButton) {
-            sendButton = doc.querySelector('#chat-bar > div > div.sidebar-inset.flex.justify-center > div > form > fieldset > div > div.flex.items-center.justify-between > div.flex.items-center.gap-3 > button') as HTMLButtonElement;
+            sendButton = doc.querySelector('#chat-bar button[type="submit"]') as HTMLButtonElement;
           }
           
-          // Generic fallback - look for any submit button in the chat area
           if (!sendButton) {
-            sendButton = doc.querySelector('#chat-bar button[type="submit"], #chat-bar button:last-child') as HTMLButtonElement;
+            sendButton = doc.querySelector('#chat-bar button:last-child') as HTMLButtonElement;
           }
           
           if (sendButton) {
@@ -304,10 +344,9 @@ export default function ListAgentRuns() {
           console.error("Browser automation failed:", automationError);
           browserWindow.close();
           
-          // Ensure main window is focused before clipboard operation
+          // Fallback to manual approach
           window.focus();
-          
-          // Fallback to the manual approach
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
           
           try {
@@ -318,15 +357,13 @@ export default function ListAgentRuns() {
             toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
           }
         }
-      }, 2000); // Wait 2 seconds for initial page load
+      }, 2000); // Wait 2 seconds for page to load
 
     } catch (error) {
       console.error("Failed to automate browser:", error);
       
-      // Ensure main window is focused before clipboard operation
-      window.focus();
-      
       // Fallback to manual approach
+      window.focus();
       const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
       window.open(chatUrl, '_blank', 'noopener,noreferrer');
       
@@ -435,11 +472,8 @@ export default function ListAgentRuns() {
                 }
                 return null;
               })()}
-              {/* Real-time monitoring statistics */}
+              {/* Real-time status statistics */}
               <div className="flex items-center space-x-2 text-sm">
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-900/30 text-green-300 border border-green-500/20">
-                  🔍 {filteredRuns.length} Monitored
-                </span>
                 {filteredRuns.filter(run => run.status === AgentRunStatus.ACTIVE).length > 0 && (
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-900/30 text-blue-300 border border-blue-500/20 animate-pulse">
                     ⚡ {filteredRuns.filter(run => run.status === AgentRunStatus.ACTIVE).length} Active
@@ -448,18 +482,14 @@ export default function ListAgentRuns() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              {selection.hasSelection && organizationId && (
-                <MonitorSelectedButton 
-                  organizationId={organizationId} 
-                  onMonitoringComplete={refresh}
-                />
-              )}
-              {organizationId && (
-                <AddToMonitorButton 
-                  organizationId={organizationId} 
-                  onAddComplete={refresh}
-                />
-              )}
+              <button
+                onClick={() => openDialog('settings')}
+                className="inline-flex items-center px-3 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+                title="Settings"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+
               <button
                 onClick={() => openDialog('createRun', { organizationId })}
                 className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -586,12 +616,6 @@ export default function ListAgentRuns() {
                 : "Create your first agent run to get started"}
             </p>
             <div className="flex justify-center space-x-3">
-              {organizationId && (
-                <AddToMonitorButton 
-                  organizationId={organizationId} 
-                  onAddComplete={refresh}
-                />
-              )}
               <button
                 onClick={() => openDialog('createRun', { organizationId })}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -671,10 +695,7 @@ export default function ListAgentRuns() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
                           <h3 className="text-lg font-medium text-white">Agent Run #{run.id}</h3>
-                          {/* Enhanced monitoring indicator with real-time status */}
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-900/50 text-green-300 border border-green-500/30">
-                            🔍 Monitored
-                          </span>
+
                           {/* Real-time status indicator */}
                           {run.status === AgentRunStatus.ACTIVE && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-900/50 text-blue-300 border border-blue-500/30 animate-pulse">
