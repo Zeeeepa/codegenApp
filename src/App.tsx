@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import ListOrganizations from './list-organizations';
-import CreateAgentRun from './create-agent-run';
 import ListAgentRuns from './list-agent-runs';
 import { SetupGuide } from './components/SetupGuide';
 import { AgentRunSelectionProvider } from './contexts/AgentRunSelectionContext';
@@ -16,7 +15,6 @@ function Navigation() {
   
   const navItems = [
     { path: '/agent-runs', label: 'Agent Runs', icon: '🤖' },
-    { path: '/create-agent-run', label: 'Create Run', icon: '➕' },
     { path: '/organizations', label: 'Organizations', icon: '🏢' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ];
@@ -290,7 +288,7 @@ function AppContent() {
     <Routes>
       <Route path="/" element={<Navigate to="/agent-runs" replace />} />
       <Route path="/organizations" element={<ListOrganizations />} />
-      <Route path="/create-agent-run" element={<CreateAgentRun />} />
+
       <Route path="/agent-runs" element={<ListAgentRuns />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>
