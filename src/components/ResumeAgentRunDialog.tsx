@@ -56,40 +56,138 @@ export function ResumeAgentRunDialog({
 
     setIsLoading(true);
     try {
-      console.log("🚀 Attempting to resume agent run:", {
+      console.log("🚀 Automating browser to resume agent run:", {
         organizationId,
         agentRunId,
         prompt: prompt.trim(),
         agentRunStatus: agentRunDetails?.status
       });
       
-      // Use the exact same API call pattern as the original resumeAgentRun function
-      await apiClient.resumeAgentRun(organizationId, {
-        agent_run_id: agentRunId,
-        prompt: prompt.trim(),
-      });
-
-      // Use the exact same success message pattern
-      toast.success(`Agent run #${agentRunId} has been resumed`);
+      // Construct the Codegen chat URL for this agent run
+      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
       
-      setPrompt("Continue with the previous task"); // Reset to default
-      onResumed?.(); // Trigger refresh
-      onClose();
-    } catch (error) {
-      console.error("Resume agent run error:", error);
+      // Open invisible browser window
+      const browserWindow = window.open(chatUrl, '_blank', 'width=1,height=1,left=-1000,top=-1000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no');
       
-      // Enhanced error handling with more specific messages
-      if (error instanceof Error) {
-        if (error.message.includes('404')) {
-          toast.error(`Resume endpoint not found. The resume feature may not be available for agent run #${agentRunId}.`);
-        } else if (error.message.includes('403')) {
-          toast.error(`Permission denied. You may not have access to resume agent run #${agentRunId}.`);
-        } else {
-          toast.error(`Failed to resume agent run: ${error.message}`);
-        }
-      } else {
-        toast.error("Failed to resume agent run: Unknown error");
+      if (!browserWindow) {
+        throw new Error("Failed to open browser window - popup blocked?");
       }
+
+      // Wait for page to load and then automate the chat input
+      setTimeout(async () => {
+        try {
+          const doc = browserWindow.document;
+          
+          // Wait a bit more for the page to fully load
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Try primary XPath selector first
+          let chatInput = doc.evaluate(
+            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div',
+            doc,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null
+          ).singleNodeValue as HTMLElement;
+          
+          // Fallback to CSS selector if XPath fails
+          if (!chatInput) {
+            chatInput = doc.querySelector('#chat-bar > div > div.sidebar-inset.flex.justify-center > div > form > fieldset > div') as HTMLElement;
+          }
+          
+          // If still not found, try to find any textarea or input in the chat area
+          if (!chatInput) {
+            chatInput = doc.querySelector('#chat-bar textarea, #chat-bar input[type="text"]') as HTMLElement;
+          }
+          
+          if (!chatInput) {
+            throw new Error("Could not find chat input element");
+          }
+          
+          // Focus and set the text
+          chatInput.focus();
+          if (chatInput.tagName.toLowerCase() === 'textarea' || chatInput.tagName.toLowerCase() === 'input') {
+            (chatInput as HTMLInputElement | HTMLTextAreaElement).value = prompt.trim();
+            
+            // Trigger input events to ensure React state updates
+            chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+            chatInput.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          
+          // Wait a moment for React to process the input
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Find and click the send button
+          let sendButton = doc.evaluate(
+            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div/div[2]/div[2]/button',
+            doc,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null
+          ).singleNodeValue as HTMLButtonElement;
+          
+          // Fallback CSS selector for send button
+          if (!sendButton) {
+            sendButton = doc.querySelector('#chat-bar > div > div.sidebar-inset.flex.justify-center > div > form > fieldset > div > div.flex.items-center.justify-between > div.flex.items-center.gap-3 > button') as HTMLButtonElement;
+          }
+          
+          // Generic fallback - look for any submit button in the chat area
+          if (!sendButton) {
+            sendButton = doc.querySelector('#chat-bar button[type="submit"], #chat-bar button:last-child') as HTMLButtonElement;
+          }
+          
+          if (sendButton) {
+            sendButton.click();
+            
+            // Wait for message to be sent
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Close the browser window
+            browserWindow.close();
+            
+            toast.success(`Agent run #${agentRunId} has been resumed successfully!`);
+            
+            // Update agent state and refresh
+            setPrompt("Continue with the previous task"); // Reset to default
+            onResumed?.(); // Trigger refresh to show updated status
+            onClose();
+          } else {
+            throw new Error("Could not find send button");
+          }
+          
+        } catch (automationError) {
+          console.error("Browser automation failed:", automationError);
+          browserWindow.close();
+          
+          // Fallback to the manual approach
+          const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
+          await navigator.clipboard.writeText(prompt.trim());
+          
+          toast.error(`Automation failed. Opened agent run in browser - please paste your message: "${prompt.trim()}"`);
+          
+          setPrompt("Continue with the previous task");
+          onResumed?.();
+          onClose();
+        }
+      }, 2000); // Wait 2 seconds for initial page load
+      
+    } catch (error) {
+      console.error("Failed to automate browser:", error);
+      
+      // Fallback to manual approach
+      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
+      window.open(chatUrl, '_blank', 'noopener,noreferrer');
+      
+      try {
+        await navigator.clipboard.writeText(prompt.trim());
+        toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
+      } catch {
+        toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
+      }
+      
+      setPrompt("Continue with the previous task");
+      onResumed?.();
+      onClose();
     } finally {
       setIsLoading(false);
     }
@@ -174,7 +272,7 @@ export function ResumeAgentRunDialog({
                   <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-3">
                     <p className="text-blue-200 text-sm">
                       💡 <strong>Resume Instructions:</strong> Enter a prompt to continue this agent run. 
-                      The agent will receive your message and continue from where it left off.
+                      The system will automatically open the agent chat and send your message.
                     </p>
                   </div>
                 </div>
