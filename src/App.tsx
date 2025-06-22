@@ -43,7 +43,6 @@ function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/agent-runs" replace />} />
       <Route path="/organizations" element={<ListOrganizations />} />
-
       <Route path="/agent-runs" element={<ListAgentRuns />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>
@@ -96,3 +95,4 @@ function App() {
 }
 
 export default App;
+
