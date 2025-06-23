@@ -1,7 +1,7 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 module.exports = function(app) {
-  // Only proxy API requests to the backend server
+  // Proxy API requests to backend server (Codegen API proxy)
   app.use(
     '/api',
     createProxyMiddleware({
@@ -16,7 +16,7 @@ module.exports = function(app) {
     })
   );
 
-  // Proxy any other backend routes if needed
+  // Proxy v1 requests to backend server (Codegen API proxy)
   app.use(
     '/v1',
     createProxyMiddleware({
@@ -27,6 +27,24 @@ module.exports = function(app) {
       onError: (err, req, res) => {
         console.error('Proxy error:', err);
         res.status(500).send('Proxy error');
+      }
+    })
+  );
+
+  // Proxy automation requests to automation backend
+  app.use(
+    '/automation',
+    createProxyMiddleware({
+      target: 'http://localhost:3002',
+      changeOrigin: true,
+      secure: false,
+      logLevel: 'debug',
+      pathRewrite: {
+        '^/automation': '' // Remove /automation prefix when forwarding
+      },
+      onError: (err, req, res) => {
+        console.error('Automation proxy error:', err);
+        res.status(500).send('Automation proxy error');
       }
     })
   );

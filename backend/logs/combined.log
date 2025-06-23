@@ -1,1 +1,3 @@
-{"level":"info","message":"Automation backend server running on port 3001","service":"automation-backend","timestamp":"2025-06-23T02:05:04.862Z"}
+{"environment":"development","frontendUrl":"http://localhost:8080","level":"info","message":"🤖 Automation backend server running on port 3002","port":"3002","service":"automation-backend","timestamp":"2025-06-23T06:21:59.343Z"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"Incoming request","method":"GET","service":"automation-backend","timestamp":"2025-06-23T06:23:12.182Z","url":"/health","userAgent":"curl/7.88.1"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"Incoming request","method":"GET","service":"automation-backend","timestamp":"2025-06-23T06:26:27.778Z","url":"/health","userAgent":"curl/7.88.1"}

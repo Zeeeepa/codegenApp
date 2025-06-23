@@ -70,6 +70,31 @@ Resumes a Codegen agent run by automating the chat interface.
 }
 ```
 
+### POST /api/test-automation
+
+Tests the automation service with a dry run.
+
+**Request Body:**
+```json
+{
+  "agentRunId": 12345,
+  "authContext": {...}
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "results": {
+    "pageLoaded": true,
+    "authenticated": true,
+    "chatInputFound": true,
+    "sendButtonFound": true,
+    "url": "https://codegen.com/agent/trace/12345"
+  }
+}
+```
 ### GET /health
 
 Health check endpoint.
@@ -78,7 +103,21 @@ Health check endpoint.
 ```json
 {
   "status": "ok",
-  "timestamp": "2024-01-15T10:30:00.000Z"
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "service": "automation-backend",
+  "version": "1.0.0"
+}
+```
+
+### GET /api/auth-script
+
+Returns JavaScript code for extracting authentication context from the frontend.
+
+**Response:**
+```json
+{
+  "success": true,
+  "script": "(async function extractAuthContext() { ... })();"
 }
 ```
 
@@ -86,9 +125,9 @@ Health check endpoint.
 
 Environment variables (see `.env.example`):
 
-- `PORT`: Server port (default: 3001)
+- `PORT`: Server port (default: 3002)
 - `NODE_ENV`: Environment mode (development/production)
-- `FRONTEND_URL`: Frontend URL for CORS (default: http://localhost:3000)
+- `FRONTEND_URL`: Frontend URL for CORS (default: http://localhost:8080)
 - `LOG_LEVEL`: Logging level (default: info)
 - `PUPPETEER_HEADLESS`: Run Puppeteer in headless mode (default: true)
 - `PUPPETEER_TIMEOUT`: Page load timeout in ms (default: 30000)
@@ -143,59 +182,24 @@ Logs are written to:
 Test the automation service:
 
 ```bash
-# Run all tests
-npm test
+# Health check
+curl http://localhost:3002/health
 
-# Test specific functionality
-curl -X POST http://localhost:3001/api/resume-agent-run \
+# Test automation (requires auth context)
+curl -X POST http://localhost:3002/api/test-automation \
   -H "Content-Type: application/json" \
   -d '{
     "agentRunId": 12345,
-    "organizationId": 323,
-    "prompt": "Test message",
     "authContext": {...}
   }'
 ```
 
-## Deployment
+## Frontend Integration
 
-### Docker (Recommended)
-
-```dockerfile
-FROM node:18-alpine
-
-# Install Puppeteer dependencies
-RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont
-
-# Set Puppeteer to use installed Chromium
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY . .
-EXPOSE 3001
-CMD ["npm", "start"]
-```
-
-### Environment Setup
-
-For production deployment:
-
-1. Set `NODE_ENV=production`
-2. Configure proper `FRONTEND_URL`
-3. Set up log rotation for log files
-4. Configure reverse proxy (nginx/Apache)
-5. Set up process manager (PM2/systemd)
+The automation service is accessible through the frontend proxy at:
+- `http://localhost:8080/automation/health`
+- `http://localhost:8080/automation/api/resume-agent-run`
+- `http://localhost:8080/automation/api/test-automation`
 
 ## Security Considerations
 
@@ -222,11 +226,24 @@ For production deployment:
 - Configurable timeouts for different operations
 - Efficient element detection with early returns
 
-## Contributing
+## Usage Example
 
-1. Follow existing code style and patterns
-2. Add comprehensive error handling
-3. Update selectors when Codegen UI changes
-4. Add tests for new functionality
-5. Update documentation for API changes
+```javascript
+// Extract auth context in frontend
+const authContext = await eval(authExtractionScript);
 
+// Send resume request
+const response = await fetch('/automation/api/resume-agent-run', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    agentRunId: 12345,
+    organizationId: 323,
+    prompt: 'Continue with the task',
+    authContext: authContext
+  })
+});
+
+const result = await response.json();
+console.log('Automation result:', result);
+```

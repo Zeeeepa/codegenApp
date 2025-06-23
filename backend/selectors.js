@@ -129,46 +129,49 @@ async function findSendButton(page, timeout = 10000) {
 }
 
 /**
- * Wait for page to be fully loaded
+ * Wait for page to load completely
  * @param {Page} page - Puppeteer page instance
  * @param {number} timeout - Timeout in milliseconds
  */
 async function waitForPageLoad(page, timeout = 30000) {
   try {
-    // Wait for network to be idle
-    await page.waitForLoadState('networkidle', { timeout });
+    // Wait for network to be idle (Puppeteer method)
+    await page.waitForLoadState ? 
+      await page.waitForLoadState('networkidle', { timeout }) :
+      await page.waitForTimeout(3000);
     
-    // Wait for chat interface to be present
-    await page.waitForSelector('#chat-bar', { timeout: 10000 });
-    
-    // Additional wait for dynamic content
+    // Wait for React to render
     await page.waitForTimeout(2000);
     
-    return true;
+    // Wait for chat interface to be ready
+    await page.waitForFunction(() => {
+      return document.querySelector('#chat-bar') || 
+             document.querySelector('textarea[placeholder*="message" i]') ||
+             document.querySelector('input[placeholder*="message" i]');
+    }, { timeout: 15000 });
+    
   } catch (error) {
-    throw new Error(`Page load timeout: ${error.message}`);
+    // Continue even if some waits fail
+    console.warn('Page load wait partially failed:', error.message);
   }
 }
 
 /**
- * Check if there are any error indicators on the page
+ * Check for errors on the page
  * @param {Page} page - Puppeteer page instance
  * @returns {Promise<string|null>} Error message if found, null otherwise
  */
 async function checkForErrors(page) {
-  for (const selector of SELECTORS.ERROR_INDICATORS) {
-    try {
-      const errorElement = await page.$(selector);
-      if (errorElement) {
-        const errorText = await errorElement.evaluate(el => el.textContent);
-        return errorText || 'Unknown error detected';
-      }
-    } catch (error) {
-      // Continue checking other selectors
-      continue;
+  try {
+    const errorElement = await waitForElement(page, SELECTORS.ERROR_INDICATORS, 2000);
+    if (errorElement) {
+      const errorText = await errorElement.evaluate(el => el.textContent);
+      return errorText;
     }
+    return null;
+  } catch (error) {
+    return null;
   }
-  return null;
 }
 
 module.exports = {
@@ -179,4 +182,3 @@ module.exports = {
   waitForPageLoad,
   checkForErrors
 };
-

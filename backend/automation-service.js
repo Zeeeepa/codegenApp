@@ -37,7 +37,7 @@ async function resumeAgentRun({ agentRunId, organizationId, prompt, authContext 
 
     // Launch headless browser
     browser = await puppeteer.launch({
-      headless: true, // Truly headless
+      headless: process.env.PUPPETEER_HEADLESS !== 'false', // Allow override for debugging
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -271,4 +271,3 @@ module.exports = {
   resumeAgentRun,
   testAutomation
 };
-

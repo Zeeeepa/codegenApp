@@ -1,37 +1,63 @@
+/**
+ * Backend automation server for Codegen app
+ * Provides headless browser automation for resuming agent runs
+ */
+
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config();
-
-const automationService = require('./automation-service');
 const logger = require('./logger');
+const { resumeAgentRun, testAutomation } = require('./automation-service');
 
 const app = express();
-const PORT = process.env.PORT || 3500;
+const PORT = process.env.PORT || 3002;
 
 // Security middleware
 app.use(helmet());
+
+// CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
+  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  message: {
+    error: 'Too many requests from this IP, please try again later.'
+  }
 });
 app.use(limiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  logger.info('Incoming request', {
+    method: req.method,
+    url: req.url,
+    ip: req.ip,
+    userAgent: req.get('User-Agent')
+  });
+  next();
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'automation-backend',
+    version: '1.0.0'
+  });
 });
 
 // Resume agent run endpoint
@@ -42,46 +68,108 @@ app.post('/api/resume-agent-run', async (req, res) => {
     // Validate required fields
     if (!agentRunId || !organizationId || !prompt) {
       return res.status(400).json({
+        success: false,
         error: 'Missing required fields: agentRunId, organizationId, prompt'
       });
     }
 
-    logger.info('Resume agent run request', {
+    if (!authContext) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authentication context is required'
+      });
+    }
+
+    logger.info('Resume agent run request received', {
       agentRunId,
       organizationId,
       promptLength: prompt.length,
-      hasAuth: !!authContext
+      hasAuthContext: !!authContext
     });
 
-    // Call automation service
-    const result = await automationService.resumeAgentRun({
+    // Execute automation
+    const result = await resumeAgentRun({
       agentRunId,
       organizationId,
       prompt,
       authContext
     });
 
-    logger.info('Resume agent run completed', {
-      agentRunId,
-      success: result.success,
-      duration: result.duration
+    if (result.success) {
+      logger.info('Agent run resumed successfully', {
+        agentRunId,
+        duration: result.duration
+      });
+      res.json(result);
+    } else {
+      logger.error('Agent run resume failed', {
+        agentRunId,
+        error: result.error
+      });
+      res.status(500).json(result);
+    }
+
+  } catch (error) {
+    logger.error('Resume agent run endpoint error', {
+      error: error.message,
+      stack: error.stack
     });
+
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Test automation endpoint
+app.post('/api/test-automation', async (req, res) => {
+  try {
+    const { agentRunId, authContext } = req.body;
+
+    if (!agentRunId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: agentRunId'
+      });
+    }
+
+    if (!authContext) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authentication context is required'
+      });
+    }
+
+    logger.info('Test automation request received', { agentRunId });
+
+    const result = await testAutomation({ agentRunId, authContext });
 
     res.json(result);
 
   } catch (error) {
-    logger.error('Resume agent run failed', {
+    logger.error('Test automation endpoint error', {
       error: error.message,
-      stack: error.stack,
-      agentRunId: req.body.agentRunId
+      stack: error.stack
     });
 
     res.status(500).json({
+      success: false,
       error: 'Internal server error',
-      message: error.message,
-      success: false
+      message: error.message
     });
   }
+});
+
+// Get authentication extraction script endpoint
+app.get('/api/auth-script', (req, res) => {
+  const { getAuthExtractionScript } = require('./auth-handler');
+  
+  res.json({
+    success: true,
+    script: getAuthExtractionScript()
+  });
 });
 
 // Error handling middleware
@@ -94,22 +182,41 @@ app.use((error, req, res, next) => {
   });
 
   res.status(500).json({
-    error: 'Internal server error',
-    success: false
+    success: false,
+    error: 'Internal server error'
   });
 });
 
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
+    success: false,
     error: 'Endpoint not found',
-    success: false
+    availableEndpoints: [
+      'GET /health',
+      'POST /api/resume-agent-run',
+      'POST /api/test-automation',
+      'GET /api/auth-script'
+    ]
   });
 });
 
 // Start server
 app.listen(PORT, () => {
-  logger.info(`Automation backend server running on port ${PORT}`);
+  logger.info(`🤖 Automation backend server running on port ${PORT}`, {
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:8080'
+  });
+
+  console.log(`🤖 Automation backend server running on port ${PORT}`);
+  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:8080'}`);
+  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📋 Available endpoints:`);
+  console.log(`   GET  /health`);
+  console.log(`   POST /api/resume-agent-run`);
+  console.log(`   POST /api/test-automation`);
+  console.log(`   GET  /api/auth-script`);
 });
 
 // Graceful shutdown
@@ -122,3 +229,5 @@ process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully');
   process.exit(0);
 });
+
+module.exports = app;
