@@ -15,7 +15,6 @@ export function filterAgentRuns(
       const runStatus = run.status.toUpperCase();
       return filters.status!.some(filterStatus => 
         filterStatus.toUpperCase() === runStatus ||
-        (filterStatus === AgentRunStatus.ACTIVE && runStatus === "RUNNING") ||
         (filterStatus === AgentRunStatus.COMPLETE && runStatus === "COMPLETED")
       );
     });

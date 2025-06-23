@@ -224,7 +224,7 @@ export default function ListAgentRuns() {
     openDialog('resume-run', { agentRunId, organizationId });
   };
 
-  // Respond to an agent run (for stopped/failed runs) - uses browser automation
+  // Respond to an agent run (for stopped/failed runs) - uses backend automation
   const respondToAgentRun = async (agentRunId: number) => {
     if (!organizationId) return;
 
@@ -236,144 +236,31 @@ export default function ListAgentRuns() {
     if (!prompt || !prompt.trim()) return;
 
     try {
-      console.log("🚀 Automating browser to respond to agent run:", {
+      console.log("🚀 Using backend automation service to respond to agent run:", {
         organizationId,
         agentRunId,
         prompt: prompt.trim()
       });
       
-      // Construct the Codegen chat URL for this agent run
-      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
-      
-      // Open INVISIBLE browser window in background
-      const browserWindow = window.open(chatUrl, '_blank', 'width=1,height=1,left=-2000,top=-2000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no,directories=no');
-      
-      if (!browserWindow) {
-        throw new Error("Failed to open browser window - popup blocked?");
+      // Call backend automation service
+      const result = await apiClient.resumeAgentRunAutomation(
+        agentRunId,
+        organizationId,
+        prompt.trim()
+      );
+
+      if (result.success) {
+        toast.success(`Response sent to agent run #${agentRunId} successfully!`);
+        
+        // Refresh to show updated status
+        await refresh();
+      } else {
+        throw new Error(result.error || 'Backend automation failed');
       }
-
-      // Wait for page to load and then automate the chat input
-      setTimeout(async () => {
-        try {
-          const doc = browserWindow.document;
-          
-          // Wait for the page to fully load
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          
-          // Try primary XPath selector first for the text input area
-          let chatInput = doc.evaluate(
-            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div/div[1]/div/textarea',
-            doc,
-            null,
-            XPathResult.FIRST_ORDERED_NODE_TYPE,
-            null
-          ).singleNodeValue as HTMLTextAreaElement;
-          
-          // Fallback XPath selectors
-          if (!chatInput) {
-            chatInput = doc.evaluate(
-              '//*[@id="chat-bar"]//textarea',
-              doc,
-              null,
-              XPathResult.FIRST_ORDERED_NODE_TYPE,
-              null
-            ).singleNodeValue as HTMLTextAreaElement;
-          }
-          
-          // CSS selector fallback
-          if (!chatInput) {
-            chatInput = doc.querySelector('#chat-bar textarea') as HTMLTextAreaElement;
-          }
-          
-          // Generic textarea fallback
-          if (!chatInput) {
-            chatInput = doc.querySelector('textarea[placeholder*="message"], textarea[placeholder*="Message"]') as HTMLTextAreaElement;
-          }
-          
-          if (!chatInput) {
-            throw new Error("Could not find chat input textarea element");
-          }
-          
-          // Focus and set the text
-          chatInput.focus();
-          chatInput.value = prompt.trim();
-          
-          // Trigger input events to ensure React state updates
-          chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-          chatInput.dispatchEvent(new Event('change', { bubbles: true }));
-          
-          // Wait a moment for React to process the input
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Find and click the send button using XPath
-          let sendButton = doc.evaluate(
-            '//*[@id="chat-bar"]//button[contains(@class, "send") or @type="submit" or contains(text(), "Send")]',
-            doc,
-            null,
-            XPathResult.FIRST_ORDERED_NODE_TYPE,
-            null
-          ).singleNodeValue as HTMLButtonElement;
-          
-          // Fallback CSS selectors for send button
-          if (!sendButton) {
-            sendButton = doc.querySelector('#chat-bar button[type="submit"]') as HTMLButtonElement;
-          }
-          
-          if (!sendButton) {
-            sendButton = doc.querySelector('#chat-bar button:last-child') as HTMLButtonElement;
-          }
-          
-          if (sendButton) {
-            sendButton.click();
-            
-            // Wait for message to be sent
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Close the browser window
-            browserWindow.close();
-            
-            toast.success(`Response sent to agent run #${agentRunId} successfully!`);
-            
-            // Refresh to show updated status
-            await refresh();
-          } else {
-            throw new Error("Could not find send button");
-          }
-          
-        } catch (automationError) {
-          console.error("Browser automation failed:", automationError);
-          browserWindow.close();
-          
-          // Fallback to manual approach
-          window.focus();
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
-          
-          try {
-            await navigator.clipboard.writeText(prompt.trim());
-            toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
-          } catch (clipboardError) {
-            console.error("Clipboard error:", clipboardError);
-            toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
-          }
-        }
-      }, 2000); // Wait 2 seconds for page to load
-
+      
     } catch (error) {
-      console.error("Failed to automate browser:", error);
-      
-      // Fallback to manual approach
-      window.focus();
-      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
-      window.open(chatUrl, '_blank', 'noopener,noreferrer');
-      
-      try {
-        await navigator.clipboard.writeText(prompt.trim());
-        toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
-      } catch (clipboardError) {
-        console.error("Clipboard error:", clipboardError);
-        toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
-      }
+      console.error("Backend automation failed:", error);
+      toast.error(`Failed to respond to agent run: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
