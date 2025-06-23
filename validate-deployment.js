@@ -238,8 +238,8 @@ async function runAllTests() {
   if (results.failed === 0) {
     log('🎉 All tests passed! Deployment is ready.', 'success');
     log('🌐 Frontend: http://localhost:8080', 'info');
-    log('🔧 Backend: http://localhost:3004', 'info');
-    log('💡 Health Check: http://localhost:3004/health', 'info');
+    log('🔧 Backend: http://localhost:3002', 'info');
+    log('💡 Health Check: http://localhost:3002/health', 'info');
   } else {
     log('⚠️  Some tests failed. Please check the issues above.', 'warning');
   }

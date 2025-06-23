@@ -70,3 +70,21 @@
 [32minfo[39m: Request completed {"contentLength":"563","contentType":"application/json; charset=utf-8","environment":"development","method":"GET","path":"/health","requestId":"h6cc0l","responseTime":4,"service":"automation-backend","statusCode":200,"timestamp":"2025-06-23 08:37:10.713","url":"/health","version":"1.0.0"}
 [32minfo[39m: Incoming request {"environment":"development","ip":"::ffff:127.0.0.1","method":"GET","path":"/health","query":{},"requestId":"dw7o5k","service":"automation-backend","timestamp":"2025-06-23 08:37:10.732","url":"/health","userAgent":"node-fetch","version":"1.0.0"}
 [32minfo[39m: Request completed {"contentLength":"563","contentType":"application/json; charset=utf-8","environment":"development","method":"GET","path":"/health","requestId":"dw7o5k","responseTime":3,"service":"automation-backend","statusCode":200,"timestamp":"2025-06-23 08:37:10.735","url":"/health","version":"1.0.0"}
+[1m[43m[30m
+  Puppeteer old Headless deprecation warning:[0m[33m
+    In the near future `headless: true` will default to the new Headless mode
+    for Chrome instead of the old Headless implementation. For more
+    information, please see https://developer.chrome.com/articles/new-headless/.
+    Consider opting in early by passing `headless: "new"` to `puppeteer.launch()`
+    If you encounter any bugs, please report them to https://github.com/puppeteer/puppeteer/issues/new/choose.[0m
+
+[32minfo[39m: Health check completed {"environment":"development","service":"automation-backend","services":{"disk":{"lastCheck":null,"status":"unknown"},"memory":{"lastCheck":1750667847582,"status":"healthy","usage":{"heap":{"total":22.9,"used":19.94},"system":{"total":12288,"usage":6.88,"used":845.72}}},"puppeteer":{"lastCheck":1750667847581,"status":"healthy"}},"status":"healthy","timestamp":"2025-06-23 08:37:27.582","version":"1.0.0"}
+[1m[43m[30m
+  Puppeteer old Headless deprecation warning:[0m[33m
+    In the near future `headless: true` will default to the new Headless mode
+    for Chrome instead of the old Headless implementation. For more
+    information, please see https://developer.chrome.com/articles/new-headless/.
+    Consider opting in early by passing `headless: "new"` to `puppeteer.launch()`
+    If you encounter any bugs, please report them to https://github.com/puppeteer/puppeteer/issues/new/choose.[0m
+
+[32minfo[39m: Health check completed {"environment":"development","service":"automation-backend","services":{"disk":{"lastCheck":null,"status":"unknown"},"memory":{"lastCheck":1750667877578,"status":"healthy","usage":{"heap":{"total":22.15,"used":19.87},"system":{"total":12288,"usage":6.88,"used":845.85}}},"puppeteer":{"lastCheck":1750667877577,"status":"healthy"}},"status":"healthy","timestamp":"2025-06-23 08:37:57.578","version":"1.0.0"}
