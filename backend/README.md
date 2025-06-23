@@ -86,7 +86,7 @@ Health check endpoint.
 
 Environment variables (see `.env.example`):
 
-- `PORT`: Server port (default: 3001)
+- `PORT`: Server port (default: 3002)
 - `NODE_ENV`: Environment mode (development/production)
 - `FRONTEND_URL`: Frontend URL for CORS (default: http://localhost:3000)
 - `LOG_LEVEL`: Logging level (default: info)
@@ -147,7 +147,7 @@ Test the automation service:
 npm test
 
 # Test specific functionality
-curl -X POST http://localhost:3001/api/resume-agent-run \
+curl -X POST http://localhost:3002/api/resume-agent-run \
   -H "Content-Type: application/json" \
   -d '{
     "agentRunId": 12345,
@@ -183,7 +183,7 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 COPY . .
-EXPOSE 3001
+EXPOSE 3002
 CMD ["npm", "start"]
 ```
 
@@ -229,4 +229,3 @@ For production deployment:
 3. Update selectors when Codegen UI changes
 4. Add tests for new functionality
 5. Update documentation for API changes
-
