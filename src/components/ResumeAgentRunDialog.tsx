@@ -107,7 +107,7 @@ export function ResumeAgentRunDialog({
       if (error instanceof Error) {
         if (error.message.includes('Backend automation service not available') || 
             error.message.includes('Cannot connect to backend')) {
-          errorMessage = `${error.message}\n\nTo enable resume functionality:\n1. Navigate to the 'backend' directory\n2. Run 'npm install' then 'npm start'\n3. Ensure the backend server is running on port 3001`;
+          errorMessage = `${error.message}\n\nTo enable resume functionality:\n1. Navigate to the 'backend' directory\n2. Run 'npm install' then 'npm start'\n3. Ensure the backend server is running on port 3500`;
         } else {
           errorMessage = error.message;
         }

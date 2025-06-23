@@ -22,7 +22,7 @@ interface UseCachedAgentRunsResult {
   sortOptions: SortOptions;
   organizationId: number | null;
   setOrganizationId: (orgId: number) => void;
-  addNewAgentRun: (agentRun: CachedAgentRun) => void;
+  addNewAgentRun: (agentRun: CachedAgentRun) => Promise<void>;
 }
 
 export function useCachedAgentRuns(): UseCachedAgentRunsResult {
@@ -185,9 +185,9 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
     localStorage.setItem("defaultOrganizationId", orgId.toString());
   }, []);
 
-  // Add new agent run immediately to state
-  const addNewAgentRun = useCallback((agentRun: CachedAgentRun) => {
-    console.log(`Adding new agent run #${agentRun.id} to state immediately`);
+  // Add new agent run immediately to state AND persist to cache
+  const addNewAgentRun = useCallback(async (agentRun: CachedAgentRun) => {
+    console.log(`Adding new agent run #${agentRun.id} to state and cache immediately`);
     console.log(`Current organization ID: ${organizationId} (type: ${typeof organizationId}), Agent run org: ${agentRun.organization_id} (type: ${typeof agentRun.organization_id})`);
     
     // Handle race condition: if organizationId is not set yet, try to get it from localStorage
@@ -211,12 +211,24 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
     }
     
     if (currentOrgId === agentRunOrgId) {
+      // Update UI state immediately
       setAgentRuns(prevRuns => [agentRun, ...prevRuns]);
       console.log(`✅ Added agent run #${agentRun.id} to UI state`);
+      
+      // Persist to cache for persistence between sessions
+      try {
+        // Convert CachedAgentRun to AgentRunResponse for cache storage
+        const { lastUpdated, organizationName, isPolling, ...agentRunResponse } = agentRun;
+        await cache.updateAgentRun(currentOrgId, agentRunResponse as any);
+        console.log(`💾 Persisted agent run #${agentRun.id} to cache`);
+      } catch (error) {
+        console.error(`Failed to persist agent run #${agentRun.id} to cache:`, error);
+        // Don't throw - UI update succeeded, cache failure shouldn't break UX
+      }
     } else {
       console.log(`❌ Skipped adding agent run #${agentRun.id} - organization mismatch (${currentOrgId} !== ${agentRunOrgId})`);
     }
-  }, [organizationId]);
+  }, [organizationId, cache]);
 
   // Initial load
   useEffect(() => {

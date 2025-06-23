@@ -147,7 +147,7 @@ export function CreateRunDialog() {
       console.log(`🎯 Will be monitored: ${cachedAgentRun.isPolling}`);
       console.log(`🔍 Current hook organization ID: ${organizationId}`);
       
-      addNewAgentRun(cachedAgentRun);
+      await addNewAgentRun(cachedAgentRun);
 
       // Backup: If the agent run didn't appear immediately, force a refresh after a short delay
       setTimeout(() => {
