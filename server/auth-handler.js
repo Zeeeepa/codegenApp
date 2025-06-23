@@ -3,7 +3,7 @@
  * Manages authentication context transfer from frontend to backend automation
  */
 
-const logger = require('./logger');
+import logger from './logger.js';
 
 /**
  * Apply authentication context to a Puppeteer page
@@ -199,7 +199,7 @@ async function checkAuthentication(page) {
   }
 }
 
-module.exports = {
+export {
   applyAuthContext,
   getAuthExtractionScript,
   validateAuthContext,

@@ -252,7 +252,7 @@ export class CodegenAPIClient {
       // Extract authentication context from current browser session
       const authContext = await this.extractAuthContext();
       
-      // Call backend automation service
+      // Call integrated automation service
       const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       const response = await fetch(`${backendUrl}/api/resume-agent-run`, {
         method: 'POST',

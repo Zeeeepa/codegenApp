@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
+import rateLimit from 'express-rate-limit';
+import { resumeAgentRun, testAutomation } from './automation-service.js';
+import logger from './logger.js';
 
 dotenv.config();
 
@@ -31,9 +34,90 @@ app.use(cors({
 
 app.use(express.json());
 
+// Rate limiting for automation endpoints
+const automationLimiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  message: {
+    error: 'Too many automation requests',
+    message: 'Please try again later'
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Automation endpoints
+app.post('/api/resume-agent-run', automationLimiter, async (req, res) => {
+  try {
+    const { agentRunId, organizationId, prompt, authContext } = req.body;
+
+    // Validate required fields
+    if (!agentRunId || !organizationId || !prompt || !authContext) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: agentRunId, organizationId, prompt, authContext'
+      });
+    }
+
+    logger.info('Received automation request', {
+      agentRunId,
+      organizationId,
+      promptLength: prompt.length,
+      hasAuth: !!authContext
+    });
+
+    // Call automation service
+    const result = await resumeAgentRun({
+      agentRunId,
+      organizationId,
+      prompt,
+      authContext
+    });
+
+    res.json(result);
+
+  } catch (error) {
+    logger.error('Automation endpoint error', {
+      error: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Test automation endpoint
+app.post('/api/test-automation', automationLimiter, async (req, res) => {
+  try {
+    const { agentRunId, authContext } = req.body;
+
+    if (!agentRunId || !authContext) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: agentRunId, authContext'
+      });
+    }
+
+    const result = await testAutomation({ agentRunId, authContext });
+    res.json(result);
+
+  } catch (error) {
+    logger.error('Test automation endpoint error', {
+      error: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 });
 
 // Proxy all API requests to Codegen API
@@ -108,6 +192,8 @@ app.use('*', (req, res) => {
     message: `Route ${req.method} ${req.originalUrl} not found`,
     availableRoutes: [
       'GET /health',
+      'POST /api/resume-agent-run',
+      'POST /api/test-automation',
       'ALL /api/v1/*'
     ]
   });

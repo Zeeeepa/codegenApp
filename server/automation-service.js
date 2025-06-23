@@ -3,10 +3,10 @@
  * Uses Puppeteer for headless browser automation
  */
 
-const puppeteer = require('puppeteer');
-const logger = require('./logger');
-const { findChatInput, findSendButton, waitForPageLoad, checkForErrors } = require('./selectors');
-const { applyAuthContext, checkAuthentication, validateAuthContext } = require('./auth-handler');
+import puppeteer from 'puppeteer';
+import logger from './logger.js';
+import { findChatInput, findSendButton, waitForPageLoad, checkForErrors } from './selectors.js';
+import { applyAuthContext, checkAuthentication, validateAuthContext } from './auth-handler.js';
 
 /**
  * Resume an agent run by automating the Codegen chat interface
@@ -267,7 +267,7 @@ async function testAutomation({ agentRunId, authContext }) {
   }
 }
 
-module.exports = {
+export {
   resumeAgentRun,
   testAutomation
 };

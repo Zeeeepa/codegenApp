@@ -135,9 +135,6 @@ async function findSendButton(page, timeout = 10000) {
  */
 async function waitForPageLoad(page, timeout = 30000) {
   try {
-    // Wait for network to be idle
-    await page.waitForLoadState('networkidle', { timeout });
-    
     // Wait for chat interface to be present
     await page.waitForSelector('#chat-bar', { timeout: 10000 });
     
@@ -171,7 +168,7 @@ async function checkForErrors(page) {
   return null;
 }
 
-module.exports = {
+export {
   SELECTORS,
   waitForElement,
   findChatInput,
@@ -179,4 +176,3 @@ module.exports = {
   waitForPageLoad,
   checkForErrors
 };
-

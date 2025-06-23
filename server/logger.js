@@ -1,4 +1,10 @@
-const winston = require('winston');
+import winston from 'winston';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Create logger instance
 const logger = winston.createLogger({
@@ -12,14 +18,14 @@ const logger = winston.createLogger({
   transports: [
     // Write all logs with importance level of `error` or less to `error.log`
     new winston.transports.File({ 
-      filename: 'logs/error.log', 
+      filename: join(__dirname, 'logs/error.log'), 
       level: 'error',
       maxsize: 5242880, // 5MB
       maxFiles: 5
     }),
     // Write all logs with importance level of `info` or less to `combined.log`
     new winston.transports.File({ 
-      filename: 'logs/combined.log',
+      filename: join(__dirname, 'logs/combined.log'),
       maxsize: 5242880, // 5MB
       maxFiles: 5
     })
@@ -37,12 +43,10 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Create logs directory if it doesn't exist
-const fs = require('fs');
-const path = require('path');
-const logsDir = path.join(__dirname, 'logs');
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
+const logsDir = join(__dirname, 'logs');
+if (!existsSync(logsDir)) {
+  mkdirSync(logsDir, { recursive: true });
 }
 
-module.exports = logger;
+export default logger;
 
