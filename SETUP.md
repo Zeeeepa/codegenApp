@@ -30,7 +30,7 @@ npm run dev
 The app will be available at:
 - **Frontend**: http://localhost:8080
 - **Backend**: http://localhost:8001
-- **Backend Automation**: http://localhost:3001 (for resume functionality)
+- **Backend Automation**: http://localhost:3002 (for resume functionality)
 - **Health Check**: http://localhost:8001/health
 
 ## 🚀 **Unified Development Workflow**
@@ -38,7 +38,7 @@ The app will be available at:
 The `npm run dev` command now starts **everything** you need:
 - ✅ **Frontend React App** (port 8080)
 - ✅ **Backend API Server** (port 8001) 
-- ✅ **Automation Service** (port 3001) - for Resume Agent Run functionality
+- ✅ **Automation Service** (port 3002) - for Resume Agent Run functionality
 
 **That's it!** One command starts the complete development environment.
 
@@ -155,7 +155,7 @@ codegenApp/
 
 The app uses multiple services for complete functionality:
 - **Frontend** (port 8080) → **Backend Proxy** (port 8001) → **Codegen API**
-- **Frontend** (port 8080) → **Automation Service** (port 3001) → **Resume Agent Runs**
+- **Frontend** (port 8080) → **Automation Service** (port 3002) → **Resume Agent Runs**
 
 This setup provides secure API communication and headless browser automation.
 
@@ -163,7 +163,7 @@ This setup provides secure API communication and headless browser automation.
 
 ### "Backend automation service not available" Error
 - **Solution**: Run `npm run dev` (starts all services including automation backend)
-- **Check Health**: Visit `http://localhost:3001/health` - should return `{"status":"ok"}`
+- **Check Health**: Visit `http://localhost:3002/health` - should return `{"status":"ok"}`
 - **Manual Start**: If needed, `cd backend && npm start`
 - **Dependencies**: Ensure `npm install` was run (installs backend deps automatically)
 

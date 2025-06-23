@@ -20,7 +20,7 @@ This application is a React-based frontend that connects directly to the Codegen
 - Node.js 16+ and npm
 - A Codegen API token (get one from [Codegen Dashboard](https://app.codegen.com/settings))
 
-## 🛠��� Installation & Setup
+## 🛠���� Installation & Setup
 
 ### 1. Clone the repository
 
@@ -68,7 +68,7 @@ npm run dev
 The application will be available at:
 - **Frontend**: `http://localhost:8080`
 - **Backend API**: `http://localhost:8001`
-- **Automation Service**: `http://localhost:3001`
+- **Automation Service**: `http://localhost:3002`
 
 ## 🔧 Development
 
