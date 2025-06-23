@@ -563,7 +563,7 @@ export default function ListAgentRuns() {
                 ...run,
                 lastUpdated: new Date().toISOString(),
                 organizationName: undefined, // Will be populated by cache if available
-                isPolling: false
+                isPolling: ['ACTIVE', 'EVALUATION', 'PENDING', 'RUNNING'].includes(run.status.toUpperCase()) // Monitor active runs
               };
 
               return (
