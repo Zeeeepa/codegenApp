@@ -3,7 +3,7 @@
 echo "🎯 COMPREHENSIVE API TEST WITH REAL CREDENTIALS"
 echo "================================================"
 
-API_TOKEN="sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99"
+API_TOKEN="${CODEGEN_API_TOKEN:-your-api-token-here}"
 ORG_ID="323"
 BASE_URL="http://localhost:3001/api"
 
