@@ -5,6 +5,7 @@ export interface AgentRunResponse {
   organization_id: number;
   status: string;
   created_at: string;
+  updated_at?: string;
   web_url: string;
   result?: string;
 }

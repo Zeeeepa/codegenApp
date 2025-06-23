@@ -47,14 +47,15 @@ Object.defineProperty(window, 'open', {
   value: mockWindowOpen
 });
 
+const defaultProps = {
+  isOpen: true,
+  onClose: jest.fn(),
+  agentRunId: 123,
+  organizationId: 456,
+  onResumed: jest.fn()
+};
+
 describe('Browser Automation Tests', () => {
-  const defaultProps = {
-    isOpen: true,
-    onClose: jest.fn(),
-    agentRunId: 123,
-    organizationId: 456,
-    onResumed: jest.fn()
-  };
 
   beforeEach(() => {
     jest.clearAllMocks();
