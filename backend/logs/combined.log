@@ -1,1 +1,64 @@
 {"level":"info","message":"Automation backend server running on port 3001","service":"automation-backend","timestamp":"2025-06-23T02:05:04.862Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:47:11.518Z"}
+{"level":"info","message":"PMAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:47:11.521Z"}
+{"level":"info","message":"PMAgent initialized with project management capabilities","service":"automation-backend","timestamp":"2025-06-23T04:47:11.522Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:47:11.524Z"}
+{"level":"info","message":"DatabaseSchemaBuildAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:47:11.524Z"}
+{"level":"info","message":"DatabaseSchemaBuildAgent initialized with database design capabilities","service":"automation-backend","timestamp":"2025-06-23T04:47:11.524Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:47:11.526Z"}
+{"level":"info","message":"QADDLGenerationAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:47:11.526Z"}
+{"level":"info","message":"QADDLGenerationAgent initialized with SQL generation capabilities","service":"automation-backend","timestamp":"2025-06-23T04:47:11.526Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:47:11.528Z"}
+{"level":"info","message":"PMAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:47:11.528Z"}
+{"level":"info","message":"PMAgent initialized with project management capabilities","service":"automation-backend","timestamp":"2025-06-23T04:47:11.528Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:47:11.528Z"}
+{"level":"info","message":"DatabaseSchemaBuildAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:47:11.528Z"}
+{"level":"info","message":"DatabaseSchemaBuildAgent initialized with database design capabilities","service":"automation-backend","timestamp":"2025-06-23T04:47:11.528Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:47:11.529Z"}
+{"level":"info","message":"QADDLGenerationAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:47:11.529Z"}
+{"level":"info","message":"QADDLGenerationAgent initialized with SQL generation capabilities","service":"automation-backend","timestamp":"2025-06-23T04:47:11.529Z"}
+{"level":"info","message":"AgentOrchestrator initialized with all agents","service":"automation-backend","timestamp":"2025-06-23T04:47:11.529Z"}
+{"features":["automation","ai-agents","orchestrator"],"frontendUrl":"http://localhost:3000","geminiConfigured":true,"level":"info","message":"Codegen Automation Backend started on port 3001","nodeEnv":"development","port":"3001","service":"automation-backend","timestamp":"2025-06-23T04:47:11.536Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:49:47.618Z"}
+{"level":"info","message":"PMAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:49:47.621Z"}
+{"level":"info","message":"PMAgent initialized with project management capabilities","service":"automation-backend","timestamp":"2025-06-23T04:49:47.621Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:49:47.624Z"}
+{"level":"info","message":"DatabaseSchemaBuildAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:49:47.624Z"}
+{"level":"info","message":"DatabaseSchemaBuildAgent initialized with database design capabilities","service":"automation-backend","timestamp":"2025-06-23T04:49:47.624Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:49:47.626Z"}
+{"level":"info","message":"QADDLGenerationAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:49:47.626Z"}
+{"level":"info","message":"QADDLGenerationAgent initialized with SQL generation capabilities","service":"automation-backend","timestamp":"2025-06-23T04:49:47.626Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:49:47.628Z"}
+{"level":"info","message":"PMAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:49:47.628Z"}
+{"level":"info","message":"PMAgent initialized with project management capabilities","service":"automation-backend","timestamp":"2025-06-23T04:49:47.629Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:49:47.629Z"}
+{"level":"info","message":"DatabaseSchemaBuildAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:49:47.629Z"}
+{"level":"info","message":"DatabaseSchemaBuildAgent initialized with database design capabilities","service":"automation-backend","timestamp":"2025-06-23T04:49:47.629Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:49:47.629Z"}
+{"level":"info","message":"QADDLGenerationAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:49:47.629Z"}
+{"level":"info","message":"QADDLGenerationAgent initialized with SQL generation capabilities","service":"automation-backend","timestamp":"2025-06-23T04:49:47.629Z"}
+{"level":"info","message":"AgentOrchestrator initialized with all agents","service":"automation-backend","timestamp":"2025-06-23T04:49:47.629Z"}
+{"features":["automation","ai-agents","orchestrator"],"frontendUrl":"http://localhost:3000","geminiConfigured":true,"level":"info","message":"Codegen Automation Backend started on port 3001","nodeEnv":"development","port":"3001","service":"automation-backend","timestamp":"2025-06-23T04:49:47.636Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:49:49.647Z"}
+{"level":"info","message":"PMAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:49:49.650Z"}
+{"level":"info","message":"PMAgent initialized with project management capabilities","service":"automation-backend","timestamp":"2025-06-23T04:49:49.651Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:49:49.653Z"}
+{"level":"info","message":"DatabaseSchemaBuildAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:49:49.654Z"}
+{"level":"info","message":"DatabaseSchemaBuildAgent initialized with database design capabilities","service":"automation-backend","timestamp":"2025-06-23T04:49:49.654Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:49:49.656Z"}
+{"level":"info","message":"QADDLGenerationAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:49:49.656Z"}
+{"level":"info","message":"QADDLGenerationAgent initialized with SQL generation capabilities","service":"automation-backend","timestamp":"2025-06-23T04:49:49.656Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:49:49.658Z"}
+{"level":"info","message":"PMAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:49:49.658Z"}
+{"level":"info","message":"PMAgent initialized with project management capabilities","service":"automation-backend","timestamp":"2025-06-23T04:49:49.658Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:49:49.658Z"}
+{"level":"info","message":"DatabaseSchemaBuildAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:49:49.658Z"}
+{"level":"info","message":"DatabaseSchemaBuildAgent initialized with database design capabilities","service":"automation-backend","timestamp":"2025-06-23T04:49:49.658Z"}
+{"level":"info","maxTokens":8192,"message":"Gemini API configured","model":"gemini-2.0-flash-exp","service":"automation-backend","temperature":0.7,"timestamp":"2025-06-23T04:49:49.659Z"}
+{"level":"info","message":"QADDLGenerationAgent initialized","model":"gemini-2.0-flash-exp","service":"automation-backend","systemPrompt":"Set","timestamp":"2025-06-23T04:49:49.659Z"}
+{"level":"info","message":"QADDLGenerationAgent initialized with SQL generation capabilities","service":"automation-backend","timestamp":"2025-06-23T04:49:49.659Z"}
+{"level":"info","message":"AgentOrchestrator initialized with all agents","service":"automation-backend","timestamp":"2025-06-23T04:49:49.659Z"}
+{"features":["automation","ai-agents","orchestrator"],"frontendUrl":"http://localhost:3000","geminiConfigured":true,"level":"info","message":"Codegen Automation Backend started on port 3001","nodeEnv":"development","port":"3001","service":"automation-backend","timestamp":"2025-06-23T04:49:49.666Z"}
+{"level":"info","message":"AI Agents status request","service":"automation-backend","timestamp":"2025-06-23T04:50:38.828Z"}
+{"level":"info","message":"PMAgent stats request","service":"automation-backend","timestamp":"2025-06-23T04:50:45.570Z"}
+{"level":"info","message":"Orchestrator workflow types request","service":"automation-backend","timestamp":"2025-06-23T04:50:53.662Z"}

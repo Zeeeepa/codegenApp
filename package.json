@@ -4,6 +4,8 @@
   "description": "A web application for managing agent runs, converted from Raycast extension",
   "private": true,
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@langchain/google-genai": "^0.2.13",
     "@types/react": "^18.2.6",
     "@types/react-dom": "^18.2.4",
     "autoprefixer": "^10.4.14",

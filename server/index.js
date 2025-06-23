@@ -6,7 +6,7 @@ import fetch from 'node-fetch';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8001;
 const CODEGEN_API_BASE = process.env.CODEGEN_API_BASE || 'https://api.codegen.com';
 
 // CORS configuration with credentials support

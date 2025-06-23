@@ -5,6 +5,7 @@ import ListOrganizations from './list-organizations';
 import CreateAgentRun from './create-agent-run';
 import ListAgentRuns from './list-agent-runs';
 import { SetupGuide } from './components/SetupGuide';
+import { AgentInterface } from './components/AgentInterface';
 import { AgentRunSelectionProvider } from './contexts/AgentRunSelectionContext';
 import { DialogProvider } from './contexts/DialogContext';
 import { getPreferenceValues, setPreferenceValues, getEnvFileContent, validateEnvironmentConfiguration } from './utils/preferences';
@@ -227,6 +228,7 @@ function AppContent() {
       <Route path="/organizations" element={<ListOrganizations />} />
       <Route path="/create-agent-run" element={<CreateAgentRun />} />
       <Route path="/agent-runs" element={<ListAgentRuns />} />
+      <Route path="/ai-agents" element={<AgentInterface />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>
   );
