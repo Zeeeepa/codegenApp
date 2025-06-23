@@ -24,11 +24,14 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "dev": "concurrently \"npm run server:dev\" \"npm run start\"",
+    "dev": "concurrently \"npm run server:dev\" \"npm run backend:dev\" \"npm run start\"",
     "server:install": "cd server && npm install",
     "server:start": "cd server && npm start",
     "server:dev": "cd server && npm run dev",
-    "postinstall": "npm run server:install"
+    "backend:install": "cd backend && npm install",
+    "backend:start": "cd backend && npm start",
+    "backend:dev": "cd backend && npm start",
+    "postinstall": "npm run server:install && npm run backend:install"
   },
   "eslintConfig": {
     "extends": [
