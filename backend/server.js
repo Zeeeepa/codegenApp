@@ -8,7 +8,7 @@ const automationService = require('./automation-service');
 const logger = require('./logger');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3500;
 
 // Security middleware
 app.use(helmet());
@@ -122,4 +122,3 @@ process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully');
   process.exit(0);
 });
-

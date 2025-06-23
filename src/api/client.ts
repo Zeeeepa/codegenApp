@@ -255,7 +255,7 @@ export class CodegenAPIClient {
       const authContext = await this.extractAuthContext();
       
       // Call backend automation service
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3500';
       console.log(`🔗 Attempting to connect to backend at: ${backendUrl}/api/resume-agent-run`);
       
       const response = await fetch(`${backendUrl}/api/resume-agent-run`, {
