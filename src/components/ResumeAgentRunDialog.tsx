@@ -48,6 +48,60 @@ export function ResumeAgentRunDialog({
     }
   }, [isOpen, agentRunId, organizationId, loadAgentRunDetails]);
 
+  // Extract authentication context for backend automation
+  const extractAuthContext = () => {
+    try {
+      // Extract cookies
+      const cookies = document.cookie.split(';').map(cookie => {
+        const [name, value] = cookie.trim().split('=');
+        return {
+          name: name,
+          value: value || '',
+          domain: window.location.hostname,
+          path: '/',
+          httpOnly: false,
+          secure: window.location.protocol === 'https:'
+        };
+      }).filter(cookie => cookie.name && cookie.value);
+
+      // Extract localStorage
+      const localStorage: Record<string, string> = {};
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (key) {
+          const value = window.localStorage.getItem(key);
+          if (value) {
+            localStorage[key] = value;
+          }
+        }
+      }
+
+      // Extract sessionStorage
+      const sessionStorage: Record<string, string> = {};
+      for (let i = 0; i < window.sessionStorage.length; i++) {
+        const key = window.sessionStorage.key(i);
+        if (key) {
+          const value = window.sessionStorage.getItem(key);
+          if (value) {
+            sessionStorage[key] = value;
+          }
+        }
+      }
+
+      return {
+        cookies: cookies,
+        localStorage: localStorage,
+        sessionStorage: sessionStorage,
+        userAgent: navigator.userAgent,
+        origin: window.location.origin,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Failed to extract auth context:', error);
+      return null;
+    }
+  };
+
   const handleResumeAgentRun = async () => {
     if (!prompt.trim()) {
       toast.error("Please enter a prompt to resume the agent run");
@@ -57,60 +111,89 @@ export function ResumeAgentRunDialog({
     setIsLoading(true);
 
     try {
-      console.log("🚀 Using backend automation service to resume agent run:", {
+      console.log("🚀 Using backend automation to resume agent run:", {
         organizationId,
         agentRunId,
         prompt: prompt.trim(),
         agentRunStatus: agentRunDetails?.status
       });
       
-      // Call backend automation service
-      const result = await apiClient.resumeAgentRunAutomation(
-        agentRunId,
-        organizationId,
-        prompt.trim()
-      );
+      // Extract authentication context
+      const authContext = extractAuthContext();
+      if (!authContext) {
+        throw new Error("Failed to extract authentication context");
+      }
 
-      if (result.success) {
-        toast.success(`Agent run #${agentRunId} has been resumed successfully!`);
+      // Call backend automation service
+      const response = await fetch('/automation/api/resume-agent-run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          agentRunId,
+          organizationId,
+          prompt: prompt.trim(),
+          authContext
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      console.log("🎉 Backend automation completed successfully:", result);
+      
+      toast.success(`Agent run #${agentRunId} resumed successfully! (${result.duration}ms)`);
+      
+      // Update local cache to reflect ACTIVE status
+      try {
+        const { getAgentRunCache } = await import('../storage/agentRunCache');
+        const cache = getAgentRunCache();
         
-        // Update local cache to reflect ACTIVE status
-        try {
-          const { getAgentRunCache } = await import('../storage/agentRunCache');
-          const cache = getAgentRunCache();
-          
-          // Update the agent run status to ACTIVE
-          if (agentRunDetails) {
-            const updatedAgentRun = {
-              ...agentRunDetails,
-              status: 'ACTIVE'
-            };
-            await cache.updateAgentRun(organizationId, updatedAgentRun);
-          }
-        } catch (cacheError) {
-          console.warn('Failed to update cache after resume:', cacheError);
+        // Update the agent run status to ACTIVE
+        if (agentRunDetails) {
+          const updatedAgentRun = {
+            ...agentRunDetails,
+            status: 'ACTIVE'
+          };
+          await cache.updateAgentRun(organizationId, updatedAgentRun);
         }
-        
-        // Reset to default and trigger refresh
-        setPrompt("Continue with the previous task");
-        onResumed?.(); // Trigger refresh to show updated status
-        onClose();
-      } else {
-        throw new Error(result.error || 'Backend automation failed');
+      } catch (cacheError) {
+        console.warn('Failed to update cache after resume:', cacheError);
       }
       
+      // Reset to default and trigger refresh to show updated status
+      setPrompt("Continue with the previous task");
+      onResumed?.(); // This will refresh the dashboard to show active state
+      onClose();
+      
     } catch (error) {
-      console.error("Backend automation failed:", error);
+      console.error("❌ Backend automation failed:", error);
       
       // Provide helpful error message based on error type
       let errorMessage = 'Unknown error';
       if (error instanceof Error) {
         if (error.message.includes('Backend automation service not available') || 
             error.message.includes('Cannot connect to backend')) {
-          errorMessage = `${error.message}\n\nTo enable resume functionality:\n1. Navigate to the 'backend' directory\n2. Run 'npm install' then 'npm start'\n3. Ensure the backend server is running on port 3500`;
+          errorMessage = `${error.message}\n\nTo enable resume functionality:\n1. Navigate to the 'backend' directory\n2. Run 'npm install' then 'npm start'\n3. Ensure the backend server is running on port 3002`;
         } else {
           errorMessage = error.message;
         }
+      }
+      
+      // Fallback to manual approach
+      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
+      window.open(chatUrl, '_blank', 'noopener,noreferrer');
+      
+      try {
+        await navigator.clipboard.writeText(prompt.trim());
+        toast.error(`Backend automation failed. Opened agent run in browser - your message is copied to clipboard.`);
+      } catch (clipboardError) {
+        console.error("Clipboard error:", clipboardError);
+        toast.error(`Backend automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
       }
       
       toast.error(`Failed to resume agent run: ${errorMessage}`);

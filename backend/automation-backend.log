@@ -1,4 +1,4 @@
-[32minfo[39m: 🤖 Automation backend server running on port 3002 {"environment":"development","frontendUrl":"http://localhost:8080","port":"3002","service":"automation-backend","timestamp":"2025-06-23T06:21:59.343Z"}
+[32minfo[39m: 🤖 Automation backend server running on port 3002 {"environment":"development","frontendUrl":"http://localhost:8080","port":"3002","service":"automation-backend","timestamp":"2025-06-23T06:47:05.644Z"}
 🤖 Automation backend server running on port 3002
 🌐 Frontend URL: http://localhost:8080
 🔧 Environment: development
@@ -7,5 +7,4 @@
    POST /api/resume-agent-run
    POST /api/test-automation
    GET  /api/auth-script
-[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"GET","service":"automation-backend","timestamp":"2025-06-23T06:23:12.182Z","url":"/health","userAgent":"curl/7.88.1"}
-[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"GET","service":"automation-backend","timestamp":"2025-06-23T06:26:27.778Z","url":"/health","userAgent":"curl/7.88.1"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"GET","service":"automation-backend","timestamp":"2025-06-23T06:48:12.051Z","url":"/health","userAgent":"curl/7.88.1"}
