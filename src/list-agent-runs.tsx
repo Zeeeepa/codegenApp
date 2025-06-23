@@ -129,25 +129,26 @@ export default function ListAgentRuns() {
   };
 
   const getStatusBadgeClasses = (status: string) => {
+    const baseClasses = "status-badge";
     switch (status.toLowerCase()) {
       case "active":
       case "running":
-        return "bg-blue-100 text-blue-800";
+        return `${baseClasses} active`;
       case "complete":
       case "completed":
-        return "bg-green-100 text-green-800";
+        return `${baseClasses} complete`;
       case "failed":
       case "error":
-        return "bg-red-100 text-red-800";
+        return `${baseClasses} failed`;
       case "cancelled":
       case "stopped":
-        return "bg-gray-100 text-gray-800";
+        return `${baseClasses} cancelled`;
       case "paused":
-        return "bg-yellow-100 text-yellow-800";
+        return `${baseClasses} paused`;
       case "pending":
-        return "bg-blue-50 text-blue-700";
+        return `${baseClasses} pending`;
       default:
-        return "bg-gray-100 text-gray-800";
+        return `${baseClasses} cancelled`;
     }
   };
 
@@ -159,7 +160,7 @@ export default function ListAgentRuns() {
     };
   };
 
-  // Format date for display
+  // Format date for display with improved accuracy
   const formatDate = (dateString: string) => {
     try {
       // Handle various date formats
@@ -180,26 +181,24 @@ export default function ListAgentRuns() {
       
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
+      const diffSecs = Math.floor(diffMs / 1000);
       const diffMins = Math.floor(diffMs / (1000 * 60));
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-      // Debug logging for timestamp issues
-      console.log('Date formatting:', {
-        original: dateString,
-        parsed: date.toISOString(),
-        now: now.toISOString(),
-        diffMs,
-        diffMins,
-        diffHours
-      });
-
-      if (diffMins < 1) return "Just now";
+      // More accurate time formatting
+      if (diffSecs < 30) return "Just now";
+      if (diffSecs < 60) return `${diffSecs}s ago`;
       if (diffMins < 60) return `${diffMins}m ago`;
       if (diffHours < 24) return `${diffHours}h ago`;
       if (diffDays < 7) return `${diffDays}d ago`;
       
-      return date.toLocaleDateString();
+      // For older dates, show the actual date
+      return date.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
     } catch (error) {
       console.error('Error formatting date:', error, dateString);
       return dateString; // Return original string if error occurs
@@ -566,14 +565,13 @@ export default function ListAgentRuns() {
                 isPolling: ['ACTIVE', 'EVALUATION', 'PENDING', 'RUNNING'].includes(run.status.toUpperCase()) // Monitor active runs
               };
 
+              // Check if this is a newly created run (within last 10 seconds)
+              const isNewRun = new Date().getTime() - new Date(run.created_at).getTime() < 10000;
+
               return (
                 <div 
                   key={run.id} 
-                  className={`p-6 rounded-lg border transition-all duration-200 cursor-pointer ${
-                    isSelected 
-                      ? 'bg-blue-900/50 border-blue-500 shadow-lg ring-2 ring-blue-500/20' 
-                      : 'bg-gray-900 border-gray-700 hover:bg-gray-800 hover:border-gray-600 hover:shadow-lg hover:shadow-gray-900/20'
-                  }`}
+                  className={`agent-run-card ${isSelected ? 'selected' : ''} ${isNewRun ? 'slide-in-new' : ''}`}
                   onClick={() => selection.toggleRun(run.id, cachedRun)}
                 >
                   <div className="flex items-center justify-between">
@@ -590,27 +588,21 @@ export default function ListAgentRuns() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
-                          <h3 className="text-lg font-medium text-white">Agent Run #{run.id}</h3>
+                          <h3 className="agent-run-title">Agent Run #{run.id}</h3>
 
                           {/* Real-time status indicator */}
                           {run.status === AgentRunStatus.ACTIVE && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-900/50 text-blue-300 border border-blue-500/30 animate-pulse">
+                            <span className="live-indicator">
                               ⚡ Live
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                          <span>Created {formatDate(run.created_at)}</span>
-                          {run.result && (
-                            <span className="text-blue-400">• Has Response</span>
-                          )}
-                          {run.web_url && (
-                            <span className="text-purple-400">• Web URL Available</span>
-                          )}
+                        <div className="agent-run-meta">
+                          <span className="timestamp">Created {formatDate(run.created_at)}</span>
                         </div>
                         {/* Show brief result preview if available */}
                         {run.result && (
-                          <p className="text-sm text-gray-400 mt-1 line-clamp-2 max-w-md">
+                          <p className="agent-run-preview">
                             {run.result.length > 100 ? `${run.result.substring(0, 100)}...` : run.result}
                           </p>
                         )}
@@ -624,7 +616,7 @@ export default function ListAgentRuns() {
                       {canViewResponse && (
                         <button
                           onClick={() => setResponseModalRun(cachedRun)}
-                          className="inline-flex items-center px-3 py-1.5 border border-green-600 text-sm font-medium rounded text-green-300 bg-green-900 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-gray-800"
+                          className="action-button success"
                           title="View Response"
                         >
                           <FileText className="h-4 w-4" />
@@ -633,7 +625,7 @@ export default function ListAgentRuns() {
                       
                       <button
                         onClick={() => window.open(run.web_url, '_blank')}
-                        className="inline-flex items-center px-3 py-1.5 border border-gray-600 text-sm font-medium rounded text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+                        className="action-button secondary"
                         title="Open in Browser"
                       >
                         <ExternalLink className="h-4 w-4" />
@@ -641,7 +633,7 @@ export default function ListAgentRuns() {
                       
                       <button
                         onClick={() => copyToClipboard(run.web_url, 'Web URL copied to clipboard')}
-                        className="inline-flex items-center px-3 py-1.5 border border-gray-600 text-sm font-medium rounded text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+                        className="action-button secondary"
                         title="Copy Web URL (Cmd+C)"
                       >
                         <Copy className="h-4 w-4" />
@@ -650,7 +642,7 @@ export default function ListAgentRuns() {
                       {canStop && (
                         <button
                           onClick={() => stopAgentRun(run.id)}
-                          className="inline-flex items-center px-3 py-1.5 border border-red-600 text-sm font-medium rounded text-red-300 bg-red-900 hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-gray-800"
+                          className="action-button danger"
                           title="Stop Agent Run (Cmd+S)"
                         >
                           <Square className="h-4 w-4" />
@@ -660,7 +652,7 @@ export default function ListAgentRuns() {
                       {canResume && (
                         <button
                           onClick={() => resumeAgentRun(run.id)}
-                          className="inline-flex items-center px-3 py-1.5 border border-green-600 text-sm font-medium rounded text-green-300 bg-green-900 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-gray-800"
+                          className="action-button success"
                           title={`Resume Agent Run #${run.id}`}
                         >
                           <Play className="h-4 w-4 mr-1" />
@@ -671,7 +663,7 @@ export default function ListAgentRuns() {
                       {canRespond && (
                         <button
                           onClick={() => respondToAgentRun(run.id)}
-                          className="inline-flex items-center px-3 py-1.5 border border-blue-600 text-sm font-medium rounded text-blue-300 bg-blue-900 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+                          className="action-button primary"
                           title="Respond to Agent Run"
                         >
                           <FileText className="h-4 w-4" />
@@ -680,7 +672,7 @@ export default function ListAgentRuns() {
                       
                       <button
                         onClick={() => deleteAgentRun(run.id)}
-                        className="inline-flex items-center px-3 py-1.5 border border-red-600 text-sm font-medium rounded text-red-300 bg-red-900 hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-gray-800"
+                        className="action-button danger"
                         title="Delete Agent Run (Cmd+Shift+Delete)"
                       >
                         <Trash2 className="h-4 w-4" />
