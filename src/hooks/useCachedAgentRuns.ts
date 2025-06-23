@@ -188,14 +188,17 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
   // Add new agent run immediately to state
   const addNewAgentRun = useCallback((agentRun: CachedAgentRun) => {
     console.log(`Adding new agent run #${agentRun.id} to state immediately`);
-    console.log(`Current organization ID: ${organizationId}, Agent run org: ${agentRun.organization_id}`);
+    console.log(`Current organization ID: ${organizationId} (type: ${typeof organizationId}), Agent run org: ${agentRun.organization_id} (type: ${typeof agentRun.organization_id})`);
     
-    // Only add if it belongs to the current organization
-    if (organizationId && agentRun.organization_id === organizationId) {
+    // Only add if it belongs to the current organization (handle type conversion)
+    const currentOrgId = Number(organizationId);
+    const agentRunOrgId = Number(agentRun.organization_id);
+    
+    if (currentOrgId && agentRunOrgId && currentOrgId === agentRunOrgId) {
       setAgentRuns(prevRuns => [agentRun, ...prevRuns]);
       console.log(`✅ Added agent run #${agentRun.id} to UI state`);
     } else {
-      console.log(`❌ Skipped adding agent run #${agentRun.id} - organization mismatch`);
+      console.log(`❌ Skipped adding agent run #${agentRun.id} - organization mismatch (${currentOrgId} !== ${agentRunOrgId})`);
     }
   }, [organizationId]);
 

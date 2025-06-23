@@ -140,6 +140,11 @@ export function CreateRunDialog() {
         organizationName: undefined,
         isPolling: ['ACTIVE', 'EVALUATION', 'PENDING', 'RUNNING'].includes(agentRun.status.toUpperCase()) // Monitor active runs
       };
+      
+      console.log(`🚀 Created agent run #${agentRun.id} with status: ${agentRun.status}`);
+      console.log(`📋 Cached agent run object:`, cachedAgentRun);
+      console.log(`🎯 Will be monitored: ${cachedAgentRun.isPolling}`);
+      
       addNewAgentRun(cachedAgentRun);
 
       toast.success(`Agent run #${agentRun.id} created successfully!`);
