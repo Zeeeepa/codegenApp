@@ -241,6 +241,95 @@ export class CodegenAPIClient {
       return false;
     }
   }
+
+  // Backend Automation Service Methods
+  async resumeAgentRunAutomation(
+    agentRunId: number,
+    organizationId: number,
+    prompt: string
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      // Extract authentication context from current browser session
+      const authContext = await this.extractAuthContext();
+      
+      // Call backend automation service
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+      const response = await fetch(`${backendUrl}/api/resume-agent-run`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          agentRunId,
+          organizationId,
+          prompt,
+          authContext
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend automation failed: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result;
+
+    } catch (error) {
+      console.error('Backend automation service error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  private async extractAuthContext(): Promise<any> {
+    try {
+      // Extract cookies
+      const cookies = document.cookie.split(';').map(cookie => {
+        const [name, value] = cookie.trim().split('=');
+        return {
+          name: name,
+          value: value || '',
+          domain: window.location.hostname,
+          path: '/',
+          httpOnly: false,
+          secure: window.location.protocol === 'https:'
+        };
+      }).filter(cookie => cookie.name && cookie.value);
+
+      // Extract localStorage
+      const localStorage: Record<string, string> = {};
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (key) {
+          localStorage[key] = window.localStorage.getItem(key) || '';
+        }
+      }
+
+      // Extract sessionStorage
+      const sessionStorage: Record<string, string> = {};
+      for (let i = 0; i < window.sessionStorage.length; i++) {
+        const key = window.sessionStorage.key(i);
+        if (key) {
+          sessionStorage[key] = window.sessionStorage.getItem(key) || '';
+        }
+      }
+
+      return {
+        cookies,
+        localStorage,
+        sessionStorage,
+        userAgent: navigator.userAgent,
+        origin: window.location.origin,
+        timestamp: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error('Failed to extract auth context:', error);
+      return null;
+    }
+  }
 }
 
 // Singleton instance

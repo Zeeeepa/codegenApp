@@ -268,8 +268,7 @@ export class AgentRunCache {
     const status = run.status.toUpperCase();
     return status === AgentRunStatus.ACTIVE || 
            status === AgentRunStatus.EVALUATION ||
-           status === AgentRunStatus.PENDING ||
-           status === "RUNNING"; // Handle legacy status values
+           status === AgentRunStatus.PENDING;
   }
 
   /**
