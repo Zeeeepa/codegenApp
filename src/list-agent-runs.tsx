@@ -15,13 +15,16 @@ import {
   Clock,
   XCircle,
   Pause,
-  FileText
+  FileText,
+  Settings
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
 import { useDialog } from "./contexts/DialogContext";
 
 import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
 import { ResumeAgentRunDialog } from "./components/ResumeAgentRunDialog";
+import { CreateRunDialog } from "./components/CreateRunDialog";
+import { SettingsDialog } from "./components/SettingsDialog";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
 import { getAPIClient } from "./api/client";
 import { getAgentRunCache } from "./storage/agentRunCache";
@@ -125,6 +128,30 @@ export default function ListAgentRuns() {
     }
   };
 
+  const getStatusBadgeClasses = (status: string) => {
+    const baseClasses = "status-badge";
+    switch (status.toLowerCase()) {
+      case "active":
+      case "running":
+        return `${baseClasses} active`;
+      case "complete":
+      case "completed":
+        return `${baseClasses} complete`;
+      case "failed":
+      case "error":
+        return `${baseClasses} failed`;
+      case "cancelled":
+      case "stopped":
+        return `${baseClasses} cancelled`;
+      case "paused":
+        return `${baseClasses} paused`;
+      case "pending":
+        return `${baseClasses} pending`;
+      default:
+        return `${baseClasses} cancelled`;
+    }
+  };
+
   // Get status icon and color
   const getStatusDisplay = (status: string) => {
     return {
@@ -133,7 +160,7 @@ export default function ListAgentRuns() {
     };
   };
 
-  // Format date for display
+  // Format date for display with improved accuracy
   const formatDate = (dateString: string) => {
     try {
       // Handle various date formats
@@ -154,26 +181,24 @@ export default function ListAgentRuns() {
       
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
+      const diffSecs = Math.floor(diffMs / 1000);
       const diffMins = Math.floor(diffMs / (1000 * 60));
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-      // Debug logging for timestamp issues
-      console.log('Date formatting:', {
-        original: dateString,
-        parsed: date.toISOString(),
-        now: now.toISOString(),
-        diffMs,
-        diffMins,
-        diffHours
-      });
-
-      if (diffMins < 1) return "Just now";
+      // More accurate time formatting
+      if (diffSecs < 30) return "Just now";
+      if (diffSecs < 60) return `${diffSecs}s ago`;
       if (diffMins < 60) return `${diffMins}m ago`;
       if (diffHours < 24) return `${diffHours}h ago`;
       if (diffDays < 7) return `${diffDays}d ago`;
       
-      return date.toLocaleDateString();
+      // For older dates, show the actual date
+      return date.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
     } catch (error) {
       console.error('Error formatting date:', error, dateString);
       return dateString; // Return original string if error occurs
@@ -221,7 +246,7 @@ export default function ListAgentRuns() {
     openDialog('resume-run', { agentRunId, organizationId });
   };
 
-  // Respond to an agent run (for stopped/failed runs) - uses browser automation
+  // Respond to an agent run (for stopped/failed runs) - uses backend automation
   const respondToAgentRun = async (agentRunId: number) => {
     if (!organizationId) return;
 
@@ -233,144 +258,31 @@ export default function ListAgentRuns() {
     if (!prompt || !prompt.trim()) return;
 
     try {
-      console.log("🚀 Automating browser to respond to agent run:", {
+      console.log("🚀 Using backend automation service to respond to agent run:", {
         organizationId,
         agentRunId,
         prompt: prompt.trim()
       });
       
-      // Construct the Codegen chat URL for this agent run
-      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
-      
-      // Open INVISIBLE browser window in background
-      const browserWindow = window.open(chatUrl, '_blank', 'width=1,height=1,left=-2000,top=-2000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no,directories=no');
-      
-      if (!browserWindow) {
-        throw new Error("Failed to open browser window - popup blocked?");
+      // Call backend automation service
+      const result = await apiClient.resumeAgentRunAutomation(
+        agentRunId,
+        organizationId,
+        prompt.trim()
+      );
+
+      if (result.success) {
+        toast.success(`Response sent to agent run #${agentRunId} successfully!`);
+        
+        // Refresh to show updated status
+        await refresh();
+      } else {
+        throw new Error(result.error || 'Backend automation failed');
       }
-
-      // Wait for page to load and then automate the chat input
-      setTimeout(async () => {
-        try {
-          const doc = browserWindow.document;
-          
-          // Wait for the page to fully load
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          
-          // Try primary XPath selector first for the text input area
-          let chatInput = doc.evaluate(
-            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div/div[1]/div/textarea',
-            doc,
-            null,
-            XPathResult.FIRST_ORDERED_NODE_TYPE,
-            null
-          ).singleNodeValue as HTMLTextAreaElement;
-          
-          // Fallback XPath selectors
-          if (!chatInput) {
-            chatInput = doc.evaluate(
-              '//*[@id="chat-bar"]//textarea',
-              doc,
-              null,
-              XPathResult.FIRST_ORDERED_NODE_TYPE,
-              null
-            ).singleNodeValue as HTMLTextAreaElement;
-          }
-          
-          // CSS selector fallback
-          if (!chatInput) {
-            chatInput = doc.querySelector('#chat-bar textarea') as HTMLTextAreaElement;
-          }
-          
-          // Generic textarea fallback
-          if (!chatInput) {
-            chatInput = doc.querySelector('textarea[placeholder*="message"], textarea[placeholder*="Message"]') as HTMLTextAreaElement;
-          }
-          
-          if (!chatInput) {
-            throw new Error("Could not find chat input textarea element");
-          }
-          
-          // Focus and set the text
-          chatInput.focus();
-          chatInput.value = prompt.trim();
-          
-          // Trigger input events to ensure React state updates
-          chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-          chatInput.dispatchEvent(new Event('change', { bubbles: true }));
-          
-          // Wait a moment for React to process the input
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Find and click the send button using XPath
-          let sendButton = doc.evaluate(
-            '//*[@id="chat-bar"]//button[contains(@class, "send") or @type="submit" or contains(text(), "Send")]',
-            doc,
-            null,
-            XPathResult.FIRST_ORDERED_NODE_TYPE,
-            null
-          ).singleNodeValue as HTMLButtonElement;
-          
-          // Fallback CSS selectors for send button
-          if (!sendButton) {
-            sendButton = doc.querySelector('#chat-bar button[type="submit"]') as HTMLButtonElement;
-          }
-          
-          if (!sendButton) {
-            sendButton = doc.querySelector('#chat-bar button:last-child') as HTMLButtonElement;
-          }
-          
-          if (sendButton) {
-            sendButton.click();
-            
-            // Wait for message to be sent
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Close the browser window
-            browserWindow.close();
-            
-            toast.success(`Response sent to agent run #${agentRunId} successfully!`);
-            
-            // Refresh to show updated status
-            await refresh();
-          } else {
-            throw new Error("Could not find send button");
-          }
-          
-        } catch (automationError) {
-          console.error("Browser automation failed:", automationError);
-          browserWindow.close();
-          
-          // Fallback to manual approach
-          window.focus();
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
-          
-          try {
-            await navigator.clipboard.writeText(prompt.trim());
-            toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
-          } catch (clipboardError) {
-            console.error("Clipboard error:", clipboardError);
-            toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
-          }
-        }
-      }, 2000); // Wait 2 seconds for page to load
-
+      
     } catch (error) {
-      console.error("Failed to automate browser:", error);
-      
-      // Fallback to manual approach
-      window.focus();
-      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
-      window.open(chatUrl, '_blank', 'noopener,noreferrer');
-      
-      try {
-        await navigator.clipboard.writeText(prompt.trim());
-        toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
-      } catch (clipboardError) {
-        console.error("Clipboard error:", clipboardError);
-        toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
-      }
+      console.error("Backend automation failed:", error);
+      toast.error(`Failed to respond to agent run: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -479,14 +391,20 @@ export default function ListAgentRuns() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-
-
               <button
-                onClick={() => openDialog('create-run', { organizationId })}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                onClick={() => openDialog('createRun', { organizationId })}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+                title="Create Agent Run"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Run
+              </button>
+              <button
+                onClick={() => openDialog('settings')}
+                className="inline-flex items-center px-3 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+                title="Settings"
+              >
+                <Settings className="h-4 w-4" />
               </button>
               {selection.hasSelection && (
                 <button
@@ -599,15 +517,8 @@ export default function ListAgentRuns() {
                 ? "Try adjusting your search or filters"
                 : "Create your first agent run to get started"}
             </p>
-            <div className="flex justify-center space-x-3">
-              <button
-                onClick={() => navigate('/create-agent-run')}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Agent Run
-              </button>
-              {hasActiveFilters(filters) && (
+            {hasActiveFilters(filters) && (
+              <div className="flex justify-center">
                 <button
                   onClick={handleClearFilters}
                   className="inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
@@ -615,8 +526,8 @@ export default function ListAgentRuns() {
                   <Filter className="h-4 w-4 mr-2" />
                   Clear Filters
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -651,16 +562,15 @@ export default function ListAgentRuns() {
                 ...run,
                 lastUpdated: new Date().toISOString(),
                 organizationName: undefined, // Will be populated by cache if available
-                isPolling: false
+                isPolling: ['ACTIVE', 'EVALUATION', 'PENDING', 'RUNNING'].includes(run.status.toUpperCase()) // Monitor active runs
               };
 
               return (
                 <div 
                   key={run.id} 
-                  className={`p-6 rounded-lg border transition-all cursor-pointer ${
-                    isSelected 
-                      ? 'bg-blue-900 border-blue-500 shadow-lg' 
-                      : 'bg-black border-gray-700 hover:bg-gray-800 hover:shadow-md'
+                  className={`agent-run-card ${isSelected ? 'selected' : ''} ${
+                    // Add slide-in animation for newly created runs (within 10 seconds)
+                    new Date().getTime() - new Date(run.created_at).getTime() < 10000 ? 'slide-in-new' : ''
                   }`}
                   onClick={() => selection.toggleRun(run.id, cachedRun)}
                 >
@@ -678,35 +588,26 @@ export default function ListAgentRuns() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
-                          <h3 className="text-lg font-medium text-white">Agent Run #{run.id}</h3>
+                          <h3 className="agent-run-title">Agent Run #{run.id}</h3>
 
                           {/* Real-time status indicator */}
                           {run.status === AgentRunStatus.ACTIVE && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-900/50 text-blue-300 border border-blue-500/30 animate-pulse">
+                            <span className="live-indicator">
                               ⚡ Live
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                          <span>Created {formatDate(run.created_at)}</span>
-                          {run.lastUpdated && run.lastUpdated !== run.created_at && (
-                            <span className="text-yellow-400">• Updated {formatDate(run.lastUpdated)}</span>
-                          )}
-                          {run.result && (
-                            <span className="text-blue-400">• Has Response</span>
-                          )}
-                          {run.web_url && (
-                            <span className="text-purple-400">• Web URL Available</span>
-                          )}
+                        <div className="agent-run-meta">
+                          <span className="timestamp">Created {formatDate(run.created_at)}</span>
                         </div>
                         {/* Show brief result preview if available */}
                         {run.result && (
-                          <p className="text-sm text-gray-400 mt-1 line-clamp-2 max-w-md">
+                          <p className="agent-run-preview">
                             {run.result.length > 100 ? `${run.result.substring(0, 100)}...` : run.result}
                           </p>
                         )}
                       </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusDisplay.color.replace('text-', 'bg-').replace('-600', '-100')} ${statusDisplay.color}`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClasses(run.status)}`}>
                         {run.status}
                       </span>
                     </div>
@@ -741,7 +642,7 @@ export default function ListAgentRuns() {
                       {canStop && (
                         <button
                           onClick={() => stopAgentRun(run.id)}
-                          className="inline-flex items-center px-3 py-1.5 border border-red-600 text-sm font-medium rounded text-red-300 bg-red-900 hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-gray-800"
+                          className="action-button danger"
                           title="Stop Agent Run (Cmd+S)"
                         >
                           <Square className="h-4 w-4" />
@@ -751,7 +652,7 @@ export default function ListAgentRuns() {
                       {canResume && (
                         <button
                           onClick={() => resumeAgentRun(run.id)}
-                          className="inline-flex items-center px-3 py-1.5 border border-green-600 text-sm font-medium rounded text-green-300 bg-green-900 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-gray-800"
+                          className="action-button success"
                           title={`Resume Agent Run #${run.id}`}
                         >
                           <Play className="h-4 w-4 mr-1" />
@@ -762,7 +663,7 @@ export default function ListAgentRuns() {
                       {canRespond && (
                         <button
                           onClick={() => respondToAgentRun(run.id)}
-                          className="inline-flex items-center px-3 py-1.5 border border-blue-600 text-sm font-medium rounded text-blue-300 bg-blue-900 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+                          className="action-button primary"
                           title="Respond to Agent Run"
                         >
                           <FileText className="h-4 w-4" />
@@ -771,7 +672,7 @@ export default function ListAgentRuns() {
                       
                       <button
                         onClick={() => deleteAgentRun(run.id)}
-                        className="inline-flex items-center px-3 py-1.5 border border-red-600 text-sm font-medium rounded text-red-300 bg-red-900 hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-gray-800"
+                        className="action-button danger"
                         title="Delete Agent Run (Cmd+Shift+Delete)"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -802,6 +703,16 @@ export default function ListAgentRuns() {
             organizationId={dialogData.organizationId}
             onResumed={refresh}
           />
+        )}
+
+        {/* Create Run Dialog */}
+        {isDialogOpen('createRun') && (
+          <CreateRunDialog />
+        )}
+
+        {/* Settings Dialog */}
+        {isDialogOpen('settings') && (
+          <SettingsDialog />
         )}
       </div>
     </div>

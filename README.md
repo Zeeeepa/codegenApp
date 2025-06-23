@@ -20,7 +20,7 @@ This application is a React-based frontend that connects directly to the Codegen
 - Node.js 16+ and npm
 - A Codegen API token (get one from [Codegen Dashboard](https://app.codegen.com/settings))
 
-## 🛠️ Installation & Setup
+## 🛠��� Installation & Setup
 
 ### 1. Clone the repository
 
@@ -29,11 +29,16 @@ git clone https://github.com/Zeeeepa/codegenApp.git
 cd codegenApp
 ```
 
-### 2. Install dependencies
+### 2. Install ALL dependencies (frontend + backend + automation)
 
 ```bash
 npm install
 ```
+
+This automatically installs dependencies for:
+- ✅ Frontend React app
+- ✅ Backend API server  
+- ✅ Automation service (for Resume Agent Run functionality)
 
 ### 3. Environment Configuration
 
@@ -54,20 +59,26 @@ REACT_APP_API_BASE_URL=https://api.codegen.com
 REACT_APP_USER_ID=your_user_id_here
 ```
 
-### 4. Start the development server
+### 4. Start ALL services (frontend + backend + automation)
 
 ```bash
-npm start
+npm run dev
 ```
 
-The application will be available at `http://localhost:3000` (or the next available port).
+The application will be available at:
+- **Frontend**: `http://localhost:8080`
+- **Backend API**: `http://localhost:8001`
+- **Automation Service**: `http://localhost:3001`
 
 ## 🔧 Development
 
 ### Available Scripts
 
-- `npm start` - Start the React development server
+- `npm run dev` - **Start ALL services** (frontend + backend + automation)
+- `npm start` - Start only the React frontend
 - `npm run build` - Build the React app for production
+- `npm run backend:start` - Start only the automation service
+- `npm run server:start` - Start only the backend API server
 - `npm test` - Run the test suite
 - `npm run eject` - Eject from Create React App (not recommended)
 

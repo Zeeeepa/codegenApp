@@ -57,155 +57,63 @@ export function ResumeAgentRunDialog({
     setIsLoading(true);
 
     try {
-      console.log("🚀 Automating browser to resume agent run:", {
+      console.log("🚀 Using backend automation service to resume agent run:", {
         organizationId,
         agentRunId,
         prompt: prompt.trim(),
         agentRunStatus: agentRunDetails?.status
       });
       
-      // Construct the Codegen chat URL for this agent run
-      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
-      
-      // Open INVISIBLE browser window in background
-      const browserWindow = window.open(chatUrl, '_blank', 'width=1,height=1,left=-2000,top=-2000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no,directories=no');
-      
-      if (!browserWindow) {
-        throw new Error("Failed to open browser window - popup blocked?");
-      }
+      // Call backend automation service
+      const result = await apiClient.resumeAgentRunAutomation(
+        agentRunId,
+        organizationId,
+        prompt.trim()
+      );
 
-      // Wait for page to load and then automate the chat input
-      setTimeout(async () => {
+      if (result.success) {
+        toast.success(`Agent run #${agentRunId} has been resumed successfully!`);
+        
+        // Update local cache to reflect ACTIVE status
         try {
-          const doc = browserWindow.document;
+          const { getAgentRunCache } = await import('../storage/agentRunCache');
+          const cache = getAgentRunCache();
           
-          // Wait for the page to fully load
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          
-          // Try primary XPath selector first for the text input area
-          let chatInput = doc.evaluate(
-            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div/div[1]/div/textarea',
-            doc,
-            null,
-            XPathResult.FIRST_ORDERED_NODE_TYPE,
-            null
-          ).singleNodeValue as HTMLTextAreaElement;
-          
-          // Fallback XPath selectors
-          if (!chatInput) {
-            chatInput = doc.evaluate(
-              '//*[@id="chat-bar"]//textarea',
-              doc,
-              null,
-              XPathResult.FIRST_ORDERED_NODE_TYPE,
-              null
-            ).singleNodeValue as HTMLTextAreaElement;
+          // Update the agent run status to ACTIVE
+          if (agentRunDetails) {
+            const updatedAgentRun = {
+              ...agentRunDetails,
+              status: 'ACTIVE'
+            };
+            await cache.updateAgentRun(organizationId, updatedAgentRun);
           }
-          
-          // CSS selector fallback
-          if (!chatInput) {
-            chatInput = doc.querySelector('#chat-bar textarea') as HTMLTextAreaElement;
-          }
-          
-          // Generic textarea fallback
-          if (!chatInput) {
-            chatInput = doc.querySelector('textarea[placeholder*="message"], textarea[placeholder*="Message"]') as HTMLTextAreaElement;
-          }
-          
-          if (!chatInput) {
-            throw new Error("Could not find chat input textarea element");
-          }
-          
-          // Focus and set the text
-          chatInput.focus();
-          chatInput.value = prompt.trim();
-          
-          // Trigger input events to ensure React state updates
-          chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-          chatInput.dispatchEvent(new Event('change', { bubbles: true }));
-          
-          // Wait a moment for React to process the input
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Find and click the send button using XPath
-          let sendButton = doc.evaluate(
-            '//*[@id="chat-bar"]//button[contains(@class, "send") or @type="submit" or contains(text(), "Send")]',
-            doc,
-            null,
-            XPathResult.FIRST_ORDERED_NODE_TYPE,
-            null
-          ).singleNodeValue as HTMLButtonElement;
-          
-          // Fallback CSS selectors for send button
-          if (!sendButton) {
-            sendButton = doc.querySelector('#chat-bar button[type="submit"]') as HTMLButtonElement;
-          }
-          
-          if (!sendButton) {
-            sendButton = doc.querySelector('#chat-bar button:last-child') as HTMLButtonElement;
-          }
-          
-          if (sendButton) {
-            sendButton.click();
-            
-            // Wait for message to be sent
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Close the browser window
-            browserWindow.close();
-            
-            toast.success(`Agent run #${agentRunId} has been resumed successfully!`);
-            
-            // Reset to default and trigger refresh
-            setPrompt("Continue with the previous task");
-            onResumed?.(); // Trigger refresh to show updated status
-            onClose();
-          } else {
-            throw new Error("Could not find send button");
-          }
-          
-        } catch (automationError) {
-          console.error("Browser automation failed:", automationError);
-          browserWindow.close();
-          
-          // Fallback to manual approach
-          window.focus();
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
-          
-          try {
-            await navigator.clipboard.writeText(prompt.trim());
-            toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
-          } catch (clipboardError) {
-            console.error("Clipboard error:", clipboardError);
-            toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
-          }
-          
-          setPrompt("Continue with the previous task");
-          onResumed?.();
-          onClose();
+        } catch (cacheError) {
+          console.warn('Failed to update cache after resume:', cacheError);
         }
-      }, 2000); // Wait 2 seconds for page to load
+        
+        // Reset to default and trigger refresh
+        setPrompt("Continue with the previous task");
+        onResumed?.(); // Trigger refresh to show updated status
+        onClose();
+      } else {
+        throw new Error(result.error || 'Backend automation failed');
+      }
       
     } catch (error) {
-      console.error("Failed to automate browser:", error);
+      console.error("Backend automation failed:", error);
       
-      // Fallback to manual approach
-      window.focus();
-      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
-      window.open(chatUrl, '_blank', 'noopener,noreferrer');
-      
-      try {
-        await navigator.clipboard.writeText(prompt.trim());
-        toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
-      } catch (clipboardError) {
-        console.error("Clipboard error:", clipboardError);
-        toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
+      // Provide helpful error message based on error type
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        if (error.message.includes('Backend automation service not available') || 
+            error.message.includes('Cannot connect to backend')) {
+          errorMessage = `${error.message}\n\nTo enable resume functionality:\n1. Navigate to the 'backend' directory\n2. Run 'npm install' then 'npm start'\n3. Ensure the backend server is running on port 3500`;
+        } else {
+          errorMessage = error.message;
+        }
       }
       
-      setPrompt("Continue with the previous task");
-      onResumed?.();
-      onClose();
+      toast.error(`Failed to resume agent run: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }

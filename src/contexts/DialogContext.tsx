@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-type DialogType = 'resume-run' | 'create-run' | 'settings';
+type DialogType = 'resume-run' | 'createRun' | 'settings';
 
 interface DialogContextType {
   openDialog: (type: DialogType, data?: any) => void;
@@ -56,4 +56,3 @@ export function useDialog() {
   }
   return context;
 }
-
