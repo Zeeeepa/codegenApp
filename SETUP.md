@@ -23,25 +23,24 @@ REACT_APP_API_TOKEN=your_actual_api_token_here
 
 ### 4. Start the Application
 ```bash
-# Start both frontend and backend servers
+# Start ALL services (frontend + backend + automation)
 npm run dev
 ```
 
 The app will be available at:
-- **Frontend**: http://localhost:8000
+- **Frontend**: http://localhost:8080
 - **Backend**: http://localhost:8001
 - **Backend Automation**: http://localhost:3001 (for resume functionality)
 - **Health Check**: http://localhost:8001/health
 
-### 5. Backend Automation Service (Optional)
-For **Resume Agent Run** functionality, start the automation service:
-```bash
-cd backend
-npm install
-npm start
-```
+## 🚀 **Unified Development Workflow**
 
-This service provides headless browser automation for resuming agent runs.
+The `npm run dev` command now starts **everything** you need:
+- ✅ **Frontend React App** (port 8080)
+- ✅ **Backend API Server** (port 8001) 
+- ✅ **Automation Service** (port 3001) - for Resume Agent Run functionality
+
+**That's it!** One command starts the complete development environment.
 
 ## 🔧 Configuration
 
@@ -84,12 +83,13 @@ If you see `TypeError: Failed to fetch` errors:
    - Development: `http://localhost:8001/api`
    - Production: `https://api.codegen.com`
 
-4. **Restart the servers**:
+4. **Restart all services**:
    ```bash
    # Kill existing processes
    pkill -f node
    
-   # Start fresh
+   # Install all dependencies and start everything
+   npm install
    npm run dev
    ```
 
@@ -153,17 +153,27 @@ codegenApp/
 
 ## 🌐 API Integration
 
-The app uses a proxy server to avoid CORS issues:
-- **Frontend** (port 8000) → **Backend Proxy** (port 8001) → **Codegen API**
+The app uses multiple services for complete functionality:
+- **Frontend** (port 8080) → **Backend Proxy** (port 8001) → **Codegen API**
+- **Frontend** (port 8080) → **Automation Service** (port 3001) → **Resume Agent Runs**
 
-This setup allows secure API communication without exposing your API token to the browser.
+This setup provides secure API communication and headless browser automation.
+
+## 🔧 **Resume Agent Run Troubleshooting**
+
+### "Backend automation service not available" Error
+- **Solution**: Run `npm run dev` (starts all services including automation backend)
+- **Check Health**: Visit `http://localhost:3001/health` - should return `{"status":"ok"}`
+- **Manual Start**: If needed, `cd backend && npm start`
+- **Dependencies**: Ensure `npm install` was run (installs backend deps automatically)
 
 ## 🎯 Next Steps
 
 1. Configure your API token in `.env`
-2. Start the development servers with `npm run dev`
-3. Open http://localhost:8000 in your browser
+2. Start all services with `npm run dev`
+3. Open http://localhost:8080 in your browser
 4. The app should load your Codegen data automatically!
+5. Resume functionality will work automatically!
 
 ## 🆘 Need Help?
 
