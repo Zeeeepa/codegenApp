@@ -88,7 +88,7 @@ export function CreateRunDialog() {
     }
 
     initialize();
-  }, [dialogData]);
+  }, [dialogData, apiClient]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
