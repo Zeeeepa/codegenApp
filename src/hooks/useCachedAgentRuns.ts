@@ -22,6 +22,7 @@ interface UseCachedAgentRunsResult {
   sortOptions: SortOptions;
   organizationId: number | null;
   setOrganizationId: (orgId: number) => void;
+  addNewAgentRun: (agentRun: CachedAgentRun) => void;
 }
 
 export function useCachedAgentRuns(): UseCachedAgentRunsResult {
@@ -184,6 +185,12 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
     localStorage.setItem("defaultOrganizationId", orgId.toString());
   }, []);
 
+  // Add new agent run immediately to state
+  const addNewAgentRun = useCallback((agentRun: CachedAgentRun) => {
+    console.log(`Adding new agent run #${agentRun.id} to state immediately`);
+    setAgentRuns(prevRuns => [agentRun, ...prevRuns]);
+  }, []);
+
   // Initial load
   useEffect(() => {
     if (organizationId) {
@@ -265,5 +272,6 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
     sortOptions,
     organizationId,
     setOrganizationId,
+    addNewAgentRun,
   };
 }

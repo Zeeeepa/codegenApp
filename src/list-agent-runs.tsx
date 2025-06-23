@@ -128,6 +128,29 @@ export default function ListAgentRuns() {
     }
   };
 
+  const getStatusBadgeClasses = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "active":
+      case "running":
+        return "bg-blue-100 text-blue-800";
+      case "complete":
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "failed":
+      case "error":
+        return "bg-red-100 text-red-800";
+      case "cancelled":
+      case "stopped":
+        return "bg-gray-100 text-gray-800";
+      case "paused":
+        return "bg-yellow-100 text-yellow-800";
+      case "pending":
+        return "bg-blue-50 text-blue-700";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   // Get status icon and color
   const getStatusDisplay = (status: string) => {
     return {
@@ -483,6 +506,14 @@ export default function ListAgentRuns() {
             </div>
             <div className="flex items-center space-x-3">
               <button
+                onClick={() => openDialog('createRun', { organizationId })}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+                title="Create Agent Run"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Run
+              </button>
+              <button
                 onClick={() => openDialog('settings')}
                 className="inline-flex items-center px-3 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
                 title="Settings"
@@ -600,15 +631,8 @@ export default function ListAgentRuns() {
                 ? "Try adjusting your search or filters"
                 : "Create your first agent run to get started"}
             </p>
-            <div className="flex justify-center space-x-3">
-              <button
-                onClick={() => openDialog('createRun', { organizationId })}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Agent Run
-              </button>
-              {hasActiveFilters(filters) && (
+            {hasActiveFilters(filters) && (
+              <div className="flex justify-center">
                 <button
                   onClick={handleClearFilters}
                   className="inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
@@ -616,8 +640,8 @@ export default function ListAgentRuns() {
                   <Filter className="h-4 w-4 mr-2" />
                   Clear Filters
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -658,10 +682,10 @@ export default function ListAgentRuns() {
               return (
                 <div 
                   key={run.id} 
-                  className={`p-6 rounded-lg border transition-all cursor-pointer ${
+                  className={`p-6 rounded-lg border transition-all duration-200 cursor-pointer ${
                     isSelected 
-                      ? 'bg-blue-900 border-blue-500 shadow-lg' 
-                      : 'bg-black border-gray-700 hover:bg-gray-800 hover:shadow-md'
+                      ? 'bg-blue-900/50 border-blue-500 shadow-lg ring-2 ring-blue-500/20' 
+                      : 'bg-gray-900 border-gray-700 hover:bg-gray-800 hover:border-gray-600 hover:shadow-lg hover:shadow-gray-900/20'
                   }`}
                   onClick={() => selection.toggleRun(run.id, cachedRun)}
                 >
@@ -704,7 +728,7 @@ export default function ListAgentRuns() {
                           </p>
                         )}
                       </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusDisplay.color.replace('text-', 'bg-').replace('-600', '-100')} ${statusDisplay.color}`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClasses(run.status)}`}>
                         {run.status}
                       </span>
                     </div>
