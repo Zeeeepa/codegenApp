@@ -36,6 +36,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Health check endpoint for v1 route (for proxy testing)
+app.get('/v1/health', (req, res) => {
+  res.json({ status: 'ok', service: 'proxy-backend', timestamp: new Date().toISOString() });
+});
+
 // Proxy all API requests to Codegen API
 app.use('/api/v1', async (req, res) => {
   try {
