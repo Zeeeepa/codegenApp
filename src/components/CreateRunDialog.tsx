@@ -22,7 +22,7 @@ export function CreateRunDialog() {
   const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const { refresh } = useCachedAgentRuns();
+  const { refresh, addNewAgentRun } = useCachedAgentRuns();
 
   const apiClient = getAPIClient();
   const cache = getAgentRunCache();
@@ -132,10 +132,19 @@ export function CreateRunDialog() {
       // Add to tracking for monitoring by default
       await cache.addToTracking(parseInt(formValues.organizationId), agentRun);
 
+      // Convert to CachedAgentRun and add immediately to UI
+      const cachedAgentRun = {
+        ...agentRun,
+        lastUpdated: new Date().toISOString(),
+        organizationName: undefined,
+        isPolling: true // New runs should be monitored
+      };
+      addNewAgentRun(cachedAgentRun);
+
       toast.success(`Agent run #${agentRun.id} created successfully!`);
       
-      // Refresh the agent runs list
-      await refresh();
+      // Background refresh to ensure consistency
+      refresh();
       
       // Close the dialog
       closeDialog();
