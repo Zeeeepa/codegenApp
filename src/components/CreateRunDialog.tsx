@@ -135,9 +135,10 @@ export function CreateRunDialog() {
       // Convert to CachedAgentRun and add immediately to UI
       const cachedAgentRun = {
         ...agentRun,
+        organization_id: parseInt(formValues.organizationId), // Ensure organization_id is set
         lastUpdated: new Date().toISOString(),
         organizationName: undefined,
-        isPolling: true // New runs should be monitored
+        isPolling: ['ACTIVE', 'EVALUATION', 'PENDING', 'RUNNING'].includes(agentRun.status.toUpperCase()) // Monitor active runs
       };
       addNewAgentRun(cachedAgentRun);
 
