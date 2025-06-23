@@ -1,23 +1,226 @@
 
 > agent-run-manager-web@1.0.0 start
-> PORT=8000 react-scripts start
+> PORT=8080 react-scripts start
 
-(node:15759) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+[HPM] Proxy created: /  -> http://localhost:3002
+[HPM] Subscribed to http-proxy events: [ 'error', 'close' ]
+[HPM] Proxy created: /  -> http://localhost:3002
+[HPM] Subscribed to http-proxy events: [ 'error', 'close' ]
+(node:42090) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-(node:15759) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:42090) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
 Starting the development server...
 
-Compiled successfully!
+Failed to compile.
 
-You can now view agent-run-manager-web in the browser.
+Module parse failed: Duplicate export 'PMAgentAPI' (291:9)
+File was processed with these loaders:
+ * ./node_modules/@pmmmwh/react-refresh-webpack-plugin/loader/index.js
+ * ./node_modules/babel-loader/lib/index.js
+ * ./node_modules/source-map-loader/dist/cjs.js
+You may need an additional loader to handle the result of these loaders.
+| 
+| // Export all APIs
+> export { PMAgentAPI, SchemaAgentAPI, QAAgentAPI, OrchestratorAPI, AgentsAPI };
+| 
+| const $ReactRefreshModuleId$ = __webpack_require__.$Refresh$.moduleId;
+WARNING in [eslint] 
+src/App.tsx
+  Line 2:60:  'Link' is defined but never used  @typescript-eslint/no-unused-vars
 
-  Local:            http://localhost:8000
-  On Your Network:  http://172.20.58.150:8000
+src/components/AgentInterface.tsx
+  Line 15:8:  'WorkflowStatus' is defined but never used  @typescript-eslint/no-unused-vars
 
-Note that the development build is not optimized.
-To create a production build, use npm run build.
+src/components/CreateRunDialog.tsx
+  Line 91:6:  React Hook useEffect has a missing dependency: 'apiClient'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-webpack compiled successfully
-Files successfully emitted, waiting for typecheck results...
-Issues checking in progress...
-No issues found.
+src/components/SettingsDialog.tsx
+  Line 115:6:  React Hook useEffect has a missing dependency: 'organizations.length'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/list-agent-runs.tsx
+  Line 50:9:  'navigate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+ERROR in ./src/api/agents.ts 291:9
+Module parse failed: Duplicate export 'PMAgentAPI' (291:9)
+File was processed with these loaders:
+ * ./node_modules/@pmmmwh/react-refresh-webpack-plugin/loader/index.js
+ * ./node_modules/babel-loader/lib/index.js
+ * ./node_modules/source-map-loader/dist/cjs.js
+You may need an additional loader to handle the result of these loaders.
+| 
+| // Export all APIs
+> export { PMAgentAPI, SchemaAgentAPI, QAAgentAPI, OrchestratorAPI, AgentsAPI };
+| 
+| const $ReactRefreshModuleId$ = __webpack_require__.$Refresh$.moduleId;
+
+webpack compiled with 1 error and 1 warning
+ERROR in src/api/agents.ts:6:10
+TS2305: Module '"./client"' has no exported member 'apiRequest'.
+    4 |  */
+    5 |
+  > 6 | import { apiRequest } from './client';
+      |          ^^^^^^^^^^
+    7 |
+    8 | // Types for AI Agents
+    9 | export interface AgentStats {
+
+ERROR in src/api/agents.ts:71:14
+TS2323: Cannot redeclare exported variable 'PMAgentAPI'.
+    69 |
+    70 | // PMAgent API
+  > 71 | export class PMAgentAPI {
+       |              ^^^^^^^^^^
+    72 |   static async analyzeProject(requirements: ProjectRequirements) {
+    73 |     return apiRequest('/api/pm-agent/analyze-project', {
+    74 |       method: 'POST',
+
+ERROR in src/api/agents.ts:124:14
+TS2323: Cannot redeclare exported variable 'SchemaAgentAPI'.
+    122 |
+    123 | // SchemaAgent API
+  > 124 | export class SchemaAgentAPI {
+        |              ^^^^^^^^^^^^^^
+    125 |   static async designSchema(requirements: SchemaRequirements) {
+    126 |     return apiRequest('/api/schema-agent/design-schema', {
+    127 |       method: 'POST',
+
+ERROR in src/api/agents.ts:184:14
+TS2323: Cannot redeclare exported variable 'QAAgentAPI'.
+    182 |
+    183 | // QAAgent API
+  > 184 | export class QAAgentAPI {
+        |              ^^^^^^^^^^
+    185 |   static async generateQueries(requirements: QueryRequirements) {
+    186 |     return apiRequest('/api/qa-agent/generate-queries', {
+    187 |       method: 'POST',
+
+ERROR in src/api/agents.ts:266:14
+TS2323: Cannot redeclare exported variable 'OrchestratorAPI'.
+    264 |
+    265 | // Orchestrator API
+  > 266 | export class OrchestratorAPI {
+        |              ^^^^^^^^^^^^^^^
+    267 |   static async startWorkflow(workflowConfig: WorkflowConfig): Promise<WorkflowStatus> {
+    268 |     return apiRequest('/api/orchestrator/start-workflow', {
+    269 |       method: 'POST',
+
+ERROR in src/api/agents.ts:325:14
+TS2323: Cannot redeclare exported variable 'AgentsAPI'.
+    323 |
+    324 | // General Agents API
+  > 325 | export class AgentsAPI {
+        |              ^^^^^^^^^
+    326 |   static async getStatus() {
+    327 |     return apiRequest('/api/agents/status');
+    328 |   }
+
+ERROR in src/api/agents.ts:357:3
+TS2323: Cannot redeclare exported variable 'PMAgentAPI'.
+    355 | // Export all APIs
+    356 | export {
+  > 357 |   PMAgentAPI,
+        |   ^^^^^^^^^^
+    358 |   SchemaAgentAPI,
+    359 |   QAAgentAPI,
+    360 |   OrchestratorAPI,
+
+ERROR in src/api/agents.ts:357:3
+TS2484: Export declaration conflicts with exported declaration of 'PMAgentAPI'.
+    355 | // Export all APIs
+    356 | export {
+  > 357 |   PMAgentAPI,
+        |   ^^^^^^^^^^
+    358 |   SchemaAgentAPI,
+    359 |   QAAgentAPI,
+    360 |   OrchestratorAPI,
+
+ERROR in src/api/agents.ts:358:3
+TS2323: Cannot redeclare exported variable 'SchemaAgentAPI'.
+    356 | export {
+    357 |   PMAgentAPI,
+  > 358 |   SchemaAgentAPI,
+        |   ^^^^^^^^^^^^^^
+    359 |   QAAgentAPI,
+    360 |   OrchestratorAPI,
+    361 |   AgentsAPI,
+
+ERROR in src/api/agents.ts:358:3
+TS2484: Export declaration conflicts with exported declaration of 'SchemaAgentAPI'.
+    356 | export {
+    357 |   PMAgentAPI,
+  > 358 |   SchemaAgentAPI,
+        |   ^^^^^^^^^^^^^^
+    359 |   QAAgentAPI,
+    360 |   OrchestratorAPI,
+    361 |   AgentsAPI,
+
+ERROR in src/api/agents.ts:359:3
+TS2323: Cannot redeclare exported variable 'QAAgentAPI'.
+    357 |   PMAgentAPI,
+    358 |   SchemaAgentAPI,
+  > 359 |   QAAgentAPI,
+        |   ^^^^^^^^^^
+    360 |   OrchestratorAPI,
+    361 |   AgentsAPI,
+    362 | };
+
+ERROR in src/api/agents.ts:359:3
+TS2484: Export declaration conflicts with exported declaration of 'QAAgentAPI'.
+    357 |   PMAgentAPI,
+    358 |   SchemaAgentAPI,
+  > 359 |   QAAgentAPI,
+        |   ^^^^^^^^^^
+    360 |   OrchestratorAPI,
+    361 |   AgentsAPI,
+    362 | };
+
+ERROR in src/api/agents.ts:360:3
+TS2323: Cannot redeclare exported variable 'OrchestratorAPI'.
+    358 |   SchemaAgentAPI,
+    359 |   QAAgentAPI,
+  > 360 |   OrchestratorAPI,
+        |   ^^^^^^^^^^^^^^^
+    361 |   AgentsAPI,
+    362 | };
+    363 |
+
+ERROR in src/api/agents.ts:360:3
+TS2484: Export declaration conflicts with exported declaration of 'OrchestratorAPI'.
+    358 |   SchemaAgentAPI,
+    359 |   QAAgentAPI,
+  > 360 |   OrchestratorAPI,
+        |   ^^^^^^^^^^^^^^^
+    361 |   AgentsAPI,
+    362 | };
+    363 |
+
+ERROR in src/api/agents.ts:361:3
+TS2323: Cannot redeclare exported variable 'AgentsAPI'.
+    359 |   QAAgentAPI,
+    360 |   OrchestratorAPI,
+  > 361 |   AgentsAPI,
+        |   ^^^^^^^^^
+    362 | };
+    363 |
+    364 |
+
+ERROR in src/api/agents.ts:361:3
+TS2484: Export declaration conflicts with exported declaration of 'AgentsAPI'.
+    359 |   QAAgentAPI,
+    360 |   OrchestratorAPI,
+  > 361 |   AgentsAPI,
+        |   ^^^^^^^^^
+    362 | };
+    363 |
+    364 |
+
+ERROR in src/components/AgentInterface.tsx:551:26
+TS2339: Property 'data' does not exist on type 'WorkflowStatus'.
+    549 |       
+    550 |       const response = await OrchestratorAPI.runWorkflow(workflowConfig);
+  > 551 |       setResult(response.data);
+        |                          ^^^^
+    552 |     } catch (error) {
+    553 |       console.error('Orchestrator error:', error);
+    554 |     } finally {
+

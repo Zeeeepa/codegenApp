@@ -1,17 +1,12 @@
 
-> agent-run-manager-server@1.0.0 dev
-> nodemon index.js
+> agent-run-manager-server@1.0.0 start
+> node index.js
 
-[33m[nodemon] 3.1.10[39m
-[33m[nodemon] to restart at any time, enter `rs`[39m
-[33m[nodemon] watching path(s): *.*[39m
-[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
-[32m[nodemon] starting `node index.js`[39m
 node:events:496
       throw er; // Unhandled 'error' event
       ^
 
-Error: listen EADDRINUSE: address already in use :::3002
+Error: listen EADDRINUSE: address already in use :::8001
     at Server.setupListenHandle [as _listen2] (node:net:1937:16)
     at listenInCluster (node:net:1994:12)
     at Server.listen (node:net:2099:7)
@@ -27,8 +22,7 @@ Emitted 'error' event on Server instance at:
   errno: -98,
   syscall: 'listen',
   address: '::',
-  port: 3002
+  port: 8001
 }
 
 Node.js v22.14.0
-[31m[nodemon] app crashed - waiting for file changes before starting...[39m
