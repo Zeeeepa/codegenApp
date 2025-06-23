@@ -1,5 +1,22 @@
 // Proxy health check utility for monitoring backend connectivity
+interface HealthStatus {
+  isHealthy: boolean;
+  lastCheck: Date | null;
+  consecutiveFailures: number;
+  lastError?: string;
+}
+
+type HealthListener = (event: string, data: any) => void;
+
 class ProxyHealthChecker {
+  private isHealthy: boolean;
+  private lastHealthCheck: Date | null;
+  private consecutiveFailures: number;
+  private maxFailures: number;
+  private healthCheckInterval: number;
+  private healthCheckTimer: NodeJS.Timeout | null;
+  private listeners: HealthListener[];
+
   constructor() {
     this.isHealthy = true;
     this.lastHealthCheck = null;
@@ -11,7 +28,7 @@ class ProxyHealthChecker {
   }
 
   // Start periodic health checks
-  startHealthChecks() {
+  startHealthChecks(): void {
     if (this.healthCheckTimer) {
       clearInterval(this.healthCheckTimer);
     }
@@ -25,7 +42,7 @@ class ProxyHealthChecker {
   }
 
   // Stop health checks
-  stopHealthChecks() {
+  stopHealthChecks(): void {
     if (this.healthCheckTimer) {
       clearInterval(this.healthCheckTimer);
       this.healthCheckTimer = null;
@@ -33,15 +50,20 @@ class ProxyHealthChecker {
   }
 
   // Perform health check
-  async performHealthCheck() {
+  async performHealthCheck(): Promise<void> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       const response = await fetch('/automation/health', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        timeout: 5000 // 5 second timeout
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -50,12 +72,12 @@ class ProxyHealthChecker {
         this.onHealthCheckFailure(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
-      this.onHealthCheckFailure(error.message);
+      this.onHealthCheckFailure(error instanceof Error ? error.message : String(error));
     }
   }
 
   // Handle successful health check
-  onHealthCheckSuccess(data) {
+  private onHealthCheckSuccess(data: any): void {
     const wasUnhealthy = !this.isHealthy;
     this.isHealthy = true;
     this.consecutiveFailures = 0;
@@ -68,7 +90,7 @@ class ProxyHealthChecker {
   }
 
   // Handle failed health check
-  onHealthCheckFailure(error) {
+  private onHealthCheckFailure(error: any): void {
     this.consecutiveFailures++;
     this.lastHealthCheck = new Date();
 
@@ -80,17 +102,17 @@ class ProxyHealthChecker {
   }
 
   // Add health status listener
-  addListener(callback) {
+  addListener(callback: HealthListener): void {
     this.listeners.push(callback);
   }
 
   // Remove health status listener
-  removeListener(callback) {
+  removeListener(callback: HealthListener): void {
     this.listeners = this.listeners.filter(listener => listener !== callback);
   }
 
   // Notify all listeners
-  notifyListeners(event, data) {
+  private notifyListeners(event: string, data: any): void {
     this.listeners.forEach(listener => {
       try {
         listener(event, data);
@@ -101,25 +123,29 @@ class ProxyHealthChecker {
   }
 
   // Get current health status
-  getHealthStatus() {
+  getHealthStatus(): HealthStatus {
     return {
       isHealthy: this.isHealthy,
-      lastHealthCheck: this.lastHealthCheck,
-      consecutiveFailures: this.consecutiveFailures,
-      maxFailures: this.maxFailures
+      lastCheck: this.lastHealthCheck,
+      consecutiveFailures: this.consecutiveFailures
     };
   }
 
   // Manual health check (returns promise)
-  async checkHealth() {
+  async checkHealth(): Promise<{ healthy: boolean; data?: any; error?: string }> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       const response = await fetch('/automation/health', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        timeout: 5000
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -133,7 +159,7 @@ class ProxyHealthChecker {
     } catch (error) {
       return { 
         healthy: false, 
-        error: error.message 
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -143,4 +169,3 @@ class ProxyHealthChecker {
 const proxyHealthChecker = new ProxyHealthChecker();
 
 export default proxyHealthChecker;
-

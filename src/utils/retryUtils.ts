@@ -1,7 +1,29 @@
 // Retry utility with exponential backoff and circuit breaker pattern
 
+interface CircuitBreakerOptions {
+  failureThreshold?: number;
+  resetTimeout?: number;
+  monitoringPeriod?: number;
+}
+
+interface ErrorClassification {
+  type: string;
+  temporary: boolean;
+  retryable: boolean;
+  userMessage: string;
+  category?: string;
+}
+
+interface FallbackCheck {
+  useFallback: boolean;
+  reason: string | null;
+}
+
 class RetryError extends Error {
-  constructor(message, attempts, lastError) {
+  public attempts: number;
+  public lastError: Error;
+
+  constructor(message: string, attempts: number, lastError: Error) {
     super(message);
     this.name = 'RetryError';
     this.attempts = attempts;
@@ -10,7 +32,15 @@ class RetryError extends Error {
 }
 
 class CircuitBreaker {
-  constructor(options = {}) {
+  private failureThreshold: number;
+  private resetTimeout: number;
+  private monitoringPeriod: number;
+  private state: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+  private failureCount: number;
+  private lastFailureTime: number | null;
+  private nextAttempt: number | null;
+
+  constructor(options: CircuitBreakerOptions = {}) {
     this.failureThreshold = options.failureThreshold || 5;
     this.resetTimeout = options.resetTimeout || 60000; // 1 minute
     this.monitoringPeriod = options.monitoringPeriod || 10000; // 10 seconds
@@ -21,9 +51,9 @@ class CircuitBreaker {
     this.nextAttempt = null;
   }
 
-  async execute(fn) {
+  async execute<T>(fn: () => Promise<T>): Promise<T> {
     if (this.state === 'OPEN') {
-      if (Date.now() < this.nextAttempt) {
+      if (this.nextAttempt && Date.now() < this.nextAttempt) {
         throw new Error('Circuit breaker is OPEN - service unavailable');
       }
       this.state = 'HALF_OPEN';
@@ -39,13 +69,13 @@ class CircuitBreaker {
     }
   }
 
-  onSuccess() {
+  private onSuccess(): void {
     this.failureCount = 0;
     this.state = 'CLOSED';
     this.nextAttempt = null;
   }
 
-  onFailure() {
+  private onFailure(): void {
     this.failureCount++;
     this.lastFailureTime = Date.now();
 
@@ -65,11 +95,22 @@ class CircuitBreaker {
   }
 }
 
+interface RetryOptions {
+  maxAttempts?: number;
+  baseDelay?: number;
+  maxDelay?: number;
+  backoffFactor?: number;
+  jitter?: boolean;
+  retryCondition?: (error: any) => boolean;
+  onRetry?: (error: any, attempt: number, delay: number) => void;
+  abortSignal?: AbortSignal | null;
+}
+
 // Exponential backoff retry function
-export async function retryWithBackoff(
-  fn,
-  options = {}
-) {
+export async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {}
+): Promise<T> {
   const {
     maxAttempts = 3,
     baseDelay = 1000,
@@ -81,7 +122,7 @@ export async function retryWithBackoff(
     abortSignal = null
   } = options;
 
-  let lastError;
+  let lastError: any;
   let attempt = 0;
 
   while (attempt < maxAttempts) {
@@ -103,7 +144,7 @@ export async function retryWithBackoff(
       }
 
       // Check if we should retry this error
-      if (!retryCondition(error, attempt)) {
+      if (!retryCondition(error)) {
         break;
       }
 
@@ -115,7 +156,7 @@ export async function retryWithBackoff(
         delay = delay * (0.5 + Math.random() * 0.5);
       }
 
-      console.log(`Retry attempt ${attempt}/${maxAttempts} after ${Math.round(delay)}ms delay:`, error.message);
+      console.log(`Retry attempt ${attempt}/${maxAttempts} after ${Math.round(delay)}ms delay:`, error instanceof Error ? error.message : String(error));
       
       // Call retry callback
       onRetry(error, attempt, delay);
@@ -126,20 +167,20 @@ export async function retryWithBackoff(
   }
 
   throw new RetryError(
-    `Failed after ${attempt} attempts: ${lastError.message}`,
+    `Failed after ${attempt} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
     attempt,
-    lastError
+    lastError instanceof Error ? lastError : new Error(String(lastError))
   );
 }
 
 // Specific retry function for automation requests
-export async function retryAutomationRequest(requestFn, options = {}) {
+export async function retryAutomationRequest<T>(requestFn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const defaultOptions = {
     maxAttempts: 3,
     baseDelay: 2000, // Start with 2 seconds
     maxDelay: 30000, // Max 30 seconds
     backoffFactor: 2,
-    retryCondition: (error, attempt) => {
+    retryCondition: (error: any) => {
       // Retry on network errors, timeouts, and 5xx server errors
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
         return true; // Network error
@@ -155,9 +196,9 @@ export async function retryAutomationRequest(requestFn, options = {}) {
       }
       return false; // Don't retry client errors (4xx) or other errors
     },
-    onRetry: (error, attempt, delay) => {
+    onRetry: (error: any, attempt: number, delay: number) => {
       console.log(`🔄 Retrying automation request (attempt ${attempt}):`, {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         delay: Math.round(delay),
         timestamp: new Date().toISOString()
       });
@@ -175,7 +216,7 @@ export const automationCircuitBreaker = new CircuitBreaker({
 });
 
 // Helper function to classify errors
-export function classifyError(error) {
+export function classifyError(error: any): ErrorClassification {
   const message = error.message.toLowerCase();
   
   if (message.includes('network') || message.includes('fetch') || 
@@ -242,7 +283,7 @@ export function classifyError(error) {
 }
 
 // Helper function to determine if fallback should be used
-export function shouldUseFallback(error, circuitBreakerState) {
+export function shouldUseFallback(error: any, circuitBreakerState: any): FallbackCheck {
   const errorClassification = classifyError(error);
   
   // Use fallback if circuit breaker is open
@@ -276,4 +317,3 @@ export function shouldUseFallback(error, circuitBreakerState) {
 }
 
 export { RetryError, CircuitBreaker };
-
