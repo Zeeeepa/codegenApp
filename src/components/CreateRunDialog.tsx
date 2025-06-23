@@ -22,7 +22,7 @@ export function CreateRunDialog() {
   const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const { refresh, addNewAgentRun } = useCachedAgentRuns();
+  const { refresh, addNewAgentRun, organizationId } = useCachedAgentRuns();
 
   const apiClient = getAPIClient();
   const cache = getAgentRunCache();
@@ -142,15 +142,20 @@ export function CreateRunDialog() {
       };
       
       console.log(`🚀 Created agent run #${agentRun.id} with status: ${agentRun.status}`);
+      console.log(`📋 Form organization ID: ${formValues.organizationId} (type: ${typeof formValues.organizationId})`);
       console.log(`📋 Cached agent run object:`, cachedAgentRun);
       console.log(`🎯 Will be monitored: ${cachedAgentRun.isPolling}`);
+      console.log(`🔍 Current hook organization ID: ${organizationId}`);
       
       addNewAgentRun(cachedAgentRun);
 
+      // Backup: If the agent run didn't appear immediately, force a refresh after a short delay
+      setTimeout(() => {
+        console.log(`🔄 Backup refresh to ensure agent run #${agentRun.id} appears in UI`);
+        refresh();
+      }, 500);
+
       toast.success(`Agent run #${agentRun.id} created successfully!`);
-      
-      // Background refresh to ensure consistency
-      refresh();
       
       // Close the dialog
       closeDialog();

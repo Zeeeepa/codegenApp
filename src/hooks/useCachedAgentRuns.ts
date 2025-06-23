@@ -190,11 +190,27 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
     console.log(`Adding new agent run #${agentRun.id} to state immediately`);
     console.log(`Current organization ID: ${organizationId} (type: ${typeof organizationId}), Agent run org: ${agentRun.organization_id} (type: ${typeof agentRun.organization_id})`);
     
-    // Only add if it belongs to the current organization (handle type conversion)
-    const currentOrgId = Number(organizationId);
+    // Handle race condition: if organizationId is not set yet, try to get it from localStorage
+    let currentOrgId = Number(organizationId);
+    if (!currentOrgId) {
+      const storedOrgId = localStorage.getItem("defaultOrganizationId");
+      if (storedOrgId) {
+        currentOrgId = Number(storedOrgId);
+        console.log(`📦 Using stored organization ID: ${currentOrgId}`);
+      }
+    }
+    
     const agentRunOrgId = Number(agentRun.organization_id);
     
-    if (currentOrgId && agentRunOrgId && currentOrgId === agentRunOrgId) {
+    // If we still don't have an organization ID, add the run anyway (better UX)
+    if (!currentOrgId) {
+      console.log(`⚠️ No organization ID available, adding agent run anyway for better UX`);
+      setAgentRuns(prevRuns => [agentRun, ...prevRuns]);
+      console.log(`✅ Added agent run #${agentRun.id} to UI state (no org check)`);
+      return;
+    }
+    
+    if (currentOrgId === agentRunOrgId) {
       setAgentRuns(prevRuns => [agentRun, ...prevRuns]);
       console.log(`✅ Added agent run #${agentRun.id} to UI state`);
     } else {

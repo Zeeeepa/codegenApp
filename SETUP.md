@@ -30,7 +30,18 @@ npm run dev
 The app will be available at:
 - **Frontend**: http://localhost:8000
 - **Backend**: http://localhost:8001
+- **Backend Automation**: http://localhost:3001 (for resume functionality)
 - **Health Check**: http://localhost:8001/health
+
+### 5. Backend Automation Service (Optional)
+For **Resume Agent Run** functionality, start the automation service:
+```bash
+cd backend
+npm install
+npm start
+```
+
+This service provides headless browser automation for resuming agent runs.
 
 ## 🔧 Configuration
 
