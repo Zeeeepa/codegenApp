@@ -9,7 +9,7 @@ const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch
 const { spawn } = require('child_process');
 
 // Configuration
-const BACKEND_PORT = 3004;
+const BACKEND_PORT = 3002;
 const FRONTEND_PORT = 8080;
 const BACKEND_URL = `http://localhost:${BACKEND_PORT}`;
 const FRONTEND_URL = `http://localhost:${FRONTEND_PORT}`;

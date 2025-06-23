@@ -2,16 +2,9 @@
 > agent-run-manager-web@1.0.0 start
 > PORT=8080 react-scripts start
 
-[HPM] Proxy created: /  -> http://localhost:3004
-[HPM] Subscribed to http-proxy events: [ 'error', 'close' ]
-[HPM] Proxy created: /  -> http://localhost:3004
-[HPM] Subscribed to http-proxy events: [ 'error', 'close' ]
-[HPM] Proxy created: /  -> http://localhost:3002
-[HPM] Proxy rewrite rule created: "^/automation" ~> ""
-[HPM] Subscribed to http-proxy events: [ 'error', 'close' ]
-(node:11567) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:37782) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-(node:11567) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:37782) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
 Starting the development server...
 
 Compiled successfully!
@@ -19,67 +12,29 @@ Compiled successfully!
 You can now view agent-run-manager-web in the browser.
 
   Local:            http://localhost:8080
-  On Your Network:  http://172.20.20.152:8080
+  On Your Network:  http://172.20.22.124:8080
 
 Note that the development build is not optimized.
 To create a production build, use npm run build.
 
 webpack compiled successfully
-ERROR in src/components/ResumeAgentRunDialog.tsx:71:22
-TS2538: Type 'null' cannot be used as an index type.
-    69 |       for (let i = 0; i < window.localStorage.length; i++) {
-    70 |         const key = window.localStorage.key(i);
-  > 71 |         localStorage[key] = window.localStorage.getItem(key);
-       |                      ^^^
-    72 |       }
-    73 |
-    74 |       // Extract sessionStorage
-
-ERROR in src/components/ResumeAgentRunDialog.tsx:71:57
-TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
-  Type 'null' is not assignable to type 'string'.
-    69 |       for (let i = 0; i < window.localStorage.length; i++) {
-    70 |         const key = window.localStorage.key(i);
-  > 71 |         localStorage[key] = window.localStorage.getItem(key);
-       |                                                         ^^^
-    72 |       }
-    73 |
-    74 |       // Extract sessionStorage
-
-ERROR in src/components/ResumeAgentRunDialog.tsx:78:24
-TS2538: Type 'null' cannot be used as an index type.
-    76 |       for (let i = 0; i < window.sessionStorage.length; i++) {
-    77 |         const key = window.sessionStorage.key(i);
-  > 78 |         sessionStorage[key] = window.sessionStorage.getItem(key);
-       |                        ^^^
-    79 |       }
-    80 |
-    81 |       return {
-
-ERROR in src/components/ResumeAgentRunDialog.tsx:78:61
-TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
-  Type 'null' is not assignable to type 'string'.
-    76 |       for (let i = 0; i < window.sessionStorage.length; i++) {
-    77 |         const key = window.sessionStorage.key(i);
-  > 78 |         sessionStorage[key] = window.sessionStorage.getItem(key);
-       |                                                             ^^^
-    79 |       }
-    80 |
-    81 |       return {
-
-Compiling...
-Compiled successfully!
-webpack compiled successfully
+Files successfully emitted, waiting for typecheck results...
+Issues checking in progress...
 No issues found.
-[HPM] Rewriting path from "/automation/health" to "/health"
-[HPM] GET /automation/health ~> http://localhost:3002
-(node:11567) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
-Automation proxy error: Error: connect ECONNREFUSED 127.0.0.1:3002
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16) {
-  errno: -111,
+(node:37782) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+/api proxy error: {
+  error: 'connect ECONNREFUSED 127.0.0.1:3004',
   code: 'ECONNREFUSED',
-  syscall: 'connect',
-  address: '127.0.0.1',
-  port: 3002
+  target: 'http://localhost:3004',
+  url: '/api/health',
+  method: 'GET'
 }
-[HPM] Error occurred while proxying request localhost:8080/health to http://localhost:3002/ [ECONNREFUSED] (https://nodejs.org/api/errors.html#errors_common_system_errors)
+[HPM] Error occurred while proxying request localhost:8080/api/health to http://localhost:3004/ [ECONNREFUSED] (https://nodejs.org/api/errors.html#errors_common_system_errors)
+/v1 proxy error: {
+  error: 'connect ECONNREFUSED 127.0.0.1:3004',
+  code: 'ECONNREFUSED',
+  target: 'http://localhost:3004',
+  url: '/v1/health',
+  method: 'GET'
+}
+[HPM] Error occurred while proxying request localhost:8080/v1/health to http://localhost:3004/ [ECONNREFUSED] (https://nodejs.org/api/errors.html#errors_common_system_errors)

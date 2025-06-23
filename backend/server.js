@@ -73,6 +73,23 @@ app.use((req, res, next) => {
   next();
 });
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    service: 'automation-backend',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: [
+      'GET /health',
+      'GET /ready',
+      'GET /metrics',
+      'POST /api/resume-agent-run',
+      'POST /api/test-automation',
+      'GET /api/auth-script'
+    ]
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   const healthStatus = healthMonitor.getHealthStatus();
