@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+
 import toast from "react-hot-toast";
 import { 
   Play, 
@@ -47,7 +47,7 @@ export default function ListAgentRuns() {
 
   const selection = useAgentRunSelection();
   const { openDialog, closeDialog, isDialogOpen, dialogData } = useDialog();
-  const navigate = useNavigate();
+
   const [searchText, setSearchText] = useState("");
   const [dateRanges] = useState(() => getDateRanges());
   const [responseModalRun, setResponseModalRun] = useState<CachedAgentRun | null>(null);
