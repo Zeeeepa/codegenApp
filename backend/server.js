@@ -10,6 +10,13 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const logger = require('./logger');
 const { resumeAgentRun, testAutomation } = require('./automation-service');
+const healthMonitor = require('./health-monitor');
+const metrics = require('./metrics');
+const { 
+  requestLoggingMiddleware, 
+  errorLoggingMiddleware, 
+  automationLoggingMiddleware 
+} = require('./middleware/logging');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -39,25 +46,60 @@ app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request logging middleware
+// Enhanced logging and metrics middleware
+app.use(requestLoggingMiddleware);
+app.use(automationLoggingMiddleware);
+
+// Metrics middleware
 app.use((req, res, next) => {
-  logger.info('Incoming request', {
-    method: req.method,
-    url: req.url,
-    ip: req.ip,
-    userAgent: req.get('User-Agent')
-  });
+  const startTime = Date.now();
+  
+  // Record request in health monitor
+  healthMonitor.recordRequest();
+  
+  // Override res.end to capture response metrics
+  const originalEnd = res.end;
+  res.end = function(...args) {
+    const responseTime = Date.now() - startTime;
+    metrics.recordRequest(req.path, req.method, res.statusCode, responseTime);
+    
+    if (res.statusCode >= 400) {
+      healthMonitor.recordError();
+    }
+    
+    originalEnd.apply(this, args);
+  };
+  
   next();
 });
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+  const healthStatus = healthMonitor.getHealthStatus();
   res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
+    ...healthStatus,
     service: 'automation-backend',
     version: '1.0.0'
   });
+});
+
+// Readiness check endpoint
+app.get('/ready', (req, res) => {
+  const readinessStatus = healthMonitor.getReadinessStatus();
+  const statusCode = readinessStatus.ready ? 200 : 503;
+  res.status(statusCode).json(readinessStatus);
+});
+
+// Metrics endpoint
+app.get('/metrics', (req, res) => {
+  const allMetrics = metrics.getAllMetrics();
+  res.json(allMetrics);
+});
+
+// Prometheus metrics endpoint
+app.get('/metrics/prometheus', (req, res) => {
+  res.set('Content-Type', 'text/plain');
+  res.send(metrics.getPrometheusMetrics());
 });
 
 // Resume agent run endpoint
@@ -88,19 +130,28 @@ app.post('/api/resume-agent-run', async (req, res) => {
     });
 
     // Execute automation
+    const automationStartTime = Date.now();
     const result = await resumeAgentRun({
       agentRunId,
       organizationId,
       prompt,
       authContext
     });
+    const automationDuration = Date.now() - automationStartTime;
+
+    // Record automation metrics
+    metrics.recordAutomationAttempt(result.success, automationDuration, result.error);
 
     if (result.success) {
       logger.info('Agent run resumed successfully', {
         agentRunId,
-        duration: result.duration
+        duration: result.duration,
+        automationDuration
       });
-      res.json(result);
+      res.json({
+        ...result,
+        automationDuration
+      });
     } else {
       logger.error('Agent run resume failed', {
         agentRunId,
@@ -172,15 +223,11 @@ app.get('/api/auth-script', (req, res) => {
   });
 });
 
-// Error handling middleware
-app.use((error, req, res, next) => {
-  logger.error('Unhandled error', {
-    error: error.message,
-    stack: error.stack,
-    url: req.url,
-    method: req.method
-  });
+// Enhanced error handling middleware
+app.use(errorLoggingMiddleware);
 
+app.use((error, req, res, next) => {
+  // This is a fallback error handler
   res.status(500).json({
     success: false,
     error: 'Internal server error'
