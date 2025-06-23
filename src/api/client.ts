@@ -256,6 +256,8 @@ export class CodegenAPIClient {
       
       // Call backend automation service
       const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+      console.log(`🔗 Attempting to connect to backend at: ${backendUrl}/api/resume-agent-run`);
+      
       const response = await fetch(`${backendUrl}/api/resume-agent-run`, {
         method: 'POST',
         headers: {
@@ -269,18 +271,39 @@ export class CodegenAPIClient {
         })
       });
 
+      console.log(`📡 Backend response status: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
-        throw new Error(`Backend automation failed: ${response.status} ${response.statusText}`);
+        // If backend is not available (404, 500, etc.), provide helpful error message
+        if (response.status === 404) {
+          throw new Error(`Backend automation service not available. Please ensure the backend server is running at ${backendUrl}`);
+        } else if (response.status >= 500) {
+          throw new Error(`Backend server error (${response.status}). Please check the backend logs.`);
+        } else {
+          throw new Error(`Backend automation failed: ${response.status} ${response.statusText}`);
+        }
       }
 
       const result = await response.json();
+      console.log(`✅ Backend response:`, result);
       return result;
 
     } catch (error) {
       console.error('Backend automation service error:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Unknown error occurred';
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          errorMessage = 'Cannot connect to backend automation service. Please ensure the backend server is running.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: errorMessage
       };
     }
   }

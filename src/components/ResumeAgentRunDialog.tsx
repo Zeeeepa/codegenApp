@@ -101,7 +101,19 @@ export function ResumeAgentRunDialog({
       
     } catch (error) {
       console.error("Backend automation failed:", error);
-      toast.error(`Failed to resume agent run: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Provide helpful error message based on error type
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        if (error.message.includes('Backend automation service not available') || 
+            error.message.includes('Cannot connect to backend')) {
+          errorMessage = `${error.message}\n\nTo enable resume functionality:\n1. Navigate to the 'backend' directory\n2. Run 'npm install' then 'npm start'\n3. Ensure the backend server is running on port 3001`;
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast.error(`Failed to resume agent run: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
