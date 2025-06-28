@@ -15,7 +15,7 @@
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^6.8.0",
-    "react-scripts": "5.0.1",
+    "react-scripts": "^5.0.1",
     "tailwindcss": "^3.3.0",
     "typescript": "^4.9.5"
   },
@@ -24,14 +24,18 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "dev": "concurrently \"npm run server:dev\" \"npm run backend:dev\" \"npm run start\"",
+    "dev": "./start-dev.sh",
+    "dev:concurrent": "concurrently \"npm run server:dev\" \"npm run backend:dev\" \"npm run start\"",
     "server:install": "cd server && npm install",
     "server:start": "cd server && npm start",
     "server:dev": "cd server && npm run dev",
     "backend:install": "cd backend && npm install",
     "backend:start": "cd backend && npm start",
     "backend:dev": "cd backend && npm start",
-    "postinstall": "npm run server:install && npm run backend:install"
+    "postinstall": "npm run server:install && npm run backend:install",
+    "fix:vulnerabilities": "./fix-vulnerabilities.sh",
+    "clean": "rm -rf node_modules server/node_modules backend/node_modules package-lock.json server/package-lock.json backend/package-lock.json",
+    "fresh-install": "npm run clean && npm install"
   },
   "eslintConfig": {
     "extends": [
