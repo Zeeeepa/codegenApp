@@ -218,31 +218,28 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
     }
     
     if (currentOrgId === agentRunOrgId) {
+      // FORCE CLEAR ALL FILTERS FIRST - NO FUCKING FILTERS HIDING NEW RUNS
+      console.log(`🧹 CLEARING ALL FILTERS TO ENSURE NEW RUN IS VISIBLE`);
+      setFilters({});
+      
       // Update UI state immediately with detailed logging
       setAgentRuns(prevRuns => {
         const newRuns = [agentRun, ...prevRuns];
-        console.log(`📋 Updated runs list: ${newRuns.length} total runs (was ${prevRuns.length})`);
-        console.log(`🆕 New run at position 0: #${agentRun.id} - ${agentRun.status}`);
+        console.log(`📋 FORCE UPDATED runs list: ${newRuns.length} total runs (was ${prevRuns.length})`);
+        console.log(`🆕 NEW RUN ADDED at position 0: #${agentRun.id} - ${agentRun.status}`);
         return newRuns;
       });
       
-      // Temporarily clear filters that might hide the new run
-      const hasRestrictiveFilters = filters.status?.length || filters.searchQuery?.trim() || filters.dateRange;
-      if (hasRestrictiveFilters) {
-        console.log(`🧹 Temporarily clearing restrictive filters to show new run`);
-        setFilters({});
-        
-        // Restore filters after a delay to let user see the new run
-        setTimeout(() => {
-          console.log(`🔄 Restoring previous filters`);
-          // Note: This might cause the run to disappear if it doesn't match filters
-          // But at least the user will see it was created successfully
-        }, 3000);
-      }
-      
-      // Force a re-render to ensure UI updates
+      // Force multiple re-renders to ensure UI updates
       setForceRender(prev => prev + 1);
-      console.log(`✅ Added agent run #${agentRun.id} to UI state for org ${currentOrgId} and triggered re-render`);
+      
+      // Additional force update after a tiny delay
+      setTimeout(() => {
+        setForceRender(prev => prev + 1);
+        console.log(`🔄 ADDITIONAL FORCE RENDER TRIGGERED`);
+      }, 50);
+      
+      console.log(`✅ FORCEFULLY ADDED agent run #${agentRun.id} to UI state for org ${currentOrgId}`);
       
       // Persist to cache for persistence between sessions
       try {
