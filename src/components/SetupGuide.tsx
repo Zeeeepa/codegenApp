@@ -30,7 +30,8 @@ export const SetupGuide: React.FC<SetupGuideProps> = ({ onComplete }) => {
     setBackendStatus({ isHealthy: false, checking: true });
     
     try {
-      const response = await fetch('http://localhost:3500/health', {
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3500';
+      const response = await fetch(`${backendUrl}/health`, {
         method: 'GET',
         timeout: 5000
       } as any);

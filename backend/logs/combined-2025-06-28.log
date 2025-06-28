@@ -1,0 +1,2 @@
+{"timestamp":"2025-06-28 20:24:41.179","level":"INFO","service":"automation-backend","message":"🤖 Automation backend server running on port 3500","version":"1.0.0","environment":"development","port":"3500","frontendUrl":"http://localhost:8080"}
+{"timestamp":"2025-06-28 20:25:04.102","level":"INFO","service":"automation-backend","message":"Incoming request","requestId":"gv3rb5","version":"1.0.0","environment":"development","method":"GET","url":"/health","path":"/health","query":{},"ip":"::ffff:127.0.0.1","userAgent":"curl/7.88.1"}
