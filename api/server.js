@@ -251,21 +251,41 @@ app.use('/api/v1', async (req, res) => {
     
     logger.info(`Proxying ${req.method} ${req.path} to ${targetUrl}`);
     
+    // Prepare headers for forwarding
+    const forwardHeaders = {
+      'User-Agent': 'Agent-Run-Manager-Proxy/1.0',
+      'Accept': 'application/json',
+      'Accept-Encoding': 'identity'
+    };
+
+    // Add authorization header if present
+    if (req.headers.authorization) {
+      forwardHeaders['Authorization'] = req.headers.authorization;
+    }
+
+    // Add content-type for non-GET requests
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      forwardHeaders['Content-Type'] = 'application/json';
+    }
+
+    // Add other relevant headers (excluding problematic ones)
+    Object.entries(req.headers).forEach(([key, value]) => {
+      const lowerKey = key.toLowerCase();
+      if (!['host', 'connection', 'content-length', 'accept-encoding', 'authorization', 'content-type', 'user-agent', 'accept'].includes(lowerKey)) {
+        forwardHeaders[key] = value;
+      }
+    });
+
+    logger.info(`Request headers being forwarded:`, {
+      hasAuth: !!req.headers.authorization,
+      authPreview: req.headers.authorization ? `${req.headers.authorization.substring(0, 20)}...` : 'none',
+      headerCount: Object.keys(forwardHeaders).length
+    });
+
     // Forward the request to Codegen API
     const response = await fetch(targetUrl + (req.url.includes('?') ? '&' + req.url.split('?')[1] : ''), {
       method: req.method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': req.headers.authorization,
-        'User-Agent': 'Agent-Run-Manager-Proxy/1.0',
-        'Accept': 'application/json',
-        'Accept-Encoding': 'identity',
-        ...Object.fromEntries(
-          Object.entries(req.headers).filter(([key]) => 
-            !['host', 'connection', 'content-length', 'accept-encoding'].includes(key.toLowerCase())
-          )
-        )
-      },
+      headers: forwardHeaders,
       body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined
     });
 
