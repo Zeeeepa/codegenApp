@@ -45,11 +45,11 @@ check_backend() {
             echo ""
             
             # Check if service is actually responding
-            if curl -s http://localhost:3002/health > /dev/null; then
+            if curl -s http://localhost:3001/health > /dev/null; then
                 print_success "Backend service is running and responding"
                 
                 # Get health details
-                HEALTH_RESPONSE=$(curl -s http://localhost:3002/health)
+                HEALTH_RESPONSE=$(curl -s http://localhost:3001/health)
                 echo "Health Status: $HEALTH_RESPONSE" | jq '.' 2>/dev/null || echo "Health Status: $HEALTH_RESPONSE"
             else
                 print_error "Backend service is running but not responding to health checks"
@@ -125,23 +125,23 @@ check_connectivity() {
     echo "Testing backend endpoints:"
     
     # Health endpoint
-    if curl -s -w "Response time: %{time_total}s\n" http://localhost:3002/health > /dev/null; then
+    if curl -s -w "Response time: %{time_total}s\n" http://localhost:3001/health > /dev/null; then
         print_success "Health endpoint: OK"
-        RESPONSE_TIME=$(curl -s -w "%{time_total}" -o /dev/null http://localhost:3002/health)
+        RESPONSE_TIME=$(curl -s -w "%{time_total}" -o /dev/null http://localhost:3001/health)
         echo "  Response time: ${RESPONSE_TIME}s"
     else
         print_error "Health endpoint: FAILED"
     fi
     
     # Metrics endpoint
-    if curl -s http://localhost:3002/metrics > /dev/null; then
+    if curl -s http://localhost:3001/metrics > /dev/null; then
         print_success "Metrics endpoint: OK"
     else
         print_error "Metrics endpoint: FAILED"
     fi
     
     # Ready endpoint
-    if curl -s http://localhost:3002/ready > /dev/null; then
+    if curl -s http://localhost:3001/ready > /dev/null; then
         print_success "Ready endpoint: OK"
     else
         print_warning "Ready endpoint: Not ready or failed"
@@ -222,7 +222,7 @@ generate_summary() {
     PROXY_OK=false
     
     # Check backend
-    if curl -s http://localhost:3002/health > /dev/null; then
+    if curl -s http://localhost:3001/health > /dev/null; then
         BACKEND_OK=true
         print_success "Backend Service: HEALTHY"
     else
@@ -250,9 +250,9 @@ generate_summary() {
     # Service URLs
     echo "🔗 Service URLs:"
     echo "   Frontend:  http://localhost:3000"
-    echo "   Backend:   http://localhost:3002"
-    echo "   Health:    http://localhost:3002/health"
-    echo "   Metrics:   http://localhost:3002/metrics"
+    echo "   Backend:   http://localhost:3001"
+    echo "   Health:    http://localhost:3001/health"
+    echo "   Metrics:   http://localhost:3001/metrics"
     echo ""
     
     # Recommendations

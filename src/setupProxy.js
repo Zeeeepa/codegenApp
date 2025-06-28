@@ -87,7 +87,7 @@ module.exports = function(app) {
   // Proxy automation requests to automation backend with enhanced configuration
   app.use(
     '/automation',
-    createRobustProxy('/automation', 'http://localhost:3002', {
+    createRobustProxy('/automation', 'http://localhost:3001', {
       pathRewrite: {
         '^/automation': '' // Remove /automation prefix when forwarding
       },

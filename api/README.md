@@ -125,7 +125,7 @@ Returns JavaScript code for extracting authentication context from the frontend.
 
 Environment variables (see `.env.example`):
 
-- `PORT`: Server port (default: 3002)
+- `PORT`: Server port (default: 3001)
 - `NODE_ENV`: Environment mode (development/production)
 - `FRONTEND_URL`: Frontend URL for CORS (default: http://localhost:8080)
 - `LOG_LEVEL`: Logging level (default: info)
@@ -183,10 +183,10 @@ Test the automation service:
 
 ```bash
 # Health check
-curl http://localhost:3002/health
+curl http://localhost:3001/health
 
 # Test automation (requires auth context)
-curl -X POST http://localhost:3002/api/test-automation \
+curl -X POST http://localhost:3001/api/test-automation \
   -H "Content-Type: application/json" \
   -d '{
     "agentRunId": 12345,
