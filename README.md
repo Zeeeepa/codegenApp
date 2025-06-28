@@ -1,233 +1,133 @@
-# Codegen Agent Run Manager
+# Codegen App - Agent Run Manager
 
-A web application for managing Codegen agent runs, converted from a Raycast extension. This application provides a user-friendly interface to create, monitor, and manage Codegen AI agent runs.
+A React-based web application for managing and resuming Codegen agent runs with integrated API server.
 
-## 🚀 Features
+## 🚀 Quick Start
 
-- **Agent Run Management**: Create and monitor AI agent runs
-- **Organization Support**: Work with multiple organizations
-- **Real-time Updates**: Live status updates for running agents
-- **Credential Management**: Secure API token handling
-- **Environment Variable Validation**: Visual status indicators for configuration
-- **Responsive Design**: Works on desktop and mobile devices
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-## 🏗️ Architecture
+2. **Configure environment:**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your Codegen API token
+   ```
 
-This application is a React-based frontend that connects directly to the Codegen API using environment variables for configuration. The application supports both development and production deployments.
+3. **Start development server:**
+   ```bash
+   npm run dev
+   ```
 
-## 📋 Prerequisites
+   This will start:
+   - API server on http://localhost:3001
+   - React frontend on http://localhost:8080
 
-- Node.js 16+ and npm
-- A Codegen API token (get one from [Codegen Dashboard](https://app.codegen.com/settings))
-
-## 🛠��� Installation & Setup
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/Zeeeepa/codegenApp.git
-cd codegenApp
-```
-
-### 2. Install ALL dependencies (frontend + backend + automation)
-
-```bash
-npm install
-```
-
-This automatically installs dependencies for:
-- ✅ Frontend React app
-- ✅ Backend API server  
-- ✅ Automation service (for Resume Agent Run functionality)
-
-### 3. Environment Configuration
-
-Create a `.env` file in the project root with your Codegen API credentials:
-
-```bash
-# Required: Your Codegen API token
-# Get it from https://app.codegen.com/settings
-REACT_APP_API_TOKEN=your_api_token_here
-
-# Optional: Your default organization ID
-REACT_APP_DEFAULT_ORGANIZATION=your_org_id_here
-
-# Optional: API Base URL (defaults to https://api.codegen.com)
-REACT_APP_API_BASE_URL=https://api.codegen.com
-
-# Optional: Your user ID for personalized features
-REACT_APP_USER_ID=your_user_id_here
-```
-
-### 4. Start ALL services (frontend + backend + automation)
-
-```bash
-npm run dev
-```
-
-The application will be available at:
-- **Frontend**: `http://localhost:8080`
-- **Backend API**: `http://localhost:8001`
-- **Automation Service**: `http://localhost:3001`
-
-## 🔧 Development
-
-### Available Scripts
-
-- `npm run dev` - **Start ALL services** (frontend + backend + automation)
-- `npm start` - Start only the React frontend
-- `npm run build` - Build the React app for production
-- `npm run backend:start` - Start only the automation service
-- `npm run server:start` - Start only the backend API server
-- `npm test` - Run the test suite
-- `npm run eject` - Eject from Create React App (not recommended)
-
-### Project Structure
+## 📁 Project Structure
 
 ```
 codegenApp/
-├── public/                 # Static assets
-│   ├── manifest.json      # PWA manifest
-│   ├── favicon.ico        # App icon
-│   └── logo*.png          # App logos
-├── src/                   # React source code
-│   ├── api/              # API client and types
-│   ├── utils/            # Utility functions
-│   ├── hooks/            # Custom React hooks
-│   ├── storage/          # Local storage utilities
-│   └── *.tsx             # React components
-├── .env                  # Environment variables
-└── README.md            # This file
+├── src/                    # React frontend source
+├── api/                    # Integrated API server
+│   ├── server.js          # Main server file
+│   ├── automation-service.js
+│   ├── health-monitor.js
+│   └── ...
+├── public/                # Static assets
+├── package.json           # Dependencies and scripts
+└── .env.example          # Environment configuration template
 ```
 
-## ⚙️ Configuration
+## 🛠 Available Scripts
 
-The application supports multiple configuration methods:
+- `npm run dev` - Start both API server and frontend in development mode
+- `npm run api:start` - Start API server only (production)
+- `npm run api:dev` - Start API server with nodemon (development)
+- `npm start` - Start React frontend only
+- `npm run build` - Build React app for production
+- `npm run health-check` - Check if API server is running
 
-1. **Environment Variables** (recommended): Set `REACT_APP_*` variables in `.env` file
-2. **Settings Page**: Configure credentials through the web interface
-3. **LocalStorage**: Automatically saves settings for future sessions
+## 🔧 Configuration
 
-### Environment Variable Validation
+### Environment Variables
 
-The Settings page will show the status of your environment variables:
-
-- ✅ **Green**: All required variables are set
-- ⚠️ **Yellow**: Optional variables missing (warnings)
-- ❌ **Red**: Required variables missing (will prevent API calls)
-
-## 🚀 Deployment
-
-### Frontend Deployment
-
-The React app can be deployed to any static hosting service:
-
-#### Vercel
-```bash
-npm run build
-# Deploy the 'build' folder to Vercel
-```
-
-#### Netlify
-```bash
-npm run build
-# Deploy the 'build' folder to Netlify
-```
-
-#### GitHub Pages
-```bash
-npm run build
-# Deploy the 'build' folder to GitHub Pages
-```
-
-### Environment Variables for Production
-
-Set these environment variables in your hosting platform:
-
-```env
-REACT_APP_API_TOKEN=your_production_api_token
-REACT_APP_DEFAULT_ORGANIZATION=your_org_id
-REACT_APP_API_BASE_URL=https://api.codegen.com
-REACT_APP_USER_ID=your_user_id
-```
-
-## 🔐 Authentication
-
-1. Get your API token from the [Codegen Dashboard](https://app.codegen.com/settings)
-2. Add it to your `.env` file or enter it in the application's Settings page
-3. The application will validate your credentials and load your organizations
-
-## 🧪 Testing
-
-Run the test suite to ensure everything is working correctly:
+Copy `.env.example` to `.env` and configure:
 
 ```bash
-npm test
+# Required: Your Codegen API token
+REACT_APP_API_TOKEN=your_api_token_here
+
+# API server configuration
+PORT=3001
+CODEGEN_API_BASE=https://api.codegen.com
+FRONTEND_URL=http://localhost:8080
 ```
 
-The test suite includes:
-- Environment variable validation tests
-- Component rendering tests
-- API configuration tests
+### API Endpoints
+
+The integrated API server provides:
+
+- `GET /health` - Health check endpoint
+- `POST /api/resume-agent-run` - Resume agent run functionality
+- `POST /api/test-automation` - Test automation features
+- `GET /api/auth-script` - Authentication script
+- `ALL /api/v1/*` - Codegen API proxy (avoids CORS issues)
+
+## 🔍 Features
+
+- **Agent Run Management**: Resume and monitor Codegen agent runs
+- **Real-time Status**: Live updates on agent run progress
+- **Authentication**: Secure token-based authentication
+- **CORS-free API Access**: Integrated proxy server eliminates CORS issues
+- **Health Monitoring**: Built-in health checks and metrics
+- **Responsive UI**: Modern React interface with Tailwind CSS
 
 ## 🐛 Troubleshooting
 
-### Missing Environment Variables
+### Common Issues
 
-If you see errors about missing environment variables:
+1. **"Cannot connect to backend automation service"**
+   - Ensure API server is running: `npm run api:start`
+   - Check health endpoint: `curl http://localhost:3001/health`
 
-1. Ensure your `.env` file is in the project root
-2. Restart the development server after creating/modifying `.env`
-3. Check the Settings page for validation status
+2. **CORS errors**
+   - Use the integrated API server (default setup)
+   - Ensure `REACT_APP_API_BASE_URL=http://localhost:3001/api`
 
-### API Connection Issues
+3. **Chrome/Puppeteer issues**
+   - Chrome is automatically installed during `npm install`
+   - If issues persist, try: `npx puppeteer browsers install chrome`
 
-If API calls are failing:
+### Development Tips
 
-1. Verify your API token is correct
-2. Check that the API base URL is accessible (`https://api.codegen.com`)
-3. Ensure your organization ID is valid
-4. Check browser console for detailed error messages
+- Use `npm run dev:safe` to check health before starting
+- Check logs in the terminal for detailed error information
+- API server logs include request/response details for debugging
 
-### Development Server Issues
+## 📦 Dependencies
 
-- Make sure port 3000 is available
-- Try restarting the server: `npm start`
-- Check the console for detailed error messages
+### Frontend
+- React 18 with TypeScript
+- Tailwind CSS for styling
+- React Router for navigation
+- React Hot Toast for notifications
 
-## 📝 API Token Setup
-
-1. Visit [Codegen Dashboard](https://app.codegen.com/settings)
-2. Navigate to API settings
-3. Generate a new API token
-4. Copy the token and add it to your `.env` file or Settings page
+### Backend
+- Express.js server
+- Puppeteer for browser automation
+- Winston for logging
+- CORS and security middleware
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
-## 🆘 Support
-
-If you encounter any issues:
-
-1. Check the troubleshooting section above
-2. Look for existing issues in the GitHub repository
-3. Create a new issue with detailed information about the problem
-
-## 🔄 Updates
-
-To update the application:
-
-```bash
-git pull origin main
-npm install  # Updates dependencies
-npm start    # Restart the development server
-```

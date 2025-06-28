@@ -8,6 +8,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const fetch = require('node-fetch');
 const logger = require('./logger');
 const { resumeAgentRun, testAutomation } = require('./automation-service');
 const healthMonitor = require('./health-monitor');
@@ -19,7 +20,7 @@ const {
 } = require('./middleware/logging');
 
 const app = express();
-const PORT = process.env.PORT || 3500;
+const PORT = process.env.PORT || 3001;
 
 // Security middleware
 app.use(helmet());
@@ -85,7 +86,8 @@ app.get('/', (req, res) => {
       'GET /metrics',
       'POST /api/resume-agent-run',
       'POST /api/test-automation',
-      'GET /api/auth-script'
+      'GET /api/auth-script',
+      'ALL /api/v1/* (Codegen API Proxy)'
     ]
   });
 });
@@ -240,6 +242,71 @@ app.get('/api/auth-script', (req, res) => {
   });
 });
 
+// Codegen API Proxy Routes
+const CODEGEN_API_BASE = process.env.CODEGEN_API_BASE || 'https://api.codegen.com';
+
+// Proxy all API requests to Codegen API
+app.use('/api/v1', async (req, res) => {
+  try {
+    const targetUrl = `${CODEGEN_API_BASE}/v1${req.path}`;
+    
+    logger.info(`Proxying ${req.method} ${req.path} to ${targetUrl}`);
+    
+    // Forward the request to Codegen API
+    const response = await fetch(targetUrl + (req.url.includes('?') ? '&' + req.url.split('?')[1] : ''), {
+      method: req.method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization,
+        'User-Agent': 'Agent-Run-Manager-Proxy/1.0',
+        'Accept': 'application/json',
+        'Accept-Encoding': 'identity',
+        ...Object.fromEntries(
+          Object.entries(req.headers).filter(([key]) => 
+            !['host', 'connection', 'content-length', 'accept-encoding'].includes(key.toLowerCase())
+          )
+        )
+      },
+      body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined
+    });
+
+    // Forward response headers
+    const responseHeaders = {};
+    response.headers.forEach((value, key) => {
+      if (!['content-encoding', 'transfer-encoding', 'connection'].includes(key.toLowerCase())) {
+        responseHeaders[key] = value;
+      }
+    });
+
+    res.set(responseHeaders);
+    res.status(response.status);
+
+    // Handle different content types
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        const data = await response.json();
+        res.json(data);
+      } catch (jsonError) {
+        logger.error('JSON parsing error:', jsonError);
+        const text = await response.text();
+        res.status(response.status).send(text);
+      }
+    } else {
+      const text = await response.text();
+      res.send(text);
+    }
+
+  } catch (error) {
+    logger.error('Proxy error:', error);
+    res.status(500).json({
+      error: 'Proxy server error',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Enhanced error handling middleware
 app.use(errorLoggingMiddleware);
 
@@ -260,7 +327,8 @@ app.use((req, res) => {
       'GET /health',
       'POST /api/resume-agent-run',
       'POST /api/test-automation',
-      'GET /api/auth-script'
+      'GET /api/auth-script',
+      'ALL /api/v1/* (Codegen API Proxy)'
     ]
   });
 });
@@ -281,6 +349,7 @@ app.listen(PORT, () => {
   console.log(`   POST /api/resume-agent-run`);
   console.log(`   POST /api/test-automation`);
   console.log(`   GET  /api/auth-script`);
+  console.log(`   ALL  /api/v1/* (Codegen API Proxy)`);
 });
 
 // Graceful shutdown
