@@ -108,7 +108,7 @@ wait_for_services() {
     
     # Wait for backend
     for i in {1..30}; do
-        if curl -s http://localhost:3002/health > /dev/null; then
+        if curl -s http://localhost:3001/health > /dev/null; then
             print_success "Backend service is ready"
             break
         fi
@@ -159,9 +159,9 @@ show_status() {
     # Service URLs
     echo "🔗 Service URLs:"
     echo "   Frontend:  http://localhost:3000"
-    echo "   Backend:   http://localhost:3002"
-    echo "   Health:    http://localhost:3002/health"
-    echo "   Metrics:   http://localhost:3002/metrics"
+    echo "   Backend:   http://localhost:3001"
+    echo "   Health:    http://localhost:3001/health"
+    echo "   Metrics:   http://localhost:3001/metrics"
     echo ""
     
     # Useful commands
