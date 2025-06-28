@@ -187,8 +187,8 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
 
   // Add new agent run immediately to state AND persist to cache
   const addNewAgentRun = useCallback(async (agentRun: CachedAgentRun) => {
-    console.log(`Adding new agent run #${agentRun.id} to state and cache immediately`);
-    console.log(`Current organization ID: ${organizationId} (type: ${typeof organizationId}), Agent run org: ${agentRun.organization_id} (type: ${typeof agentRun.organization_id})`);
+    console.log(`🔄 Adding new agent run #${agentRun.id} to state and cache immediately`);
+    console.log(`📊 Current organization ID: ${organizationId} (type: ${typeof organizationId}), Agent run org: ${agentRun.organization_id} (type: ${typeof agentRun.organization_id})`);
     
     // Handle race condition: if organizationId is not set yet, try to get it from localStorage
     let currentOrgId = Number(organizationId);
@@ -205,15 +205,24 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
     // If we still don't have an organization ID, add the run anyway (better UX)
     if (!currentOrgId) {
       console.log(`⚠️ No organization ID available, adding agent run anyway for better UX`);
-      setAgentRuns(prevRuns => [agentRun, ...prevRuns]);
+      setAgentRuns(prevRuns => {
+        const newRuns = [agentRun, ...prevRuns];
+        console.log(`📋 Updated runs list: ${newRuns.length} total runs`);
+        return newRuns;
+      });
       console.log(`✅ Added agent run #${agentRun.id} to UI state (no org check)`);
       return;
     }
     
     if (currentOrgId === agentRunOrgId) {
-      // Update UI state immediately
-      setAgentRuns(prevRuns => [agentRun, ...prevRuns]);
-      console.log(`✅ Added agent run #${agentRun.id} to UI state`);
+      // Update UI state immediately with detailed logging
+      setAgentRuns(prevRuns => {
+        const newRuns = [agentRun, ...prevRuns];
+        console.log(`📋 Updated runs list: ${newRuns.length} total runs (was ${prevRuns.length})`);
+        console.log(`🆕 New run at position 0: #${agentRun.id} - ${agentRun.status}`);
+        return newRuns;
+      });
+      console.log(`✅ Added agent run #${agentRun.id} to UI state for org ${currentOrgId}`);
       
       // Persist to cache for persistence between sessions
       try {
@@ -222,11 +231,12 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
         await cache.updateAgentRun(currentOrgId, agentRunResponse as any);
         console.log(`💾 Persisted agent run #${agentRun.id} to cache`);
       } catch (error) {
-        console.error(`Failed to persist agent run #${agentRun.id} to cache:`, error);
+        console.error(`❌ Failed to persist agent run #${agentRun.id} to cache:`, error);
         // Don't throw - UI update succeeded, cache failure shouldn't break UX
       }
     } else {
       console.log(`❌ Skipped adding agent run #${agentRun.id} - organization mismatch (${currentOrgId} !== ${agentRunOrgId})`);
+      throw new Error(`Organization mismatch: expected ${currentOrgId}, got ${agentRunOrgId}`);
     }
   }, [organizationId, cache]);
 

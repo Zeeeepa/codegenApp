@@ -132,33 +132,45 @@ export function CreateRunDialog() {
       // Add to tracking for monitoring by default
       await cache.addToTracking(parseInt(formValues.organizationId), agentRun);
 
+      // Ensure organization IDs are properly aligned
+      const selectedOrgId = parseInt(formValues.organizationId);
+      
       // Convert to CachedAgentRun and add immediately to UI
       const cachedAgentRun = {
         ...agentRun,
-        organization_id: parseInt(formValues.organizationId), // Ensure organization_id is set
+        organization_id: selectedOrgId, // Ensure organization_id is set correctly
         lastUpdated: new Date().toISOString(),
         organizationName: undefined,
         isPolling: ['ACTIVE', 'EVALUATION', 'PENDING', 'RUNNING'].includes(agentRun.status.toUpperCase()) // Monitor active runs
       };
       
       console.log(`🚀 Created agent run #${agentRun.id} with status: ${agentRun.status}`);
-      console.log(`📋 Form organization ID: ${formValues.organizationId} (type: ${typeof formValues.organizationId})`);
+      console.log(`📋 Form organization ID: ${formValues.organizationId} (string) -> ${selectedOrgId} (number)`);
+      console.log(`🔍 Current hook organization ID: ${organizationId} (type: ${typeof organizationId})`);
       console.log(`📋 Cached agent run object:`, cachedAgentRun);
       console.log(`🎯 Will be monitored: ${cachedAgentRun.isPolling}`);
-      console.log(`🔍 Current hook organization ID: ${organizationId}`);
       
-      await addNewAgentRun(cachedAgentRun);
-
-      // Backup: If the agent run didn't appear immediately, force a refresh after a short delay
-      setTimeout(() => {
-        console.log(`🔄 Backup refresh to ensure agent run #${agentRun.id} appears in UI`);
+      // Add to UI state immediately - this should make it appear right away
+      try {
+        await addNewAgentRun(cachedAgentRun);
+        console.log(`✅ Successfully added agent run #${agentRun.id} to UI state`);
+      } catch (error) {
+        console.error(`❌ Failed to add agent run #${agentRun.id} to UI state:`, error);
+        // If immediate add fails, force a refresh
+        console.log(`🔄 Forcing refresh due to addNewAgentRun failure`);
         refresh();
-      }, 500);
+      }
 
       toast.success(`Agent run #${agentRun.id} created successfully!`);
       
       // Close the dialog
       closeDialog();
+      
+      // Additional fallback: Force a refresh after dialog closes to ensure UI is updated
+      setTimeout(() => {
+        console.log(`🔄 Final fallback refresh to ensure UI shows agent run #${agentRun.id}`);
+        refresh();
+      }, 100);
       
     } catch (error) {
       console.error("Failed to create agent run:", error);
