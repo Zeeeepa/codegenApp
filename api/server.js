@@ -8,7 +8,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const fetch = require('node-fetch');
 const logger = require('./logger');
 const { resumeAgentRun, testAutomation } = require('./automation-service');
 const healthMonitor = require('./health-monitor');
