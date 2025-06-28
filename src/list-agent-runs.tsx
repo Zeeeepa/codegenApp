@@ -34,6 +34,7 @@ import { SyncStatus } from "./storage/cacheTypes";
 
 export default function ListAgentRuns() {
   const {
+    agentRuns,
     filteredRuns,
     isLoading,
     isRefreshing,
@@ -63,6 +64,22 @@ export default function ListAgentRuns() {
   useEffect(() => {
     console.log('Agent runs component initialized');
   }, []); // Empty dependency array - only run once
+
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log(`🔍 ListAgentRuns state update:`);
+    console.log(`  - Raw agent runs: ${agentRuns.length}`);
+    console.log(`  - Filtered runs: ${filteredRuns.length}`);
+    console.log(`  - Organization ID: ${organizationId}`);
+    console.log(`  - Current filters:`, filters);
+    console.log(`  - Is loading: ${isLoading}`);
+    if (agentRuns.length > 0) {
+      console.log(`  - First raw run: #${agentRuns[0].id} - ${agentRuns[0].status} (org: ${agentRuns[0].organization_id})`);
+    }
+    if (filteredRuns.length > 0) {
+      console.log(`  - First filtered run: #${filteredRuns[0].id} - ${filteredRuns[0].status} (org: ${filteredRuns[0].organization_id})`);
+    }
+  }, [agentRuns, filteredRuns, organizationId, filters, isLoading]);
 
   // Update search filter when search text changes - memoized to prevent re-renders
   const handleSearchTextChange = useCallback((text: string) => {
