@@ -152,8 +152,18 @@ export function CreateRunDialog() {
       
       // Add to UI state immediately - this should make it appear right away
       try {
+        console.log(`🔄 About to call addNewAgentRun with org ID: ${selectedOrgId}`);
+        console.log(`🔍 Hook organization ID before call: ${organizationId}`);
+        
         await addNewAgentRun(cachedAgentRun);
         console.log(`✅ Successfully added agent run #${agentRun.id} to UI state`);
+        
+        // Force a small delay to ensure state has propagated, then refresh as backup
+        setTimeout(() => {
+          console.log(`🔄 Backup refresh 200ms after successful add`);
+          refresh();
+        }, 200);
+        
       } catch (error) {
         console.error(`❌ Failed to add agent run #${agentRun.id} to UI state:`, error);
         // If immediate add fails, force a refresh

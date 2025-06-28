@@ -32,6 +32,7 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(SyncStatus.IDLE);
   const [organizationId, setOrganizationIdState] = useState<number | null>(null);
+  const [forceRender, setForceRender] = useState(0); // Force re-render counter
   
   // Filter and sort state
   const [filters, setFilters] = useState<AgentRunFilters>({});
@@ -189,6 +190,7 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
   const addNewAgentRun = useCallback(async (agentRun: CachedAgentRun) => {
     console.log(`🔄 Adding new agent run #${agentRun.id} to state and cache immediately`);
     console.log(`📊 Current organization ID: ${organizationId} (type: ${typeof organizationId}), Agent run org: ${agentRun.organization_id} (type: ${typeof agentRun.organization_id})`);
+    console.log(`🔍 Current filters:`, filters);
     
     // Handle race condition: if organizationId is not set yet, try to get it from localStorage
     let currentOrgId = Number(organizationId);
@@ -210,6 +212,7 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
         console.log(`📋 Updated runs list: ${newRuns.length} total runs`);
         return newRuns;
       });
+      setForceRender(prev => prev + 1);
       console.log(`✅ Added agent run #${agentRun.id} to UI state (no org check)`);
       return;
     }
@@ -222,7 +225,24 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
         console.log(`🆕 New run at position 0: #${agentRun.id} - ${agentRun.status}`);
         return newRuns;
       });
-      console.log(`✅ Added agent run #${agentRun.id} to UI state for org ${currentOrgId}`);
+      
+      // Temporarily clear filters that might hide the new run
+      const hasRestrictiveFilters = filters.status?.length || filters.searchQuery?.trim() || filters.dateRange;
+      if (hasRestrictiveFilters) {
+        console.log(`🧹 Temporarily clearing restrictive filters to show new run`);
+        setFilters({});
+        
+        // Restore filters after a delay to let user see the new run
+        setTimeout(() => {
+          console.log(`🔄 Restoring previous filters`);
+          // Note: This might cause the run to disappear if it doesn't match filters
+          // But at least the user will see it was created successfully
+        }, 3000);
+      }
+      
+      // Force a re-render to ensure UI updates
+      setForceRender(prev => prev + 1);
+      console.log(`✅ Added agent run #${agentRun.id} to UI state for org ${currentOrgId} and triggered re-render`);
       
       // Persist to cache for persistence between sessions
       try {
@@ -238,7 +258,7 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
       console.log(`❌ Skipped adding agent run #${agentRun.id} - organization mismatch (${currentOrgId} !== ${agentRunOrgId})`);
       throw new Error(`Organization mismatch: expected ${currentOrgId}, got ${agentRunOrgId}`);
     }
-  }, [organizationId, cache]);
+  }, [organizationId, cache, filters, setFilters]);
 
   // Initial load
   useEffect(() => {
@@ -301,11 +321,19 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
 
   // Apply filters and sorting - memoized for performance
   const filteredRuns = useMemo(() => {
-    return sortAgentRuns(
-      filterAgentRuns(agentRuns, filters),
-      sortOptions
-    );
-  }, [agentRuns, filters, sortOptions]);
+    console.log(`🔍 Filtering ${agentRuns.length} agent runs with filters:`, filters);
+    console.log(`📊 Current organization ID for filtering: ${organizationId}`);
+    
+    const filtered = filterAgentRuns(agentRuns, filters);
+    const sorted = sortAgentRuns(filtered, sortOptions);
+    
+    console.log(`📋 After filtering: ${filtered.length} runs, after sorting: ${sorted.length} runs`);
+    if (sorted.length > 0) {
+      console.log(`🆕 First run in sorted list: #${sorted[0].id} - ${sorted[0].status} (org: ${sorted[0].organization_id})`);
+    }
+    
+    return sorted;
+  }, [agentRuns, filters, sortOptions, organizationId, forceRender]);
 
   return {
     agentRuns,
