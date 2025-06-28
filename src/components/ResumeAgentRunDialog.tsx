@@ -148,14 +148,11 @@ export function ResumeAgentRunDialog({
     setErrorDetails(null);
 
     try {
-      // Check circuit breaker state
-      const circuitBreakerState = automationCircuitBreaker.getState();
-      const fallbackCheck = shouldUseFallback(new Error('pre-check'), circuitBreakerState);
-      
-      if (fallbackCheck.useFallback || !backendHealthy) {
-        console.log("🔄 Using fallback mode:", fallbackCheck.reason || 'Backend unhealthy');
+      // Only use fallback if backend is explicitly unhealthy
+      if (!backendHealthy) {
+        console.log("🔄 Using fallback mode: Backend unhealthy");
         setFallbackMode(true);
-        throw new Error(fallbackCheck.reason || 'Backend service is unavailable');
+        throw new Error('Backend service is unavailable');
       }
 
       console.log("🚀 Using backend automation to resume agent run:", {
@@ -247,12 +244,9 @@ export function ResumeAgentRunDialog({
       const errorClassification = classifyError(error);
       setErrorDetails(errorClassification.userMessage);
       
-      // Check if we should use fallback
-      const circuitBreakerState = automationCircuitBreaker.getState();
-      const fallbackCheck = shouldUseFallback(error, circuitBreakerState);
-      
-      if (fallbackCheck.useFallback || !errorClassification.retryable) {
-        console.log("🔄 Switching to manual fallback mode:", fallbackCheck.reason);
+      // Only use fallback for non-retryable errors or if backend is unhealthy
+      if (!errorClassification.retryable || !backendHealthy) {
+        console.log("🔄 Switching to manual fallback mode:", !errorClassification.retryable ? 'Non-retryable error' : 'Backend unhealthy');
         setFallbackMode(true);
         
         // Fallback to manual approach
