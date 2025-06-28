@@ -1,3 +1,7 @@
+
+> agent-run-manager-server@1.0.0 start
+> node index.js
+
 node:events:496
       throw er; // Unhandled 'error' event
       ^
@@ -7,7 +11,7 @@ Error: listen EADDRINUSE: address already in use :::3001
     at listenInCluster (node:net:1994:12)
     at Server.listen (node:net:2099:7)
     at Function.listen (/tmp/Zeeeepa/codegenApp/server/node_modules/express/lib/application.js:635:24)
-    at file:///tmp/Zeeeepa/codegenApp/server/index.js:126:5
+    at file:///tmp/Zeeeepa/codegenApp/server/index.js:131:5
     at ModuleJob.run (node:internal/modules/esm/module_job:271:25)
     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:578:26)
     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5)
