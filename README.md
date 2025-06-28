@@ -19,8 +19,9 @@ This application is a React-based frontend that connects directly to the Codegen
 
 - Node.js 16+ and npm
 - A Codegen API token (get one from [Codegen Dashboard](https://app.codegen.com/settings))
+- **Linux users**: System dependencies for Puppeteer (see installation steps below)
 
-## 🛠��� Installation & Setup
+## 🛠���� Installation & Setup
 
 ### 1. Clone the repository
 
@@ -29,7 +30,27 @@ git clone https://github.com/Zeeeepa/codegenApp.git
 cd codegenApp
 ```
 
-### 2. Install ALL dependencies (frontend + backend + automation)
+### 2. Install system dependencies (Linux only)
+
+**Linux users must install system dependencies for Puppeteer first:**
+
+```bash
+# Run the automated installation script
+./scripts/install-puppeteer-deps.sh
+```
+
+Or install manually:
+```bash
+# Debian/Ubuntu
+sudo apt-get update && sudo apt-get install -y \
+  libnspr4 libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 \
+  libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 \
+  libasound2 libcups2 libgtk-3-0 libgconf-2-4
+```
+
+**macOS and Windows users can skip this step** - Puppeteer works out of the box.
+
+### 3. Install ALL dependencies (frontend + backend + automation)
 
 ```bash
 npm install
@@ -40,7 +61,7 @@ This automatically installs dependencies for:
 - ✅ Backend API server  
 - ✅ Automation service (for Resume Agent Run functionality)
 
-### 3. Environment Configuration
+### 4. Environment Configuration
 
 Create a `.env` file in the project root with your Codegen API credentials:
 
@@ -59,7 +80,7 @@ REACT_APP_API_BASE_URL=https://api.codegen.com
 REACT_APP_USER_ID=your_user_id_here
 ```
 
-### 4. Start ALL services (frontend + backend + automation)
+### 5. Start ALL services (frontend + backend + automation)
 
 ```bash
 npm run dev
@@ -194,6 +215,29 @@ If API calls are failing:
 - Make sure port 3000 is available
 - Try restarting the server: `npm start`
 - Check the console for detailed error messages
+
+### "Resume Agent Run" Connection Issues
+
+If you get the error "Cannot connect to backend automation service":
+
+1. **Check if backend service is running**:
+   ```bash
+   curl http://localhost:3500/health
+   ```
+
+2. **Linux users**: Install Puppeteer system dependencies:
+   ```bash
+   ./scripts/install-puppeteer-deps.sh
+   ```
+
+3. **Start the backend service manually**:
+   ```bash
+   cd backend && npm start
+   ```
+
+4. **Check service status**:
+   - Backend should show `"status": "healthy"`
+   - If status is `"unhealthy"`, check the error message for missing dependencies
 
 ## 📝 API Token Setup
 
