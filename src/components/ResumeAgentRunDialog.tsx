@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
-import { X, Play, Send, Loader } from "lucide-react";
+import { X, Play, Send, Loader, AlertTriangle } from "lucide-react";
 import { getAPIClient } from "../api/client";
 import { AgentRunResponse } from "../api/types";
+import { 
+  retryAutomationRequest, 
+  automationCircuitBreaker, 
+  classifyError, 
+  shouldUseFallback 
+} from '../utils/retryUtils';
+import proxyHealthChecker from '../utils/proxyHealthCheck';
 
 interface ResumeAgentRunDialogProps {
   isOpen: boolean;
@@ -23,6 +30,10 @@ export function ResumeAgentRunDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [agentRunDetails, setAgentRunDetails] = useState<AgentRunResponse | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [backendHealthy, setBackendHealthy] = useState(true);
+  const [fallbackMode, setFallbackMode] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
   const apiClient = getAPIClient();
 
@@ -39,14 +50,93 @@ export function ResumeAgentRunDialog({
     }
   }, [apiClient, organizationId, agentRunId]);
 
+  // Setup health monitoring
+  useEffect(() => {
+    const handleHealthChange = (event: string, data: any) => {
+      if (event === 'unhealthy') {
+        setBackendHealthy(false);
+        setErrorDetails(`Backend service is unhealthy: ${data.error}`);
+      } else if (event === 'recovered') {
+        setBackendHealthy(true);
+        setErrorDetails(null);
+        setFallbackMode(false);
+      }
+    };
+
+    proxyHealthChecker.addListener(handleHealthChange);
+    proxyHealthChecker.startHealthChecks();
+
+    return () => {
+      proxyHealthChecker.removeListener(handleHealthChange);
+      proxyHealthChecker.stopHealthChecks();
+    };
+  }, []);
+
   // Load agent run details when dialog opens
   useEffect(() => {
     if (isOpen && agentRunId && organizationId) {
       loadAgentRunDetails();
-      // Reset prompt to default when dialog opens
+      // Reset state when dialog opens
       setPrompt("Continue with the previous task");
+      setFallbackMode(false);
+      setRetryAttempt(0);
+      setErrorDetails(null);
     }
   }, [isOpen, agentRunId, organizationId, loadAgentRunDetails]);
+
+  // Extract authentication context for backend automation
+  const extractAuthContext = () => {
+    try {
+      // Extract cookies
+      const cookies = document.cookie.split(';').map(cookie => {
+        const [name, value] = cookie.trim().split('=');
+        return {
+          name: name,
+          value: value || '',
+          domain: window.location.hostname,
+          path: '/',
+          httpOnly: false,
+          secure: window.location.protocol === 'https:'
+        };
+      }).filter(cookie => cookie.name && cookie.value);
+
+      // Extract localStorage
+      const localStorage: Record<string, string> = {};
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (key) {
+          const value = window.localStorage.getItem(key);
+          if (value) {
+            localStorage[key] = value;
+          }
+        }
+      }
+
+      // Extract sessionStorage
+      const sessionStorage: Record<string, string> = {};
+      for (let i = 0; i < window.sessionStorage.length; i++) {
+        const key = window.sessionStorage.key(i);
+        if (key) {
+          const value = window.sessionStorage.getItem(key);
+          if (value) {
+            sessionStorage[key] = value;
+          }
+        }
+      }
+
+      return {
+        cookies: cookies,
+        localStorage: localStorage,
+        sessionStorage: sessionStorage,
+        userAgent: navigator.userAgent,
+        origin: window.location.origin,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Failed to extract auth context:', error);
+      return null;
+    }
+  };
 
   const handleResumeAgentRun = async () => {
     if (!prompt.trim()) {
@@ -55,65 +145,140 @@ export function ResumeAgentRunDialog({
     }
 
     setIsLoading(true);
+    setErrorDetails(null);
 
     try {
-      console.log("🚀 Using backend automation service to resume agent run:", {
+      // Check circuit breaker state
+      const circuitBreakerState = automationCircuitBreaker.getState();
+      const fallbackCheck = shouldUseFallback(new Error('pre-check'), circuitBreakerState);
+      
+      if (fallbackCheck.useFallback || !backendHealthy) {
+        console.log("🔄 Using fallback mode:", fallbackCheck.reason || 'Backend unhealthy');
+        setFallbackMode(true);
+        throw new Error(fallbackCheck.reason || 'Backend service is unavailable');
+      }
+
+      console.log("🚀 Using backend automation to resume agent run:", {
         organizationId,
         agentRunId,
         prompt: prompt.trim(),
-        agentRunStatus: agentRunDetails?.status
+        agentRunStatus: agentRunDetails?.status,
+        attempt: retryAttempt + 1
       });
       
-      // Call backend automation service
-      const result = await apiClient.resumeAgentRunAutomation(
-        agentRunId,
-        organizationId,
-        prompt.trim()
-      );
+      // Extract authentication context
+      const authContext = extractAuthContext();
+      if (!authContext) {
+        throw new Error("Failed to extract authentication context");
+      }
 
-      if (result.success) {
-        toast.success(`Agent run #${agentRunId} has been resumed successfully!`);
-        
-        // Update local cache to reflect ACTIVE status
-        try {
-          const { getAgentRunCache } = await import('../storage/agentRunCache');
-          const cache = getAgentRunCache();
-          
-          // Update the agent run status to ACTIVE
-          if (agentRunDetails) {
-            const updatedAgentRun = {
-              ...agentRunDetails,
-              status: 'ACTIVE'
-            };
-            await cache.updateAgentRun(organizationId, updatedAgentRun);
+      // Create automation request function
+      const automationRequest = async () => {
+        return await automationCircuitBreaker.execute(async () => {
+          const response = await fetch('/automation/api/resume-agent-run', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              agentRunId,
+              organizationId,
+              prompt: prompt.trim(),
+              authContext
+            })
+          });
+
+          const result = await response.json();
+
+          if (!response.ok || !result.success) {
+            const error = new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
+            throw error;
           }
-        } catch (cacheError) {
-          console.warn('Failed to update cache after resume:', cacheError);
+
+          return result;
+        });
+      };
+
+      // Execute with retry logic
+      const result = await retryAutomationRequest(automationRequest, {
+        maxAttempts: 3,
+        onRetry: (error, attempt, delay) => {
+          setRetryAttempt(attempt);
+          setErrorDetails(`Retry attempt ${attempt}: ${error.message}`);
+        }
+      });
+
+      console.log("🎉 Backend automation completed successfully:", result);
+      
+      toast.success(
+        `Agent run #${agentRunId} resumed successfully! ` +
+        `(${result.duration}ms${result.automationDuration ? `, automation: ${result.automationDuration}ms` : ''})`
+      );
+      
+      // Update local cache to reflect ACTIVE status
+      try {
+        const { getAgentRunCache } = await import('../storage/agentRunCache');
+        const cache = getAgentRunCache();
+        
+        // Update the agent run status to ACTIVE
+        if (agentRunDetails) {
+          const updatedAgentRun = {
+            ...agentRunDetails,
+            status: 'ACTIVE'
+          };
+          await cache.updateAgentRun(organizationId, updatedAgentRun);
+        }
+      } catch (cacheError) {
+        console.warn('Failed to update cache after resume:', cacheError);
+      }
+      
+      // Reset state and trigger refresh
+      setPrompt("Continue with the previous task");
+      setRetryAttempt(0);
+      setErrorDetails(null);
+      setFallbackMode(false);
+      onResumed?.(); // This will refresh the dashboard to show active state
+      onClose();
+      
+    } catch (error: any) {
+      console.error("❌ Backend automation failed:", error);
+      
+      // Classify the error
+      const errorClassification = classifyError(error);
+      setErrorDetails(errorClassification.userMessage);
+      
+      // Check if we should use fallback
+      const circuitBreakerState = automationCircuitBreaker.getState();
+      const fallbackCheck = shouldUseFallback(error, circuitBreakerState);
+      
+      if (fallbackCheck.useFallback || !errorClassification.retryable) {
+        console.log("🔄 Switching to manual fallback mode:", fallbackCheck.reason);
+        setFallbackMode(true);
+        
+        // Fallback to manual approach
+        const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
+        window.open(chatUrl, '_blank', 'noopener,noreferrer');
+        
+        try {
+          await navigator.clipboard.writeText(prompt.trim());
+          toast.success(
+            "Automation failed - opened agent chat in new tab and copied prompt to clipboard. " +
+            "Please paste the prompt manually."
+          );
+        } catch (clipboardError) {
+          console.error("Failed to copy to clipboard:", clipboardError);
+          toast.success(
+            "Automation failed - opened agent chat in new tab. " +
+            "Please enter your prompt manually."
+          );
         }
         
-        // Reset to default and trigger refresh
-        setPrompt("Continue with the previous task");
-        onResumed?.(); // Trigger refresh to show updated status
         onClose();
       } else {
-        throw new Error(result.error || 'Backend automation failed');
+        // Show error but don't close dialog - user can retry
+        toast.error(`Automation failed: ${errorClassification.userMessage}`);
       }
       
-    } catch (error) {
-      console.error("Backend automation failed:", error);
-      
-      // Provide helpful error message based on error type
-      let errorMessage = 'Unknown error';
-      if (error instanceof Error) {
-        if (error.message.includes('Backend automation service not available') || 
-            error.message.includes('Cannot connect to backend')) {
-          errorMessage = `${error.message}\n\nTo enable resume functionality:\n1. Navigate to the 'backend' directory\n2. Run 'npm install' then 'npm start'\n3. Ensure the backend server is running on port 3500`;
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      toast.error(`Failed to resume agent run: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -200,6 +365,47 @@ export function ResumeAgentRunDialog({
                       💡 <strong>Resume Instructions:</strong> Enter a prompt to continue this agent run. 
                       The system will automatically open the agent chat and send your message.
                     </p>
+                  </div>
+
+                  {/* Backend Status Indicators */}
+                  <div className="space-y-2">
+                    {/* Backend Health Status */}
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-2 h-2 rounded-full ${backendHealthy ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                      <span className="text-xs text-gray-400">
+                        Backend: {backendHealthy ? 'Healthy' : 'Unhealthy'}
+                      </span>
+                    </div>
+
+                    {/* Fallback Mode Indicator */}
+                    {fallbackMode && (
+                      <div className="flex items-center space-x-2">
+                        <AlertTriangle className="w-3 h-3 text-yellow-400" />
+                        <span className="text-xs text-yellow-400">
+                          Fallback mode active - will open manual chat
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Retry Attempt Indicator */}
+                    {retryAttempt > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <Loader className="w-3 h-3 animate-spin text-blue-400" />
+                        <span className="text-xs text-blue-400">
+                          Retry attempt {retryAttempt}/3
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Error Details */}
+                    {errorDetails && (
+                      <div className="bg-red-900/20 border border-red-700/50 rounded p-2">
+                        <p className="text-red-200 text-xs">
+                          <AlertTriangle className="w-3 h-3 inline mr-1" />
+                          {errorDetails}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (

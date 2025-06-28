@@ -2,4 +2,39 @@
 > agent-run-manager-web@1.0.0 start
 > PORT=8080 react-scripts start
 
-Something is already running on port 8080.
+(node:37782) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:37782) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+Starting the development server...
+
+Compiled successfully!
+
+You can now view agent-run-manager-web in the browser.
+
+  Local:            http://localhost:8080
+  On Your Network:  http://172.20.22.124:8080
+
+Note that the development build is not optimized.
+To create a production build, use npm run build.
+
+webpack compiled successfully
+Files successfully emitted, waiting for typecheck results...
+Issues checking in progress...
+No issues found.
+(node:37782) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+/api proxy error: {
+  error: 'connect ECONNREFUSED 127.0.0.1:3004',
+  code: 'ECONNREFUSED',
+  target: 'http://localhost:3004',
+  url: '/api/health',
+  method: 'GET'
+}
+[HPM] Error occurred while proxying request localhost:8080/api/health to http://localhost:3004/ [ECONNREFUSED] (https://nodejs.org/api/errors.html#errors_common_system_errors)
+/v1 proxy error: {
+  error: 'connect ECONNREFUSED 127.0.0.1:3004',
+  code: 'ECONNREFUSED',
+  target: 'http://localhost:3004',
+  url: '/v1/health',
+  method: 'GET'
+}
+[HPM] Error occurred while proxying request localhost:8080/v1/health to http://localhost:3004/ [ECONNREFUSED] (https://nodejs.org/api/errors.html#errors_common_system_errors)
