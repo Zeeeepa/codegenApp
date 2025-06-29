@@ -55,8 +55,41 @@ class ChromeCookieExtractor:
         print("Available Chrome profiles:")
         for i, profile in enumerate(self.chrome_paths):
             cookies_db = profile['path'] / 'Cookies'
-            status = "✅" if cookies_db.exists() else "❌"
-            print(f"  {i}: {status} {profile['browser']} - {profile['name']} ({profile['path']})")
+            
+            # Check for alternative cookie file locations
+            alt_locations = [
+                profile['path'] / 'Cookies',
+                profile['path'] / 'Network' / 'Cookies',
+                profile['path'] / 'Default' / 'Cookies',
+            ]
+            
+            found_cookies = None
+            for location in alt_locations:
+                if location.exists():
+                    found_cookies = location
+                    break
+            
+            if found_cookies:
+                status = "✅"
+                size_mb = found_cookies.stat().st_size / (1024 * 1024)
+                size_info = f" ({size_mb:.1f}MB)"
+            else:
+                status = "❌"
+                size_info = ""
+                
+                # Check if profile has been used at all
+                has_files = any(profile['path'].iterdir()) if profile['path'].exists() else False
+                if not has_files:
+                    size_info = " (unused profile)"
+                else:
+                    # List what files do exist
+                    existing_files = [f.name for f in profile['path'].iterdir() if f.is_file()][:3]
+                    if existing_files:
+                        size_info = f" (has: {', '.join(existing_files)}...)"
+            
+            print(f"  {i}: {status} {profile['browser']} - {profile['name']}{size_info}")
+            print(f"      Path: {profile['path']}")
+            
         return self.chrome_paths
     
     def extract_cookies(self, profile_index=0, domain_filter=None):
@@ -65,12 +98,43 @@ class ChromeCookieExtractor:
             raise ValueError(f"Profile index {profile_index} not found")
         
         profile = self.chrome_paths[profile_index]
-        cookies_db = profile['path'] / 'Cookies'
         
-        if not cookies_db.exists():
-            raise FileNotFoundError(f"Cookies database not found: {cookies_db}")
+        # Check for alternative cookie file locations
+        alt_locations = [
+            profile['path'] / 'Cookies',
+            profile['path'] / 'Network' / 'Cookies',
+            profile['path'] / 'Default' / 'Cookies',
+        ]
+        
+        cookies_db = None
+        for location in alt_locations:
+            if location.exists():
+                cookies_db = location
+                break
+        
+        if not cookies_db:
+            # Provide helpful error message with what we found
+            profile_contents = []
+            if profile['path'].exists():
+                profile_contents = [f.name for f in profile['path'].iterdir() if f.is_file()]
+            
+            error_msg = f"Cookies database not found in profile: {profile['name']}\n"
+            error_msg += f"Searched locations:\n"
+            for loc in alt_locations:
+                error_msg += f"  - {loc}\n"
+            
+            if profile_contents:
+                error_msg += f"Profile contains these files: {', '.join(profile_contents[:10])}"
+                if len(profile_contents) > 10:
+                    error_msg += f" (and {len(profile_contents) - 10} more)"
+            else:
+                error_msg += "Profile appears to be empty or unused."
+                error_msg += "\n\nTry:\n1. Open Chrome and visit codegen.com\n2. Log in to your account\n3. Close Chrome completely\n4. Run this script again"
+            
+            raise FileNotFoundError(error_msg)
         
         print(f"Extracting cookies from {profile['browser']} - {profile['name']}")
+        print(f"Using cookies database: {cookies_db}")
         
         # Create temporary copy of cookies database (Chrome locks the original)
         with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as temp_file:
@@ -213,6 +277,73 @@ class ChromeCookieExtractor:
                 f.write('; '.join(cookie_strings))
         
         print(f"Saved {len(cookies)} cookies to {output_file} (format: {format_type})")
+    
+    def diagnose_chrome(self):
+        """Run diagnostic checks for Chrome installation"""
+        print("🔍 Chrome Installation Diagnostics")
+        print("=" * 50)
+        
+        # Check Chrome executable
+        chrome_exes = [
+            "C:/Program Files/Google/Chrome/Application/chrome.exe",
+            "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+            Path.home() / "AppData/Local/Google/Chrome/Application/chrome.exe",
+        ]
+        
+        chrome_found = False
+        for exe_path in chrome_exes:
+            if Path(exe_path).exists():
+                print(f"✅ Chrome executable found: {exe_path}")
+                chrome_found = True
+                break
+        
+        if not chrome_found:
+            print("❌ Chrome executable not found in standard locations")
+            print("   Chrome may not be installed or in a custom location")
+        
+        # Check User Data directories
+        print(f"\n📁 User Data Directories:")
+        for profile in self.chrome_paths:
+            print(f"\n{profile['browser']} - {profile['name']}:")
+            print(f"  Path: {profile['path']}")
+            print(f"  Exists: {'✅' if profile['path'].exists() else '❌'}")
+            
+            if profile['path'].exists():
+                files = list(profile['path'].iterdir())
+                print(f"  Files: {len(files)} items")
+                
+                # Check for key files
+                key_files = ['Cookies', 'Preferences', 'History', 'Bookmarks']
+                for key_file in key_files:
+                    file_path = profile['path'] / key_file
+                    if file_path.exists():
+                        size = file_path.stat().st_size
+                        print(f"    ✅ {key_file} ({size:,} bytes)")
+                    else:
+                        print(f"    ❌ {key_file}")
+        
+        # Check if Chrome is running
+        print(f"\n🔄 Process Check:")
+        try:
+            import psutil
+            chrome_processes = [p for p in psutil.process_iter(['pid', 'name']) 
+                              if 'chrome' in p.info['name'].lower()]
+            if chrome_processes:
+                print(f"⚠️  Chrome is currently running ({len(chrome_processes)} processes)")
+                print("   Close Chrome before extracting cookies for best results")
+            else:
+                print("✅ Chrome is not running")
+        except ImportError:
+            print("ℹ️  Install 'psutil' package to check if Chrome is running")
+        
+        print(f"\n💡 Recommendations:")
+        if not chrome_found:
+            print("  1. Install Google Chrome from https://chrome.google.com")
+        else:
+            print("  1. Open Chrome and visit codegen.com")
+            print("  2. Log in to your codegen account")
+            print("  3. Close Chrome completely")
+            print("  4. Run the cookie extraction again")
 
 def main():
     parser = argparse.ArgumentParser(description='Extract Chrome cookies for WSL2 transfer')
@@ -229,11 +360,17 @@ def main():
                        help='List available Chrome profiles and exit')
     parser.add_argument('--all-domains', '-a', action='store_true',
                        help='Extract cookies for all domains (not just --domain)')
+    parser.add_argument('--diagnose', action='store_true',
+                       help='Run diagnostic checks for Chrome installation')
     
     args = parser.parse_args()
     
     try:
         extractor = ChromeCookieExtractor()
+        
+        if args.diagnose:
+            extractor.diagnose_chrome()
+            return
         
         if args.list_profiles:
             extractor.list_profiles()
@@ -295,4 +432,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
