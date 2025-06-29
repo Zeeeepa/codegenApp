@@ -109,14 +109,7 @@ export class CodegenAPIClient {
       throw new Error("Access denied");
     }
 
-    if (response.status === 429) {
-      await showToast({
-        style: ToastStyle.Failure,
-        title: "Rate Limit Exceeded",
-        message: "Please wait a moment before trying again.",
-      });
-      throw new Error("Rate limit exceeded");
-    }
+    // Rate limiting removed - no 429 status handling needed
 
     await showToast({
       style: ToastStyle.Failure,
