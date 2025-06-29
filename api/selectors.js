@@ -102,7 +102,7 @@ async function waitForElement(page, selectors, timeout = 10000) {
     }
     
     // Wait a bit before trying again
-    await page.waitForTimeout(500);
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
   
   return null;
@@ -138,10 +138,10 @@ async function waitForPageLoad(page, timeout = 30000) {
     // Wait for network to be idle (Puppeteer method)
     await page.waitForLoadState ? 
       await page.waitForLoadState('networkidle', { timeout }) :
-      await page.waitForTimeout(3000);
+      await new Promise(resolve => setTimeout(resolve, 3000));
     
     // Wait for React to render
-    await page.waitForTimeout(2000);
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Wait for chat interface to be ready
     await page.waitForFunction(() => {

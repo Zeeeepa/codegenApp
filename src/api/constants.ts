@@ -17,6 +17,13 @@ export const API_ENDPOINTS = {
   // Agent Run endpoints
   AGENT_RUN_CREATE: (organizationId: number) => 
     `/v1/organizations/${organizationId}/agent/run`,
+  AGENT_RUN_LIST: (organizationId: number, page?: number, size?: number) => {
+    const params = new URLSearchParams();
+    if (page !== undefined) params.append('page', page.toString());
+    if (size !== undefined) params.append('size', size.toString());
+    const queryString = params.toString();
+    return `/v1/organizations/${organizationId}/agent/runs${queryString ? `?${queryString}` : ''}`;
+  },
   AGENT_RUN_GET: (organizationId: number, agentRunId: number) => 
     `/v1/organizations/${organizationId}/agent/run/${agentRunId}`,
   AGENT_RUN_RESUME: (organizationId: number, agentRunId: number) => 

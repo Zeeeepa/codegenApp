@@ -106,7 +106,7 @@ async function resumeAgentRun({ agentRunId, organizationId, prompt, authContext 
     await chatInput.type(prompt, { delay: 50 });
 
     // Wait a moment for React to process the input
-    await page.waitForTimeout(1000);
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Find and click send button
     logger.info('Looking for send button');
@@ -124,7 +124,7 @@ async function resumeAgentRun({ agentRunId, organizationId, prompt, authContext 
     await sendButton.click();
 
     // Wait for message to be sent (look for loading indicators or new message)
-    await page.waitForTimeout(2000);
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Verify message was sent by checking if input is cleared or disabled
     const inputValue = await chatInput.evaluate(el => el.value);

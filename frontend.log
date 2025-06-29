@@ -1,0 +1,20 @@
+
+> agent-run-manager-web@1.0.0 start
+> PORT=8080 NODE_OPTIONS="--no-deprecation" react-scripts start
+
+Starting the development server...
+
+Compiled successfully!
+
+You can now view agent-run-manager-web in the browser.
+
+  Local:            http://localhost:8080
+  On Your Network:  http://172.20.23.14:8080
+
+Note that the development build is not optimized.
+To create a production build, use npm run build.
+
+webpack compiled successfully
+Files successfully emitted, waiting for typecheck results...
+Issues checking in progress...
+No issues found.
