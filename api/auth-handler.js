@@ -33,6 +33,11 @@ async function applyAuthContext(page, authContext) {
         if (chromeCookies && chromeCookies.length > 0) {
           cookiesToSet = extractor.toPuppeteerFormat(chromeCookies);
           logger.info(`Extracted ${cookiesToSet.length} cookies from Chrome browser`);
+          
+          // Log cookie details for debugging (without values for security)
+          cookiesToSet.forEach(cookie => {
+            logger.info(`Chrome cookie: ${cookie.name} (domain: ${cookie.domain}, secure: ${cookie.secure})`);
+          });
         } else {
           logger.warn('No cookies found in Chrome browser for codegen.com');
         }
@@ -47,15 +52,44 @@ async function applyAuthContext(page, authContext) {
       // Filter and fix cookies for codegen.com domain
       const validCookies = cookiesToSet
         .filter(cookie => cookie.name && cookie.value)
-        .map(cookie => ({
-          ...cookie,
-          domain: '.codegen.com', // Ensure cookies work for codegen.com
-          url: 'https://codegen.com' // Add URL for proper cookie setting
-        }));
+        .map(cookie => {
+          // Ensure proper domain format for codegen.com
+          let domain = cookie.domain;
+          if (!domain || (!domain.includes('codegen.com'))) {
+            domain = '.codegen.com';
+          }
+          
+          return {
+            ...cookie,
+            domain: domain,
+            url: 'https://codegen.com', // Add URL for proper cookie setting
+            // Ensure secure cookies for HTTPS
+            secure: true,
+            // Handle sameSite properly
+            sameSite: cookie.sameSite || 'None'
+          };
+        });
       
       if (validCookies.length > 0) {
-        await page.setCookie(...validCookies);
-        logger.info(`Successfully set ${validCookies.length} cookies for codegen.com`);
+        try {
+          await page.setCookie(...validCookies);
+          logger.info(`Successfully set ${validCookies.length} cookies for codegen.com`);
+          
+          // Verify cookies were set
+          const setCookies = await page.cookies('https://codegen.com');
+          logger.info(`Verified ${setCookies.length} cookies are now set for codegen.com`);
+        } catch (cookieError) {
+          logger.error('Failed to set cookies:', cookieError.message);
+          // Try setting cookies one by one to identify problematic ones
+          for (const cookie of validCookies) {
+            try {
+              await page.setCookie(cookie);
+              logger.info(`Successfully set individual cookie: ${cookie.name}`);
+            } catch (individualError) {
+              logger.warn(`Failed to set cookie ${cookie.name}:`, individualError.message);
+            }
+          }
+        }
       }
     }
 
@@ -238,14 +272,18 @@ async function checkAuthentication(page) {
 
     logger.info('Authentication check results', authChecks);
 
-    // More lenient authentication check:
-    // - If we're on the trace page and don't have obvious login buttons, assume authenticated
+    // Check if we're redirected to login page
+    const isOnLoginPage = authChecks.url.includes('/login') || authChecks.url.includes('/signin');
+    
+    // More robust authentication check:
+    // - If we're redirected to login page, definitely not authenticated
     // - If we have a chat interface, assume authenticated
     // - If we have user profile indicators, assume authenticated
-    const isAuthenticated = (
-      (authChecks.isOnTracePage && !authChecks.hasLoginButton && !authChecks.hasError) ||
+    // - If we're on the trace page and don't have obvious login buttons, assume authenticated
+    const isAuthenticated = !isOnLoginPage && (
       authChecks.hasChatInterface ||
-      authChecks.hasUserProfile
+      authChecks.hasUserProfile ||
+      (authChecks.isOnTracePage && !authChecks.hasLoginButton && !authChecks.hasError)
     );
 
     return isAuthenticated;
