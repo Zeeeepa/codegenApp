@@ -10,3 +10,65 @@ false
 false
 false
 false
+false
+false
+false
+false
+false
+false
+false
+false
+false
+false
+{"timestamp":"2025-06-29 16:51:52.932","level":"info","message":"Resume agent run request received","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","organizationId":"323","promptLength":35,"hasAuthContext":true}
+{"timestamp":"2025-06-29 16:51:52.932","level":"info","message":"Starting agent run resume automation","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","organizationId":"323","promptLength":35,"hasAuth":true}
+false
+false
+false
+false
+false
+false
+{"timestamp":"2025-06-29 16:51:53.328","level":"info","message":"Navigating to agent run page","service":"automation-backend","version":"1.0.0","environment":"development","chatUrl":"https://codegen.com/agent/trace/45771"}
+false
+false
+false
+{"timestamp":"2025-06-29 16:51:57.006","level":"error","message":"Agent run resume failed","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","organizationId":"323","error":"page.waitForTimeout is not a function","stack":"TypeError: page.waitForTimeout is not a function\n    at waitForElement (/tmp/Zeeeepa/codegenApp/api/selectors.js:105:16)\n    at async findChatInput (/tmp/Zeeeepa/codegenApp/api/selectors.js:118:10)\n    at async resumeAgentRun (/tmp/Zeeeepa/codegenApp/api/automation-service.js:88:23)\n    at async /tmp/Zeeeepa/codegenApp/api/server.js:152:20","duration":4074}
+{"timestamp":"2025-06-29 16:51:57.284","level":"error","message":"Agent run resume failed","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","error":"page.waitForTimeout is not a function"}
+false
+false
+false
+false
+false
+false
+false
+false
+false
+false
+false
+false
+{"timestamp":"2025-06-29 16:54:17.658","level":"info","message":"Resume agent run request received","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","organizationId":"323","promptLength":35,"hasAuthContext":true}
+{"timestamp":"2025-06-29 16:54:17.659","level":"info","message":"Starting agent run resume automation","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","organizationId":"323","promptLength":35,"hasAuth":true}
+false
+false
+false
+false
+false
+false
+{"timestamp":"2025-06-29 16:54:18.145","level":"info","message":"Navigating to agent run page","service":"automation-backend","version":"1.0.0","environment":"development","chatUrl":"https://codegen.com/agent/trace/45771"}
+false
+false
+false
+false
+{"timestamp":"2025-06-29 16:54:59.209","level":"error","message":"Agent run resume failed","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","organizationId":"323","error":"Could not find chat input element","stack":"Error: Could not find chat input element\n    at resumeAgentRun (/tmp/Zeeeepa/codegenApp/api/automation-service.js:93:13)\n    at async /tmp/Zeeeepa/codegenApp/api/server.js:152:20","duration":41550}
+{"timestamp":"2025-06-29 16:54:59.499","level":"error","message":"Agent run resume failed","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","error":"Could not find chat input element"}
+false
+false
+false
+false
+false
+false
+false
+{"timestamp":"2025-06-29 16:55:14.238","level":"info","message":"Test automation request received","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771"}
+{"timestamp":"2025-06-29 16:55:14.239","level":"info","message":"Starting automation test","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771"}
+false
+false
