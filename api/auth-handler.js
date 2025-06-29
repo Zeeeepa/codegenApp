@@ -4,6 +4,7 @@
  */
 
 const logger = require('./logger');
+const ChromeCookieExtractor = require('./chrome-cookie-extractor');
 
 /**
  * Apply authentication context to a Puppeteer page
@@ -17,12 +18,34 @@ async function applyAuthContext(page, authContext) {
   }
 
   try {
+    let cookiesToSet = [];
+    
     // Set cookies if provided
-    if (authContext.cookies && Array.isArray(authContext.cookies)) {
-      logger.info(`Setting ${authContext.cookies.length} cookies`);
+    if (authContext.cookies && Array.isArray(authContext.cookies) && authContext.cookies.length > 0) {
+      logger.info(`Setting ${authContext.cookies.length} cookies from auth context`);
+      cookiesToSet = authContext.cookies;
+    } else {
+      // Try to extract cookies from Chrome if none provided
+      logger.info('No cookies in auth context, attempting to extract from Chrome browser');
+      try {
+        const extractor = new ChromeCookieExtractor();
+        const chromeCookies = await extractor.getCookiesForDomain('codegen.com');
+        if (chromeCookies && chromeCookies.length > 0) {
+          cookiesToSet = extractor.toPuppeteerFormat(chromeCookies);
+          logger.info(`Extracted ${cookiesToSet.length} cookies from Chrome browser`);
+        } else {
+          logger.warn('No cookies found in Chrome browser for codegen.com');
+        }
+      } catch (chromeError) {
+        logger.warn('Failed to extract cookies from Chrome:', chromeError.message);
+      }
+    }
+    
+    if (cookiesToSet.length > 0) {
+      logger.info(`Setting ${cookiesToSet.length} cookies`);
       
       // Filter and fix cookies for codegen.com domain
-      const validCookies = authContext.cookies
+      const validCookies = cookiesToSet
         .filter(cookie => cookie.name && cookie.value)
         .map(cookie => ({
           ...cookie,
@@ -161,7 +184,8 @@ function validateAuthContext(authContext) {
 async function checkAuthentication(page) {
   try {
     // Wait for page to load
-    await page.waitForTimeout(2000);
+    // Wait for page to load - use setTimeout instead of deprecated waitForTimeout
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Check for common authentication indicators
     const authChecks = await page.evaluate(() => {
