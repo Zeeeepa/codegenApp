@@ -98,3 +98,28 @@ false
 false
 false
 false
+false
+false
+false
+false
+false
+false
+false
+{"timestamp":"2025-06-29 18:04:52.230","level":"info","message":"Resume agent run request received","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","organizationId":"323","promptLength":48,"hasAuthContext":true}
+{"timestamp":"2025-06-29 18:04:52.230","level":"info","message":"Starting agent run resume automation","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","organizationId":"323","promptLength":48,"hasAuth":true}
+false
+false
+false
+false
+false
+false
+false
+{"timestamp":"2025-06-29 18:04:53.145","level":"info","message":"Navigating to agent run page","service":"automation-backend","version":"1.0.0","environment":"development","chatUrl":"https://codegen.com/agent/trace/45771"}
+false
+false
+{"timestamp":"2025-06-29 18:05:18.914","level":"error","message":"Agent run resume failed","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","organizationId":"323","error":"Authentication failed - user not logged in to Codegen","stack":"Error: Authentication failed - user not logged in to Codegen\n    at resumeAgentRun (/tmp/Zeeeepa/codegenApp/api/automation-service.js:81:13)\n    at async /tmp/Zeeeepa/codegenApp/api/server.js:144:20","duration":26684}
+{"timestamp":"2025-06-29 18:05:19.452","level":"error","message":"Agent run resume failed","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","error":"Authentication failed - user not logged in to Codegen"}
+false
+false
+false
+false
