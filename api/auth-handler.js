@@ -20,7 +20,20 @@ async function applyAuthContext(page, authContext) {
     // Set cookies if provided
     if (authContext.cookies && Array.isArray(authContext.cookies)) {
       logger.info(`Setting ${authContext.cookies.length} cookies`);
-      await page.setCookie(...authContext.cookies);
+      
+      // Filter and fix cookies for codegen.com domain
+      const validCookies = authContext.cookies
+        .filter(cookie => cookie.name && cookie.value)
+        .map(cookie => ({
+          ...cookie,
+          domain: '.codegen.com', // Ensure cookies work for codegen.com
+          url: 'https://codegen.com' // Add URL for proper cookie setting
+        }));
+      
+      if (validCookies.length > 0) {
+        await page.setCookie(...validCookies);
+        logger.info(`Successfully set ${validCookies.length} cookies for codegen.com`);
+      }
     }
 
     // Set local storage if provided
@@ -171,22 +184,45 @@ async function checkAuthentication(page) {
       const hasChatInterface = !!(
         document.querySelector('#chat-bar') ||
         document.querySelector('[class*="chat"]') ||
-        document.querySelector('textarea[placeholder*="message" i]')
+        document.querySelector('textarea[placeholder*="message" i]') ||
+        document.querySelector('textarea[placeholder*="type" i]') ||
+        document.querySelector('input[placeholder*="message" i]')
+      );
+
+      // Check if we're on the agent trace page (good sign)
+      const isOnTracePage = window.location.href.includes('/agent/trace/');
+      
+      // Check for error pages or redirects
+      const hasError = !!(
+        document.querySelector('.error') ||
+        document.querySelector('[class*="error"]') ||
+        document.title.toLowerCase().includes('error') ||
+        document.title.toLowerCase().includes('not found')
       );
 
       return {
         hasLoginButton,
         hasUserProfile,
         hasChatInterface,
+        isOnTracePage,
+        hasError,
         url: window.location.href,
-        title: document.title
+        title: document.title,
+        bodyClasses: document.body.className
       };
     });
 
     logger.info('Authentication check results', authChecks);
 
-    // If we have a chat interface and no login button, likely authenticated
-    const isAuthenticated = authChecks.hasChatInterface && !authChecks.hasLoginButton;
+    // More lenient authentication check:
+    // - If we're on the trace page and don't have obvious login buttons, assume authenticated
+    // - If we have a chat interface, assume authenticated
+    // - If we have user profile indicators, assume authenticated
+    const isAuthenticated = (
+      (authChecks.isOnTracePage && !authChecks.hasLoginButton && !authChecks.hasError) ||
+      authChecks.hasChatInterface ||
+      authChecks.hasUserProfile
+    );
 
     return isAuthenticated;
 

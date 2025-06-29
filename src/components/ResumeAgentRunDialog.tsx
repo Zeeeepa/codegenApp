@@ -169,6 +169,13 @@ export function ResumeAgentRunDialog({
         throw new Error("Failed to extract authentication context");
       }
 
+      console.log("🔐 Authentication context extracted:", {
+        cookieCount: authContext.cookies?.length || 0,
+        localStorageKeys: Object.keys(authContext.localStorage || {}).length,
+        sessionStorageKeys: Object.keys(authContext.sessionStorage || {}).length,
+        origin: authContext.origin
+      });
+
       // Create automation request function
       const automationRequest = async () => {
         return await automationCircuitBreaker.execute(async () => {
