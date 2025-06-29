@@ -4,7 +4,7 @@ async function testWorkflow() {
   console.log('🚀 Starting Agent Run Workflow Test...');
   
   const browser = await puppeteer.launch({ 
-    headless: false,
+    headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
   
@@ -14,7 +14,7 @@ async function testWorkflow() {
     // Navigate to the application
     console.log('📱 Opening application...');
     await page.goto('http://localhost:8080');
-    await page.waitForTimeout(3000);
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     // Take a screenshot
     await page.screenshot({ path: 'test-1-homepage.png' });
@@ -22,12 +22,14 @@ async function testWorkflow() {
     
     // Look for the create run button
     console.log('🔍 Looking for create run button...');
-    const createButton = await page.$('button[data-testid="create-run"], button:contains("Create"), button:contains("New")');
+    const createButton = await page.$('button[data-testid="create-run"]') || 
+                         await page.$('button') ||
+                         await page.$('[role="button"]');
     
     if (createButton) {
       console.log('✅ Found create button, clicking...');
       await createButton.click();
-      await page.waitForTimeout(2000);
+      await new Promise(resolve => setTimeout(resolve, 2000));
       await page.screenshot({ path: 'test-2-create-dialog.png' });
       console.log('📸 Screenshot saved: test-2-create-dialog.png');
     } else {
@@ -45,7 +47,11 @@ async function testWorkflow() {
     
   } catch (error) {
     console.error('❌ Test failed:', error);
-    await page.screenshot({ path: 'test-error.png' });
+    try {
+      await page.screenshot({ path: 'test-error.png' });
+    } catch (e) {
+      console.log('Could not take error screenshot');
+    }
   } finally {
     await browser.close();
   }
