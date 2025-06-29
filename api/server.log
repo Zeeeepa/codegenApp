@@ -1,0 +1,15 @@
+[32minfo[39m: 🤖 Automation backend server running on port 3001 {"environment":"development","frontendUrl":"http://localhost:8080","port":3001,"service":"automation-backend","timestamp":"2025-06-29 15:57:27.316","version":"1.0.0"}
+🤖 Automation backend server running on port 3001
+🌐 Frontend URL: http://localhost:8080
+🔧 Environment: development
+📋 Available endpoints:
+   GET  /health
+   POST /api/resume-agent-run
+   POST /api/test-automation
+   GET  /api/auth-script
+   ALL  /api/v1/* (Codegen API Proxy)
+[33mwarn[39m: Service unhealthy {"environment":"development","service":"automation-backend","timestamp":"2025-06-29 15:57:57.324","unhealthyServices":["Failed to launch the browser process!\n/root/.cache/puppeteer/chrome/linux-138.0.7204.49/chrome-linux64/chrome: error while loading shared libraries: libnspr4.so: cannot open shared object file: No such file or directory\n\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n"],"version":"1.0.0"}
+[32minfo[39m: Health check completed {"environment":"development","service":"automation-backend","services":{"disk":{"lastCheck":null,"status":"unknown"},"memory":{"lastCheck":1751212677324,"status":"healthy","usage":{"heap":{"total":17.07,"used":14.27},"system":{"total":12288,"usage":7.88,"used":968.52}}},"puppeteer":{"error":"Failed to launch the browser process!\n/root/.cache/puppeteer/chrome/linux-138.0.7204.49/chrome-linux64/chrome: error while loading shared libraries: libnspr4.so: cannot open shared object file: No such file or directory\n\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n","lastCheck":1751212677323,"status":"unhealthy"}},"status":"unhealthy","timestamp":"2025-06-29 15:57:57.325","version":"1.0.0"}
+[33mwarn[39m: Service unhealthy {"environment":"development","service":"automation-backend","timestamp":"2025-06-29 15:58:27.322","unhealthyServices":["Failed to launch the browser process!\n/root/.cache/puppeteer/chrome/linux-138.0.7204.49/chrome-linux64/chrome: error while loading shared libraries: libnspr4.so: cannot open shared object file: No such file or directory\n\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n"],"version":"1.0.0"}
+[32minfo[39m: Health check completed {"environment":"development","service":"automation-backend","services":{"disk":{"lastCheck":null,"status":"unknown"},"memory":{"lastCheck":1751212707322,"status":"healthy","usage":{"heap":{"total":17.07,"used":14.6},"system":{"total":12288,"usage":7.88,"used":968.81}}},"puppeteer":{"error":"Failed to launch the browser process!\n/root/.cache/puppeteer/chrome/linux-138.0.7204.49/chrome-linux64/chrome: error while loading shared libraries: libnspr4.so: cannot open shared object file: No such file or directory\n\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n","lastCheck":1751212707320,"status":"unhealthy"}},"status":"unhealthy","timestamp":"2025-06-29 15:58:27.322","version":"1.0.0"}
+[32minfo[39m: SIGTERM received, shutting down gracefully {"environment":"development","service":"automation-backend","timestamp":"2025-06-29 15:58:36.555","version":"1.0.0"}
