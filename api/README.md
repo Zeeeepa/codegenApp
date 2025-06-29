@@ -8,7 +8,6 @@ This backend service provides headless browser automation for resuming Codegen a
 - **Authentication Context Transfer**: Securely transfers user authentication from frontend
 - **Robust Element Detection**: Multiple fallback strategies for finding UI elements
 - **Comprehensive Error Handling**: Detailed logging and error reporting
-- **Rate Limiting**: Protection against abuse
 - **CORS Support**: Configured for frontend integration
 
 ## Installation
@@ -131,8 +130,6 @@ Environment variables (see `.env.example`):
 - `LOG_LEVEL`: Logging level (default: info)
 - `PUPPETEER_HEADLESS`: Run Puppeteer in headless mode (default: true)
 - `PUPPETEER_TIMEOUT`: Page load timeout in ms (default: 30000)
-- `RATE_LIMIT_WINDOW_MS`: Rate limiting window (default: 900000)
-- `RATE_LIMIT_MAX_REQUESTS`: Max requests per window (default: 100)
 
 ## Architecture
 
@@ -204,7 +201,6 @@ The automation service is accessible through the frontend proxy at:
 ## Security Considerations
 
 - Authentication context is handled securely and not logged
-- Rate limiting prevents abuse
 - CORS is configured for specific frontend origins
 - Input validation on all endpoints
 - No sensitive data is stored persistently
@@ -217,7 +213,6 @@ The automation service is accessible through the frontend proxy at:
 2. **Authentication fails**: Check cookie/session transfer
 3. **Elements not found**: Update selectors in `selectors.js`
 4. **CORS errors**: Verify `FRONTEND_URL` configuration
-5. **Rate limiting**: Adjust rate limit settings
 
 ### Performance Optimization
 
