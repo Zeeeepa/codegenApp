@@ -9,6 +9,8 @@ import {
   CreateAgentRunRequest,
   ResumeAgentRunRequest,
   StopAgentRunRequest,
+  ListAgentRunsRequest,
+  ListAgentRunsResponse,
   PaginatedResponse,
   APIError,
 } from "./types";
@@ -138,6 +140,25 @@ export class CodegenAPIClient {
         method: "POST",
         body: JSON.stringify(request),
       }
+    );
+  }
+
+  async listAgentRuns(
+    organizationId: number,
+    request?: ListAgentRunsRequest
+  ): Promise<ListAgentRunsResponse> {
+    const page = request?.page || 1;
+    const size = request?.size || 20;
+    
+    console.log("📋 List Agent Runs API Call:", {
+      organizationId,
+      page,
+      size,
+      endpoint: API_ENDPOINTS.AGENT_RUN_LIST(organizationId, page, size)
+    });
+    
+    return this.makeRequest<ListAgentRunsResponse>(
+      API_ENDPOINTS.AGENT_RUN_LIST(organizationId, page, size)
     );
   }
 

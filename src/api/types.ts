@@ -44,6 +44,19 @@ export interface StopAgentRunRequest {
   agent_run_id: number;
 }
 
+export interface ListAgentRunsRequest {
+  page?: number;
+  size?: number;
+}
+
+export interface ListAgentRunsResponse {
+  items: AgentRunResponse[];
+  total: number;
+  page: number;
+  size: number;
+  has_more: boolean;
+}
+
 // Paginated Response Type
 export interface PaginatedResponse<T> {
   items: T[];
