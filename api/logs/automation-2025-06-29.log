@@ -72,3 +72,29 @@ false
 {"timestamp":"2025-06-29 16:55:14.239","level":"info","message":"Starting automation test","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771"}
 false
 false
+false
+false
+false
+false
+false
+false
+false
+{"timestamp":"2025-06-29 17:51:09.235","level":"info","message":"Resume agent run request received","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","organizationId":"323","promptLength":35,"hasAuthContext":true}
+{"timestamp":"2025-06-29 17:51:09.236","level":"info","message":"Starting agent run resume automation","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","organizationId":"323","promptLength":35,"hasAuth":true}
+false
+false
+false
+false
+false
+false
+{"timestamp":"2025-06-29 17:51:09.678","level":"info","message":"Navigating to agent run page","service":"automation-backend","version":"1.0.0","environment":"development","chatUrl":"https://codegen.com/agent/trace/45771"}
+false
+false
+false
+false
+{"timestamp":"2025-06-29 17:51:50.710","level":"error","message":"Agent run resume failed","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","organizationId":"323","error":"Could not find chat input element","stack":"Error: Could not find chat input element\n    at resumeAgentRun (/tmp/Zeeeepa/codegenApp/api/automation-service.js:93:13)\n    at async /tmp/Zeeeepa/codegenApp/api/server.js:144:20","duration":41474}
+{"timestamp":"2025-06-29 17:51:51.023","level":"error","message":"Agent run resume failed","service":"automation-backend","version":"1.0.0","environment":"development","agentRunId":"45771","error":"Could not find chat input element"}
+false
+false
+false
+false
