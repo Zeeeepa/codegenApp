@@ -1,0 +1,62 @@
+{
+  "name": "zeeeepa",
+  "description": "GitHub repository analyzer and webhook processor for github.gg",
+  "url": "https://github.gg",
+  "callback_urls": [
+    "http://localhost:3000/api/auth/callback/github",
+    "https://github.gg/api/auth/callback/github"
+  ],
+  "request_oauth_on_install": true,
+  "setup_on_update": true,
+  "public": false,
+  "webhook_active": true,
+  "webhook_url": "https://webhook-gateway.pixeliumperfecto.workers.dev/api/webhooks/github",
+  "events": [
+    "repository",
+    "push",
+    "pull_request",
+    "issues",
+    "release",
+    "star",
+    "fork",
+    "watch"
+  ],
+  "permissions": {
+    "repository_permissions": {
+      "contents": "read",
+      "metadata": "read",
+      "pull_requests": "read",
+      "issues": "read",
+      "commit_statuses": "read",
+      "repository_hooks": "read",
+      "deployments": "read"
+    },
+    "account_permissions": {
+      "email_addresses": "read"
+    }
+  },
+  "features": {
+    "expire_user_authorization_tokens": true,
+    "device_flow_enabled": true
+  },
+  "installation_requirements": {
+    "minimum_permissions": [
+      "contents:read",
+      "metadata:read"
+    ],
+    "required_events": [
+      "repository",
+      "push"
+    ]
+  },
+  "rate_limiting": {
+    "requests_per_hour": 5000,
+    "requests_per_minute": 100
+  },
+  "security": {
+    "webhook_secret_required": true,
+    "private_key_required": true,
+    "oauth_flow_required": true
+  }
+}
+

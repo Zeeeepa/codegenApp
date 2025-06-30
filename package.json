@@ -1,83 +1,53 @@
 {
-  "name": "agent-run-manager-web",
+  "name": "github.gg",
   "version": "1.0.0",
-  "description": "A web application for managing agent runs, converted from Raycast extension",
-  "private": true,
+  "description": "GitHub repository analyzer and webhook processor",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "install:legacy": "npm install --legacy-peer-deps",
+    "setup": "npm run install:legacy && npm run build",
+    "webhook:test": "node scripts/test-webhook.js"
+  },
   "dependencies": {
-    "@types/react": "^18.2.6",
-    "@types/react-dom": "^18.2.4",
-    "autoprefixer": "^10.4.14",
-    "concurrently": "^8.2.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.5.0",
-    "express": "^4.18.2",
-    "helmet": "^7.1.0",
-    "lucide-react": "^0.263.1",
-    "postcss": "^8.4.24",
-    "puppeteer": "^24.11.1",
+    "@octokit/app": "^14.0.2",
+    "@octokit/auth-app": "^6.0.1",
+    "@octokit/rest": "^20.0.2",
+    "@octokit/webhooks-types": "^7.3.2",
+    "next": "^14.0.0",
+    "next-auth": "^4.24.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-hot-toast": "^2.4.1",
-    "react-router-dom": "^6.8.0",
-    "react-scripts": "5.0.1",
-    "sqlite3": "^5.1.7",
-    "tailwindcss": "^3.3.0",
-    "typescript": "^4.9.5",
-    "winston": "^3.11.0",
-    "winston-daily-rotate-file": "^5.0.0"
-  },
-  "scripts": {
-    "start": "PORT=8080 NODE_OPTIONS=\"--no-deprecation\" react-scripts start",
-    "build": "NODE_OPTIONS=\"--no-deprecation\" react-scripts build",
-    "test": "NODE_OPTIONS=\"--no-deprecation\" react-scripts test",
-    "eject": "react-scripts eject",
-    "dev": "concurrently --names \"API,FRONTEND\" --prefix-colors \"blue,yellow\" \"npm run api:dev\" \"wait-on http://localhost:3001/health && npm run start\"",
-    "api:start": "cd api && NODE_OPTIONS=\"--no-deprecation\" node server.js",
-    "api:dev": "cd api && NODE_OPTIONS=\"--no-deprecation\" nodemon server.js",
-    "postinstall": "npx puppeteer browsers install chrome || echo 'Chrome installation failed, continuing...'",
-    "health-check": "curl -f http://localhost:3001/health || echo 'API not ready'",
-    "dev:safe": "npm run health-check && npm run dev"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "devServer": {
-    "headers": {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-      "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Authorization, Accept, Origin",
-      "Access-Control-Allow-Credentials": "true"
-    }
+    "typescript": "^5.3.0"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/jest": "^30.0.0",
-    "@types/jsdom": "^21.1.7",
-    "@types/node": "^24.0.3",
-    "jest": "^29.7.0",
-    "jsdom": "^23.0.0",
-    "nodemon": "^3.0.2",
-    "pm2": "^6.0.8",
-    "wait-on": "^8.0.3"
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "^14.0.0"
   },
-  "config": {
-    "puppeteer_skip_chromium_download": "true"
-  }
+  "keywords": [
+    "github",
+    "webhook",
+    "repository",
+    "analyzer",
+    "nextjs",
+    "typescript"
+  ],
+  "author": "Zeeeepa",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zeeeepa/github.gg.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Zeeeepa/github.gg/issues"
+  },
+  "homepage": "https://github.gg"
 }
+
