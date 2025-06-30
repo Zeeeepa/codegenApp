@@ -7,6 +7,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const passport = require('passport');
 
 const logger = require('./logger');
 const { resumeAgentRun, testAutomation } = require('./automation-service');
@@ -17,6 +18,16 @@ const {
   errorLoggingMiddleware, 
   automationLoggingMiddleware 
 } = require('./middleware/logging');
+
+// GitHub App integration
+const gitHubAppClient = require('./github-app');
+const { 
+  configureGitHubOAuth, 
+  configureSession, 
+  setupGitHubOAuthRoutes 
+} = require('./auth/github-oauth');
+const githubRoutes = require('./routes/github');
+const { processGitHubWebhook } = require('./webhooks/github');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -31,6 +42,27 @@ app.use(cors({
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Session configuration for GitHub OAuth
+const sessionMiddleware = configureSession();
+if (sessionMiddleware) {
+  app.use(sessionMiddleware);
+  logger.info('Session middleware configured');
+} else {
+  logger.warn('Session middleware not configured - GitHub OAuth will not work');
+}
+
+// Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Configure GitHub OAuth
+const oauthConfigured = configureGitHubOAuth();
+if (oauthConfigured) {
+  logger.info('GitHub OAuth configured successfully');
+} else {
+  logger.warn('GitHub OAuth not configured - authentication will not work');
+}
 
 // Rate limiting removed - no restrictions on API usage
 
@@ -71,6 +103,10 @@ app.get('/', (req, res) => {
     service: 'automation-backend',
     version: '1.0.0',
     status: 'running',
+    github_app: {
+      initialized: gitHubAppClient.isInitialized(),
+      app_id: process.env.GITHUB_APP_ID
+    },
     endpoints: [
       'GET /health',
       'GET /ready',
@@ -78,7 +114,16 @@ app.get('/', (req, res) => {
       'POST /api/resume-agent-run',
       'POST /api/test-automation',
       'GET /api/auth-script',
-      'ALL /api/v1/* (Codegen API Proxy)'
+      'ALL /api/v1/* (Codegen API Proxy)',
+      '--- GitHub App Endpoints ---',
+      'GET /auth/github (Start OAuth)',
+      'GET /auth/github/callback (OAuth callback)',
+      'GET /auth/user (Get current user)',
+      'POST /auth/logout (Logout)',
+      'GET /github/status (GitHub App status)',
+      'GET /github/installations (User installations)',
+      'GET /github/repositories/:owner/:repo/analyze (Analyze repo)',
+      'POST /webhooks/github (GitHub webhooks)'
     ]
   });
 });
@@ -317,6 +362,13 @@ app.use('/api/v1', async (req, res) => {
     });
   }
 });
+
+// GitHub App Routes
+setupGitHubOAuthRoutes(app);
+app.use('/github', githubRoutes);
+
+// GitHub Webhook endpoint
+app.post('/webhooks/github', processGitHubWebhook);
 
 // Enhanced error handling middleware
 app.use(errorLoggingMiddleware);
