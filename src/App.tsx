@@ -1,5 +1,4 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Settings } from 'lucide-react';
 import ListAgentRuns from './list-agent-runs';
@@ -7,7 +6,7 @@ import { SetupGuide } from './components/SetupGuide';
 import { AgentRunSelectionProvider } from './contexts/AgentRunSelectionContext';
 import { DialogProvider } from './contexts/DialogContext';
 import { SettingsDialog } from './components/SettingsDialog';
-import { getPreferenceValues, setPreferenceValues, getEnvFileContent, validateEnvironmentConfiguration } from './utils/preferences';
+import { validateEnvironmentConfiguration } from './utils/preferences';
 import './App.css';
 
 // Header component with settings gear icon
