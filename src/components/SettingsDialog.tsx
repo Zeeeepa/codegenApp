@@ -51,8 +51,8 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
     try {
       const apiClient = getAPIClient();
       const orgs = await apiClient.getOrganizations();
-      setOrganizations(orgs);
-      toast.success(`Loaded ${orgs.length} organizations`);
+      setOrganizations(orgs.items);
+      toast.success(`Loaded ${orgs.items.length} organizations`);
     } catch (error) {
       console.error('Failed to load organizations:', error);
       toast.error('Failed to load organizations. Check your API token.');

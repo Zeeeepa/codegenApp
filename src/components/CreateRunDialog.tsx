@@ -67,7 +67,7 @@ export function CreateRunDialog({ isOpen, onClose, onCreated }: CreateRunDialogP
 
         // Load organizations
         const orgs = await apiClient.getOrganizations();
-        setOrganizations(orgs);
+        setOrganizations(orgs.items);
 
         // Set default organization
         if (validation.organizations && validation.organizations.length > 0) {

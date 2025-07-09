@@ -256,8 +256,6 @@ export default function ListAgentRuns() {
     }
   };
 
-  const navigate = useNavigate();
-
   if (error && !isLoading) {
     return (
       <div className="container mx-auto p-6 max-w-4xl">
