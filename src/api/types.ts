@@ -34,7 +34,6 @@ export interface CreateAgentRunRequest {
 }
 
 export interface ResumeAgentRunRequest {
-  agent_run_id: number;
   prompt: string;
   images?: string[];
 }
