@@ -1,77 +1,161 @@
-#!/usr/bin/env node
+const http = require('http');
 
-const API_BASE = 'http://localhost:3001';
-const TOKEN = 'sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99';
-
-async function testAPI() {
-  console.log('🧪 Testing API endpoints...\n');
-
-  // Test health endpoint
-  try {
-    const healthResponse = await fetch(`${API_BASE}/health`);
-    const healthData = await healthResponse.json();
-    console.log('✅ Health Check:', JSON.stringify(healthData, null, 2));
-  } catch (error) {
-    console.log('❌ Health Check failed:', error.message);
-  }
-
-  // Test user endpoint
-  try {
-    const userResponse = await fetch(`${API_BASE}/api/v1/users/me`, {
-      headers: {
-        'Authorization': `Bearer ${TOKEN}`
-      }
-    });
-    const userData = await userResponse.json();
-    console.log('\n✅ User Data:', JSON.stringify(userData, null, 2));
-  } catch (error) {
-    console.log('\n❌ User endpoint failed:', error.message);
-  }
-
-  // Test organizations endpoint
-  try {
-    const orgResponse = await fetch(`${API_BASE}/api/v1/organizations`, {
-      headers: {
-        'Authorization': `Bearer ${TOKEN}`
-      }
+function makeRequest(options, data = null) {
+  return new Promise((resolve, reject) => {
+    const req = http.request(options, (res) => {
+      let body = '';
+      res.on('data', (chunk) => body += chunk);
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(body);
+          resolve({ status: res.statusCode, data: parsed });
+        } catch (e) {
+          resolve({ status: res.statusCode, data: body });
+        }
+      });
     });
     
-    if (orgResponse.ok) {
-      const orgData = await orgResponse.json();
-      console.log('\n✅ Organizations:', JSON.stringify(orgData, null, 2));
-    } else {
-      console.log('\n⚠️ Organizations endpoint returned:', orgResponse.status, orgResponse.statusText);
-    }
-  } catch (error) {
-    console.log('\n❌ Organizations endpoint failed:', error.message);
-  }
-
-  // Test agent runs endpoint
-  try {
-    const runsResponse = await fetch(`${API_BASE}/api/v1/organizations/323/agent_runs?limit=3`, {
-      headers: {
-        'Authorization': `Bearer ${TOKEN}`
-      }
-    });
+    req.on('error', reject);
     
-    if (runsResponse.ok) {
-      const runsData = await runsResponse.json();
-      console.log('\n✅ Agent Runs:', JSON.stringify(runsData, null, 2));
-    } else {
-      console.log('\n⚠️ Agent runs endpoint returned:', runsResponse.status, runsResponse.statusText);
+    if (data) {
+      req.write(JSON.stringify(data));
     }
-  } catch (error) {
-    console.log('\n❌ Agent runs endpoint failed:', error.message);
-  }
+    
+    req.end();
+  });
 }
 
-// Import fetch for Node.js
-import('node-fetch').then(({ default: fetch }) => {
-  global.fetch = fetch;
-  testAPI();
-}).catch(() => {
-  // Fallback for environments without node-fetch
-  console.log('⚠️ Using built-in fetch or curl fallback');
-  testAPI();
-});
+async function testAPI() {
+  console.log('🧪 Testing Agent Run API Endpoints...');
+  
+  const baseUrl = 'localhost';
+  const port = 3001;
+  const orgId = 323;
+  
+  // Test 1: Health check
+  console.log('\n1️⃣ Testing health endpoint...');
+  try {
+    const health = await makeRequest({
+      hostname: baseUrl,
+      port: port,
+      path: '/health',
+      method: 'GET'
+    });
+    console.log(`✅ Health check: ${health.status} - ${health.data.status}`);
+  } catch (error) {
+    console.log(`❌ Health check failed: ${error.message}`);
+  }
+  
+  // Test 2: List agent runs (new endpoint)
+  console.log('\n2️⃣ Testing list agent runs endpoint...');
+  try {
+    const listRuns = await makeRequest({
+      hostname: baseUrl,
+      port: port,
+      path: `/api/v1/organizations/${orgId}/agent/runs?page=1&size=5`,
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    console.log(`📋 List runs: ${listRuns.status}`);
+    if (listRuns.status === 200) {
+      console.log(`✅ List endpoint works! Found ${listRuns.data.items?.length || 0} runs`);
+      console.log(`📊 Total: ${listRuns.data.total}, Page: ${listRuns.data.page}, Has more: ${listRuns.data.has_more}`);
+    } else {
+      console.log(`❌ List endpoint failed: ${JSON.stringify(listRuns.data).substring(0, 200)}`);
+    }
+  } catch (error) {
+    console.log(`❌ List runs failed: ${error.message}`);
+  }
+  
+  // Test 3: Create agent run
+  console.log('\n3️⃣ Testing create agent run endpoint...');
+  try {
+    const createRun = await makeRequest({
+      hostname: baseUrl,
+      port: port,
+      path: `/api/v1/organizations/${orgId}/agent/run`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }, {
+      prompt: 'Test run for API validation - please respond with a simple hello message'
+    });
+    
+    console.log(`🚀 Create run: ${createRun.status}`);
+    if (createRun.status === 200 || createRun.status === 201) {
+      console.log(`✅ Create endpoint works! Run ID: ${createRun.data.id}`);
+      
+      // Test 4: Get the created run
+      console.log('\n4️⃣ Testing get agent run endpoint...');
+      const getRun = await makeRequest({
+        hostname: baseUrl,
+        port: port,
+        path: `/api/v1/organizations/${orgId}/agent/run/${createRun.data.id}`,
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log(`📖 Get run: ${getRun.status}`);
+      if (getRun.status === 200) {
+        console.log(`✅ Get endpoint works! Status: ${getRun.data.status}`);
+        
+        // Test 5: Stop the run
+        console.log('\n5️⃣ Testing stop agent run endpoint...');
+        const stopRun = await makeRequest({
+          hostname: baseUrl,
+          port: port,
+          path: `/api/v1/beta/organizations/${orgId}/agent/run/stop`,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }, {
+          agent_run_id: createRun.data.id
+        });
+        
+        console.log(`⏹️ Stop run: ${stopRun.status}`);
+        if (stopRun.status === 200) {
+          console.log(`✅ Stop endpoint works!`);
+          
+          // Test 6: Resume the run
+          console.log('\n6️⃣ Testing resume agent run endpoint...');
+          const resumeRun = await makeRequest({
+            hostname: baseUrl,
+            port: port,
+            path: `/api/v1/alpha/organizations/${orgId}/agent/run/${createRun.data.id}/resume`,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }, {
+            prompt: 'Continue with the test - please confirm you received this resume message'
+          });
+          
+          console.log(`▶️ Resume run: ${resumeRun.status}`);
+          if (resumeRun.status === 200) {
+            console.log(`✅ Resume endpoint works!`);
+          } else {
+            console.log(`❌ Resume failed: ${JSON.stringify(resumeRun.data).substring(0, 200)}`);
+          }
+        } else {
+          console.log(`❌ Stop failed: ${JSON.stringify(stopRun.data).substring(0, 200)}`);
+        }
+      } else {
+        console.log(`❌ Get failed: ${JSON.stringify(getRun.data).substring(0, 200)}`);
+      }
+    } else {
+      console.log(`❌ Create failed: ${JSON.stringify(createRun.data).substring(0, 200)}`);
+    }
+  } catch (error) {
+    console.log(`❌ Create run failed: ${error.message}`);
+  }
+  
+  console.log('\n🏁 API test completed!');
+}
 
+testAPI().catch(console.error);

@@ -1,0 +1,3 @@
+{"timestamp":"2025-06-30 12:55:15.087","level":"ERROR","service":"automation-backend","message":"Missing GitHub App configuration","version":"1.0.0","environment":"development","hasAppId":false,"hasPrivateKeyPath":false,"hasClientId":false,"hasClientSecret":false}
+{"timestamp":"2025-06-30 12:55:15.108","level":"ERROR","service":"automation-backend","message":"Session secret not configured","version":"1.0.0","environment":"development"}
+{"timestamp":"2025-06-30 12:55:15.110","level":"ERROR","service":"automation-backend","message":"Missing GitHub OAuth configuration","version":"1.0.0","environment":"development","hasClientID":false,"hasClientSecret":false,"hasCallbackURL":false}
