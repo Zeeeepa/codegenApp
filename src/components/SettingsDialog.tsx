@@ -49,7 +49,16 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
 
     setLoadingOrgs(true);
     try {
+      // Update preferences with current token before making API call
+      await setPreferenceValues({
+        apiToken: token,
+        defaultOrganization: orgId,
+      });
+      
       const apiClient = getAPIClient();
+      // Force refresh credentials to pick up the new token
+      await apiClient.refreshCredentials();
+      
       const orgs = await apiClient.getOrganizations();
       setOrganizations(orgs.items);
       toast.success(`Loaded ${orgs.items.length} organizations`);

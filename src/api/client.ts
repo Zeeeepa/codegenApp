@@ -31,6 +31,13 @@ export class CodegenAPIClient {
     }
   }
 
+  // Force refresh credentials (useful when settings are updated)
+  public async refreshCredentials(): Promise<void> {
+    const credentials = await getCredentials();
+    this.baseUrl = credentials.apiBaseUrl || DEFAULT_API_BASE_URL;
+    this.apiToken = credentials.apiToken;
+  }
+
   private async makeRequest<T>(
     endpoint: string,
     options: RequestInit = {}
