@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const API_BASE = 'http://localhost:3001';
-const TOKEN = 'sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99';
+const TOKEN = process.env.CODEGEN_API_TOKEN || 'your-api-token-here';
 
 async function testAPI() {
   console.log('🧪 Testing API endpoints...\n');
@@ -61,7 +61,7 @@ async function testAPI() {
       console.log('\n⚠️ Agent runs endpoint returned:', runsResponse.status, runsResponse.statusText);
     }
   } catch (error) {
-    console.log('\n❌ Agent runs endpoint failed:', error.message);
+    console.log('\n�� Agent runs endpoint failed:', error.message);
   }
 }
 
@@ -74,4 +74,3 @@ import('node-fetch').then(({ default: fetch }) => {
   console.log('⚠️ Using built-in fetch or curl fallback');
   testAPI();
 });
-

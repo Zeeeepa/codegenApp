@@ -12,9 +12,9 @@ const CODEGEN_API_BASE = process.env.CODEGEN_API_BASE || 'https://api.codegen.co
 // CORS configuration with credentials support
 app.use(cors({
   origin: [
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'https://localhost:8000',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+    'https://localhost:8080',
     // Add your production domain here
     process.env.FRONTEND_URL
   ].filter(Boolean),
@@ -34,6 +34,11 @@ app.use(express.json());
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Health check endpoint for v1 route (for proxy testing)
+app.get('/v1/health', (req, res) => {
+  res.json({ status: 'ok', service: 'proxy-backend', timestamp: new Date().toISOString() });
 });
 
 // Proxy all API requests to Codegen API

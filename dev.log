@@ -1,0 +1,141 @@
+
+> agent-run-manager-web@1.0.0 dev
+> concurrently "npm run server:dev" "npm run backend:dev" "npm run start"
+
+[2] 
+[2] > agent-run-manager-web@1.0.0 start
+[2] > PORT=8080 react-scripts start
+[2] 
+[0] 
+[0] > agent-run-manager-web@1.0.0 server:dev
+[0] > cd server && npm run dev
+[0] 
+[1] 
+[1] > agent-run-manager-web@1.0.0 backend:dev
+[1] > cd backend && npm start
+[1] 
+[0] 
+[0] > agent-run-manager-server@1.0.0 dev
+[0] > nodemon index.js
+[0] 
+[1] 
+[1] > codegen-app-automation-backend@1.0.0 start
+[1] > node server.js
+[1] 
+[0] [33m[nodemon] 3.1.10[39m
+[0] [33m[nodemon] to restart at any time, enter `rs`[39m
+[0] [33m[nodemon] watching path(s): *.*[39m
+[0] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[0] [32m[nodemon] starting `node index.js`[39m
+[0] 🚀 Proxy server running on port 3001
+[0] 🎯 Proxying to: https://api.codegen.com
+[0] 🌐 Health check: http://localhost:3001/health
+[1] [32minfo[39m: 🤖 Automation backend server running on port 3002 {"environment":"development","frontendUrl":"http://localhost:8080","port":"3002","service":"automation-backend","timestamp":"2025-06-23 08:58:39.018","version":"1.0.0"}
+[1] 🤖 Automation backend server running on port 3002
+[1] 🌐 Frontend URL: http://localhost:8080
+[1] 🔧 Environment: development
+[1] 📋 Available endpoints:
+[1]    GET  /health
+[1]    POST /api/resume-agent-run
+[1]    POST /api/test-automation
+[1]    GET  /api/auth-script
+[2] (node:19746) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+[2] (Use `node --trace-deprecation ...` to show where the warning was created)
+[2] (node:19746) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+[2] Starting the development server...
+[2] 
+[2] Compiled successfully!
+[2] 
+[2] You can now view agent-run-manager-web in the browser.
+[2] 
+[2]   Local:            http://localhost:8080
+[2]   On Your Network:  http://172.20.87.175:8080
+[2] 
+[2] Note that the development build is not optimized.
+[2] To create a production build, use npm run build.
+[2] 
+[2] webpack compiled successfully
+[2] Files successfully emitted, waiting for typecheck results...
+[2] Issues checking in progress...
+[2] No issues found.
+[1] [1m[43m[30m
+[1]   Puppeteer old Headless deprecation warning:[0m[33m
+[1]     In the near future `headless: true` will default to the new Headless mode
+[1]     for Chrome instead of the old Headless implementation. For more
+[1]     information, please see https://developer.chrome.com/articles/new-headless/.
+[1]     Consider opting in early by passing `headless: "new"` to `puppeteer.launch()`
+[1]     If you encounter any bugs, please report them to https://github.com/puppeteer/puppeteer/issues/new/choose.[0m
+[1] 
+[1] [32minfo[39m: Health check completed {"environment":"development","service":"automation-backend","services":{"disk":{"lastCheck":null,"status":"unknown"},"memory":{"lastCheck":1750669149177,"status":"healthy","usage":{"heap":{"total":20.65,"used":18.81},"system":{"total":12288,"usage":7.1,"used":872.37}}},"puppeteer":{"lastCheck":1750669149175,"status":"healthy"}},"status":"healthy","timestamp":"2025-06-23 08:59:09.177","version":"1.0.0"}
+[1] [1m[43m[30m
+[1]   Puppeteer old Headless deprecation warning:[0m[33m
+[1]     In the near future `headless: true` will default to the new Headless mode
+[1]     for Chrome instead of the old Headless implementation. For more
+[1]     information, please see https://developer.chrome.com/articles/new-headless/.
+[1]     Consider opting in early by passing `headless: "new"` to `puppeteer.launch()`
+[1]     If you encounter any bugs, please report them to https://github.com/puppeteer/puppeteer/issues/new/choose.[0m
+[1] 
+[1] [32minfo[39m: Health check completed {"environment":"development","service":"automation-backend","services":{"disk":{"lastCheck":null,"status":"unknown"},"memory":{"lastCheck":1750669179195,"status":"healthy","usage":{"heap":{"total":21.9,"used":18.9},"system":{"total":12288,"usage":7.1,"used":872.94}}},"puppeteer":{"lastCheck":1750669179194,"status":"healthy"}},"status":"healthy","timestamp":"2025-06-23 08:59:39.196","version":"1.0.0"}
+[1] [32minfo[39m: Incoming request {"environment":"development","ip":"::ffff:127.0.0.1","method":"GET","path":"/health","query":{},"requestId":"u01wq","service":"automation-backend","timestamp":"2025-06-23 08:59:55.686","url":"/health","userAgent":"curl/7.88.1","version":"1.0.0"}
+[1] [32minfo[39m: Request completed {"contentLength":"562","contentType":"application/json; charset=utf-8","environment":"development","method":"GET","path":"/health","requestId":"u01wq","responseTime":5,"service":"automation-backend","statusCode":200,"timestamp":"2025-06-23 08:59:55.691","url":"/health","version":"1.0.0"}
+[1] [1m[43m[30m
+[1]   Puppeteer old Headless deprecation warning:[0m[33m
+[1]     In the near future `headless: true` will default to the new Headless mode
+[1]     for Chrome instead of the old Headless implementation. For more
+[1]     information, please see https://developer.chrome.com/articles/new-headless/.
+[1]     Consider opting in early by passing `headless: "new"` to `puppeteer.launch()`
+[1]     If you encounter any bugs, please report them to https://github.com/puppeteer/puppeteer/issues/new/choose.[0m
+[1] 
+[1] [32minfo[39m: Health check completed {"environment":"development","service":"automation-backend","services":{"disk":{"lastCheck":null,"status":"unknown"},"memory":{"lastCheck":1750669209175,"status":"healthy","usage":{"heap":{"total":21.4,"used":19.44},"system":{"total":12288,"usage":7.15,"used":878.87}}},"puppeteer":{"lastCheck":1750669209171,"status":"healthy"}},"status":"healthy","timestamp":"2025-06-23 09:00:09.175","version":"1.0.0"}
+[1] [32minfo[39m: Incoming request {"environment":"development","ip":"::ffff:127.0.0.1","method":"GET","path":"/health","query":{},"requestId":"bwe65","service":"automation-backend","timestamp":"2025-06-23 09:00:15.778","url":"/health","userAgent":"curl/7.88.1","version":"1.0.0"}
+[1] [32minfo[39m: Request completed {"contentLength":"563","contentType":"application/json; charset=utf-8","environment":"development","method":"GET","path":"/health","requestId":"bwe65","responseTime":5,"service":"automation-backend","statusCode":200,"timestamp":"2025-06-23 09:00:15.783","url":"/health","version":"1.0.0"}
+[1] [1m[43m[30m
+[1]   Puppeteer old Headless deprecation warning:[0m[33m
+[1]     In the near future `headless: true` will default to the new Headless mode
+[1]     for Chrome instead of the old Headless implementation. For more
+[1]     information, please see https://developer.chrome.com/articles/new-headless/.
+[1]     Consider opting in early by passing `headless: "new"` to `puppeteer.launch()`
+[1]     If you encounter any bugs, please report them to https://github.com/puppeteer/puppeteer/issues/new/choose.[0m
+[1] 
+[1] [32minfo[39m: Health check completed {"environment":"development","service":"automation-backend","services":{"disk":{"lastCheck":null,"status":"unknown"},"memory":{"lastCheck":1750669239207,"status":"healthy","usage":{"heap":{"total":21.9,"used":19.59},"system":{"total":12288,"usage":7.12,"used":875.3}}},"puppeteer":{"lastCheck":1750669239205,"status":"healthy"}},"status":"healthy","timestamp":"2025-06-23 09:00:39.207","version":"1.0.0"}
+[1] [1m[43m[30m
+[1]   Puppeteer old Headless deprecation warning:[0m[33m
+[1]     In the near future `headless: true` will default to the new Headless mode
+[1]     for Chrome instead of the old Headless implementation. For more
+[1]     information, please see https://developer.chrome.com/articles/new-headless/.
+[1]     Consider opting in early by passing `headless: "new"` to `puppeteer.launch()`
+[1]     If you encounter any bugs, please report them to https://github.com/puppeteer/puppeteer/issues/new/choose.[0m
+[1] 
+[1] [32minfo[39m: Health check completed {"environment":"development","service":"automation-backend","services":{"disk":{"lastCheck":null,"status":"unknown"},"memory":{"lastCheck":1750669269166,"status":"healthy","usage":{"heap":{"total":21.9,"used":19.54},"system":{"total":12288,"usage":7.13,"used":875.6}}},"puppeteer":{"lastCheck":1750669269163,"status":"healthy"}},"status":"healthy","timestamp":"2025-06-23 09:01:09.166","version":"1.0.0"}
+[1] [32minfo[39m: Incoming request {"environment":"development","ip":"::ffff:127.0.0.1","method":"GET","path":"/","query":{},"requestId":"7bzlqa","service":"automation-backend","timestamp":"2025-06-23 09:01:32.443","url":"/","userAgent":"node-fetch","version":"1.0.0"}
+[1] [32minfo[39m: Request completed {"contentLength":"205","contentType":"application/json; charset=utf-8","environment":"development","method":"GET","path":"/","requestId":"7bzlqa","responseTime":1,"service":"automation-backend","statusCode":200,"timestamp":"2025-06-23 09:01:32.444","url":"/","version":"1.0.0"}
+[1] [32minfo[39m: Incoming request {"environment":"development","ip":"::ffff:127.0.0.1","method":"GET","path":"/health","query":{},"requestId":"2c5a9n","service":"automation-backend","timestamp":"2025-06-23 09:01:32.460","url":"/health","userAgent":"node-fetch","version":"1.0.0"}
+[1] [32minfo[39m: Request completed {"contentLength":"563","contentType":"application/json; charset=utf-8","environment":"development","method":"GET","path":"/health","requestId":"2c5a9n","responseTime":3,"service":"automation-backend","statusCode":200,"timestamp":"2025-06-23 09:01:32.463","url":"/health","version":"1.0.0"}
+[2] (node:19746) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+[2] /api proxy error: {
+[2]   error: 'connect ECONNREFUSED 127.0.0.1:3004',
+[2]   code: 'ECONNREFUSED',
+[2]   target: 'http://localhost:3004',
+[2]   url: '/api/health',
+[2]   method: 'GET'
+[2] }
+[2] [HPM] Error occurred while proxying request localhost:8080/api/health to http://localhost:3004/ [ECONNREFUSED] (https://nodejs.org/api/errors.html#errors_common_system_errors)
+[1] [32minfo[39m: Incoming request {"environment":"development","ip":"::ffff:127.0.0.1","method":"GET","path":"/health","query":{},"requestId":"3m27ug","service":"automation-backend","timestamp":"2025-06-23 09:01:32.482","url":"/health","userAgent":"node-fetch","version":"1.0.0"}
+[1] [32minfo[39m: Request completed {"contentLength":"562","contentType":"application/json; charset=utf-8","environment":"development","method":"GET","path":"/health","requestId":"3m27ug","responseTime":2,"service":"automation-backend","statusCode":200,"timestamp":"2025-06-23 09:01:32.484","url":"/health","version":"1.0.0"}
+[2] /v1 proxy error: {
+[2]   error: 'connect ECONNREFUSED 127.0.0.1:3004',
+[2]   code: 'ECONNREFUSED',
+[2]   target: 'http://localhost:3004',
+[2]   url: '/v1/health',
+[2]   method: 'GET'
+[2] }
+[2] [HPM] Error occurred while proxying request localhost:8080/v1/health to http://localhost:3004/ [ECONNREFUSED] (https://nodejs.org/api/errors.html#errors_common_system_errors)
+[1] [1m[43m[30m
+[1]   Puppeteer old Headless deprecation warning:[0m[33m
+[1]     In the near future `headless: true` will default to the new Headless mode
+[1]     for Chrome instead of the old Headless implementation. For more
+[1]     information, please see https://developer.chrome.com/articles/new-headless/.
+[1]     Consider opting in early by passing `headless: "new"` to `puppeteer.launch()`
+[1]     If you encounter any bugs, please report them to https://github.com/puppeteer/puppeteer/issues/new/choose.[0m
+[1] 
+[1] [32minfo[39m: Health check completed {"environment":"development","service":"automation-backend","services":{"disk":{"lastCheck":null,"status":"unknown"},"memory":{"lastCheck":1750669299196,"status":"healthy","usage":{"heap":{"total":21.9,"used":19.91},"system":{"total":12288,"usage":7.27,"used":893.67}}},"puppeteer":{"lastCheck":1750669299194,"status":"healthy"}},"status":"healthy","timestamp":"2025-06-23 09:01:39.196","version":"1.0.0"}
