@@ -154,11 +154,17 @@ export class CodegenAPIClient {
     organizationId: number,
     request: ResumeAgentRunRequest
   ): Promise<AgentRunResponse> {
+    console.log("🔄 Resume Agent Run API Call:", {
+      organizationId,
+      request,
+      endpoint: API_ENDPOINTS.AGENT_RUN_RESUME(organizationId, request.agent_run_id)
+    });
+    
     return this.makeRequest<AgentRunResponse>(
-      API_ENDPOINTS.AGENT_RUN_RESUME(organizationId),
+      API_ENDPOINTS.AGENT_RUN_RESUME(organizationId, request.agent_run_id),
       {
         method: "POST",
-        body: JSON.stringify(request),
+        body: JSON.stringify({ prompt: request.prompt }),
       }
     );
   }
@@ -167,6 +173,12 @@ export class CodegenAPIClient {
     organizationId: number,
     request: StopAgentRunRequest
   ): Promise<AgentRunResponse> {
+    console.log("⏹️ Stop Agent Run API Call:", {
+      organizationId,
+      request,
+      endpoint: API_ENDPOINTS.AGENT_RUN_STOP(organizationId)
+    });
+    
     return this.makeRequest<AgentRunResponse>(
       API_ENDPOINTS.AGENT_RUN_STOP(organizationId),
       {
@@ -177,13 +189,15 @@ export class CodegenAPIClient {
   }
 
   // Organization Methods
-  async getOrganizations(
-    page = 1,
-    size = 50
-  ): Promise<PaginatedResponse<OrganizationResponse>> {
-    return this.makeRequest<PaginatedResponse<OrganizationResponse>>(
-      API_ENDPOINTS.ORGANIZATIONS_PAGINATED(page, size)
+  async getOrganizations(): Promise<{ items: OrganizationResponse[] }> {
+    const response = await this.makeRequest<{ items?: OrganizationResponse[] }>(
+      API_ENDPOINTS.ORGANIZATIONS
     );
+    
+    // Ensure we return the expected format
+    return {
+      items: response.items || []
+    };
   }
 
   // User Methods
@@ -227,6 +241,118 @@ export class CodegenAPIClient {
       return result.isValid;
     } catch {
       return false;
+    }
+  }
+
+  // Backend Automation Service Methods
+  async resumeAgentRunAutomation(
+    agentRunId: number,
+    organizationId: number,
+    prompt: string
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      // Extract authentication context from current browser session
+      const authContext = await this.extractAuthContext();
+      
+      // Call backend automation service
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3500';
+      console.log(`🔗 Attempting to connect to backend at: ${backendUrl}/api/resume-agent-run`);
+      
+      const response = await fetch(`${backendUrl}/api/resume-agent-run`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          agentRunId,
+          organizationId,
+          prompt,
+          authContext
+        })
+      });
+
+      console.log(`📡 Backend response status: ${response.status} ${response.statusText}`);
+
+      if (!response.ok) {
+        // If backend is not available (404, 500, etc.), provide helpful error message
+        if (response.status === 404) {
+          throw new Error(`Backend automation service not available. Please ensure the backend server is running at ${backendUrl}`);
+        } else if (response.status >= 500) {
+          throw new Error(`Backend server error (${response.status}). Please check the backend logs.`);
+        } else {
+          throw new Error(`Backend automation failed: ${response.status} ${response.statusText}`);
+        }
+      }
+
+      const result = await response.json();
+      console.log(`✅ Backend response:`, result);
+      return result;
+
+    } catch (error) {
+      console.error('Backend automation service error:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Unknown error occurred';
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          errorMessage = 'Cannot connect to backend automation service. Please ensure the backend server is running.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
+  }
+
+  private async extractAuthContext(): Promise<any> {
+    try {
+      // Extract cookies
+      const cookies = document.cookie.split(';').map(cookie => {
+        const [name, value] = cookie.trim().split('=');
+        return {
+          name: name,
+          value: value || '',
+          domain: window.location.hostname,
+          path: '/',
+          httpOnly: false,
+          secure: window.location.protocol === 'https:'
+        };
+      }).filter(cookie => cookie.name && cookie.value);
+
+      // Extract localStorage
+      const localStorage: Record<string, string> = {};
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (key) {
+          localStorage[key] = window.localStorage.getItem(key) || '';
+        }
+      }
+
+      // Extract sessionStorage
+      const sessionStorage: Record<string, string> = {};
+      for (let i = 0; i < window.sessionStorage.length; i++) {
+        const key = window.sessionStorage.key(i);
+        if (key) {
+          sessionStorage[key] = window.sessionStorage.getItem(key) || '';
+        }
+      }
+
+      return {
+        cookies,
+        localStorage,
+        sessionStorage,
+        userAgent: navigator.userAgent,
+        origin: window.location.origin,
+        timestamp: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error('Failed to extract auth context:', error);
+      return null;
     }
   }
 }

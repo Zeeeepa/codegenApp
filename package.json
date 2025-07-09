@@ -4,6 +4,8 @@
   "description": "A web application for managing agent runs, converted from Raycast extension",
   "private": true,
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@langchain/google-genai": "^0.2.13",
     "@types/react": "^18.2.6",
     "@types/react-dom": "^18.2.4",
     "autoprefixer": "^10.4.14",
@@ -20,15 +22,18 @@
     "typescript": "^4.9.5"
   },
   "scripts": {
-    "start": "PORT=8000 react-scripts start",
+    "start": "PORT=8080 react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "dev": "concurrently \"npm run server:dev\" \"npm run start\"",
+    "dev": "concurrently \"npm run server:dev\" \"npm run backend:dev\" \"npm run start\"",
     "server:install": "cd server && npm install",
     "server:start": "cd server && npm start",
     "server:dev": "cd server && npm run dev",
-    "postinstall": "npm run server:install"
+    "backend:install": "cd backend && npm install",
+    "backend:start": "cd backend && npm start",
+    "backend:dev": "cd backend && npm start",
+    "postinstall": "npm run server:install && npm run backend:install"
   },
   "eslintConfig": {
     "extends": [
@@ -48,7 +53,6 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:3001",
   "devServer": {
     "headers": {
       "Access-Control-Allow-Origin": "*",
@@ -62,7 +66,9 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/jest": "^30.0.0",
+    "@types/jsdom": "^21.1.7",
     "@types/node": "^24.0.3",
-    "dotenv": "^16.5.0"
+    "dotenv": "^16.5.0",
+    "jsdom": "^23.0.0"
   }
 }
