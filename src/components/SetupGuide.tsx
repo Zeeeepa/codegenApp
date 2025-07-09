@@ -30,7 +30,7 @@ export const SetupGuide: React.FC<SetupGuideProps> = ({ onComplete }) => {
     setBackendStatus({ isHealthy: false, checking: true });
     
     try {
-      const response = await fetch('http://localhost:3001/health', {
+      const response = await fetch('https://api.codegen.com/health', {
         method: 'GET',
         timeout: 5000
       } as any);
@@ -49,7 +49,7 @@ export const SetupGuide: React.FC<SetupGuideProps> = ({ onComplete }) => {
       setBackendStatus({ 
         isHealthy: false, 
         checking: false, 
-        error: 'Cannot connect to backend server' 
+        error: 'Cannot connect to Codegen API' 
       });
     }
   };
@@ -267,9 +267,9 @@ export const SetupGuide: React.FC<SetupGuideProps> = ({ onComplete }) => {
         fontSize: '0.9em',
         color: '#495057'
       }}>
-        <strong>💡 Pro Tip:</strong> Make sure both your frontend (port 8000) and backend (port 8001) servers are running. 
-        You can test the backend at: <a href="http://localhost:8001/health" target="_blank" rel="noopener noreferrer">
-          http://localhost:8001/health
+        <strong>💡 Pro Tip:</strong> This app connects directly to the Codegen production API. 
+        You can test the API at: <a href="https://api.codegen.com/health" target="_blank" rel="noopener noreferrer">
+          https://api.codegen.com/health
         </a>
       </div>
     </div>

@@ -145,7 +145,7 @@ async function diagnoseFetchError(
  */
 async function checkBackendHealth(): Promise<boolean> {
   try {
-    const healthEndpoint = 'http://localhost:8001/health';
+    const healthEndpoint = 'https://api.codegen.com/health';
     const response = await fetch(healthEndpoint, { 
       method: 'GET',
       timeout: 5000 // 5 second timeout
