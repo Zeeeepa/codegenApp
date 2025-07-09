@@ -1,5 +1,5 @@
 import { Cache, LocalStorage } from "../utils/storage";
-import { AgentRunResponse, AgentRunStatus, TrackedAgentRun, AgentRunStatusChange } from "../api/types";
+import { AgentRunResponse, CachedAgentRun, AgentRunStatus, TrackedAgentRun, AgentRunStatusChange } from "../api/types";
 import { getAPIClient } from "../api/client";
 import {
   AgentRunCacheEntry,
@@ -31,7 +31,7 @@ export class AgentRunCache {
   /**
    * Get cached agent runs for an organization
    */
-  async getAgentRuns(organizationId: number): Promise<AgentRunResponse[]> {
+  async getAgentRuns(organizationId: number): Promise<CachedAgentRun[]> {
     const cacheKey = this.getOrgCacheKey(organizationId);
     const cached = this.cache.get(cacheKey);
     
@@ -51,7 +51,12 @@ export class AgentRunCache {
           }
           return true;
         })
-        .map(entry => entry.data)
+        .map(entry => ({
+          ...entry.data,
+          lastUpdated: entry.timestamp,
+          organizationName: undefined, // Will be populated by other methods if needed
+          isPolling: entry.isPolling || false
+        } as CachedAgentRun))
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     } catch (error) {
       console.error("Error parsing cached agent runs:", error);
@@ -62,7 +67,7 @@ export class AgentRunCache {
   /**
    * Get a specific cached agent run
    */
-  async getAgentRun(organizationId: number, agentRunId: number): Promise<AgentRunResponse | null> {
+  async getAgentRun(organizationId: number, agentRunId: number): Promise<CachedAgentRun | null> {
     const runs = await this.getAgentRuns(organizationId);
     return runs.find(run => run.id === agentRunId) || null;
   }
@@ -70,19 +75,23 @@ export class AgentRunCache {
   /**
    * Cache agent runs for an organization
    */
-  async setAgentRuns(organizationId: number, agentRuns: AgentRunResponse[]): Promise<void> {
+  async setAgentRuns(organizationId: number, agentRuns: CachedAgentRun[]): Promise<void> {
     const cacheKey = this.getOrgCacheKey(organizationId);
     const now = new Date();
     const config = CACHE_CONFIGS[CACHE_NAMESPACES.AGENT_RUNS];
     
-    const entries: AgentRunCacheEntry[] = agentRuns.map(run => ({
-      data: run,
-      timestamp: now.toISOString(),
-      expiresAt: new Date(now.getTime() + config.ttl).toISOString(),
-      version: this.metadata.version,
-      organizationId,
-      isPolling: this.shouldPollRun(run),
-    }));
+    const entries: AgentRunCacheEntry[] = agentRuns.map(run => {
+      // Convert CachedAgentRun back to AgentRunResponse for storage
+      const { lastUpdated, organizationName, isPolling, ...agentRunData } = run;
+      return {
+        data: agentRunData as AgentRunResponse,
+        timestamp: now.toISOString(),
+        expiresAt: new Date(now.getTime() + config.ttl).toISOString(),
+        version: this.metadata.version,
+        organizationId,
+        isPolling: this.shouldPollRun(agentRunData as AgentRunResponse),
+      };
+    });
 
     this.cache.set(cacheKey, JSON.stringify(entries));
     
@@ -100,10 +109,18 @@ export class AgentRunCache {
     
     const isNewRun = runIndex < 0;
     
+    // Convert AgentRunResponse to CachedAgentRun
+    const cachedAgentRun: CachedAgentRun = {
+      ...agentRun,
+      lastUpdated: new Date().toISOString(),
+      organizationName: undefined,
+      isPolling: false
+    };
+    
     if (runIndex >= 0) {
-      existingRuns[runIndex] = agentRun;
+      existingRuns[runIndex] = cachedAgentRun;
     } else {
-      existingRuns.unshift(agentRun); // Add to beginning
+      existingRuns.unshift(cachedAgentRun); // Add to beginning
     }
 
     await this.setAgentRuns(organizationId, existingRuns);
@@ -132,7 +149,7 @@ export class AgentRunCache {
   /**
    * Get agent runs that need polling (active status)
    */
-  async getPollingRuns(organizationId: number): Promise<AgentRunResponse[]> {
+  async getPollingRuns(organizationId: number): Promise<CachedAgentRun[]> {
     const runs = await this.getAgentRuns(organizationId);
     return runs.filter(run => this.shouldPollRun(run));
   }
@@ -146,30 +163,79 @@ export class AgentRunCache {
       
       const apiClient = getAPIClient();
       
-      // For now, we'll implement a simple approach since the API doesn't have a list endpoint
-      // In a real implementation, you might need to track agent run IDs separately
-      const cachedRuns = await this.getAgentRuns(organizationId);
-      const updatedRuns: AgentRunResponse[] = [];
+      console.log(`🔄 Syncing agent runs for organization ${organizationId} using list endpoint`);
       
-      // Update existing runs that might have changed status
-      for (const cachedRun of cachedRuns) {
-        try {
-          const updatedRun = await apiClient.getAgentRun(organizationId, cachedRun.id);
-          updatedRuns.push(updatedRun);
-        } catch (error) {
-          // If we can't fetch a run, keep the cached version
-          console.warn(`Failed to update agent run ${cachedRun.id}:`, error);
-          updatedRuns.push(cachedRun);
-        }
-      }
+      // Use the new list endpoint to get all runs
+      try {
+        const listResponse = await apiClient.listAgentRuns(organizationId, { page: 1, size: 100 });
+        console.log(`📋 Retrieved ${listResponse.items.length} runs from list endpoint`);
+        
+        // Convert AgentRunResponse to CachedAgentRun
+        const updatedRuns: CachedAgentRun[] = listResponse.items.map(run => ({
+          ...run,
+          lastUpdated: new Date().toISOString(),
+          organizationName: undefined,
+          isPolling: this.shouldPollRun(run)
+        }));
 
-      await this.setAgentRuns(organizationId, updatedRuns);
-      await this.setSyncStatus(organizationId, SyncStatus.SUCCESS);
-      
-      return {
-        status: SyncStatus.SUCCESS,
-        lastSync: new Date().toISOString(),
-      };
+        // Add all runs to tracking
+        for (const run of listResponse.items) {
+          try {
+            await this.addToTracking(organizationId, run);
+          } catch (trackingError) {
+            console.warn(`Failed to add agent run #${run.id} to tracking:`, trackingError);
+          }
+        }
+
+        await this.setAgentRuns(organizationId, updatedRuns);
+        await this.setSyncStatus(organizationId, SyncStatus.SUCCESS);
+        
+        return {
+          status: SyncStatus.SUCCESS,
+          lastSync: new Date().toISOString(),
+        };
+      } catch (listError) {
+        console.warn("List endpoint failed, falling back to individual fetch method:", listError);
+        
+        // Fallback to the old method if list endpoint fails
+        const cachedRuns = await this.getAgentRuns(organizationId);
+        const updatedRuns: CachedAgentRun[] = [];
+        
+        // Update existing runs that might have changed status
+        for (const cachedRun of cachedRuns) {
+          try {
+            const updatedRun = await apiClient.getAgentRun(organizationId, cachedRun.id);
+            // Convert to CachedAgentRun
+            const cachedUpdatedRun: CachedAgentRun = {
+              ...updatedRun,
+              lastUpdated: new Date().toISOString(),
+              organizationName: undefined,
+              isPolling: this.shouldPollRun(updatedRun)
+            };
+            updatedRuns.push(cachedUpdatedRun);
+            
+            // Ensure all runs are added to monitoring by default
+            try {
+              await this.addToTracking(organizationId, updatedRun);
+            } catch (trackingError) {
+              // Don't fail sync if tracking fails, just log it
+              console.warn(`Failed to add agent run #${updatedRun.id} to tracking:`, trackingError);
+            }
+          } catch (error) {
+            // If we can't fetch a run, keep the cached version
+            console.warn(`Failed to update agent run ${cachedRun.id}:`, error);
+            updatedRuns.push(cachedRun);
+          }
+        }
+
+        await this.setAgentRuns(organizationId, updatedRuns);
+        await this.setSyncStatus(organizationId, SyncStatus.SUCCESS);
+        
+        return {
+          status: SyncStatus.SUCCESS,
+          lastSync: new Date().toISOString(),
+        };
+      }
     } catch (error) {
       console.error("Failed to sync agent runs:", error);
       await this.setSyncStatus(organizationId, SyncStatus.ERROR, error instanceof Error ? error.message : "Unknown error");
@@ -232,12 +298,11 @@ export class AgentRunCache {
   /**
    * Check if an agent run should be polled for updates
    */
-  private shouldPollRun(run: AgentRunResponse): boolean {
+  private shouldPollRun(run: AgentRunResponse | CachedAgentRun): boolean {
     const status = run.status.toUpperCase();
     return status === AgentRunStatus.ACTIVE || 
            status === AgentRunStatus.EVALUATION ||
-           status === AgentRunStatus.PENDING ||
-           status === "RUNNING"; // Handle legacy status values
+           status === AgentRunStatus.PENDING;
   }
 
   /**

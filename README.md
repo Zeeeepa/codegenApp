@@ -1,222 +1,253 @@
-# Codegen Agent Run Manager
+# github.gg - GitHub Repository Analyzer
 
-A web application for managing Codegen agent runs, converted from a Raycast extension. This application provides a user-friendly interface to create, monitor, and manage Codegen AI agent runs.
+A powerful GitHub App that analyzes repositories, processes webhooks, and provides insights into your GitHub projects.
 
 ## 🚀 Features
 
-- **Agent Run Management**: Create and monitor AI agent runs
-- **Organization Support**: Work with multiple organizations
-- **Real-time Updates**: Live status updates for running agents
-- **Credential Management**: Secure API token handling
-- **Environment Variable Validation**: Visual status indicators for configuration
-- **Responsive Design**: Works on desktop and mobile devices
-
-## 🏗️ Architecture
-
-This application is a React-based frontend that connects directly to the Codegen API using environment variables for configuration. The application supports both development and production deployments.
+- **GitHub OAuth Authentication** - Secure login with GitHub accounts
+- **Repository Analysis** - Deep analysis of repository structure, languages, and statistics
+- **Real-time Webhooks** - Process GitHub events in real-time
+- **Rate Limiting** - Built-in rate limiting for API calls
+- **TypeScript Support** - Fully typed codebase
+- **Next.js Framework** - Modern React framework with API routes
 
 ## 📋 Prerequisites
 
-- Node.js 16+ and npm
-- A Codegen API token (get one from [Codegen Dashboard](https://app.codegen.com/settings))
+- Node.js 18+ or Bun
+- GitHub App credentials
+- GitHub Personal Access Token (optional, for higher rate limits)
 
-## 🛠️ Installation & Setup
+## 🔧 Installation
 
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/Zeeeepa/codegenApp.git
-cd codegenApp
-```
-
-### 2. Install dependencies
+### Quick Setup with Script
 
 ```bash
-npm install
+# Download and run the setup script
+curl -sSL https://raw.githubusercontent.com/Zeeeepa/github.gg/main/deploy-local.sh | bash
 ```
 
-### 3. Environment Configuration
+### Manual Setup
 
-Create a `.env` file in the project root with your Codegen API credentials:
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Zeeeepa/github.gg.git
+   cd github.gg
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   # Using Bun (recommended)
+   bun install
+   
+   # Or using npm with legacy peer deps
+   npm install --legacy-peer-deps
+   
+   # Or using the provided script
+   npm run install:legacy
+   ```
+
+3. **Environment setup:**
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+4. **Configure environment variables** (see [Environment Configuration](#environment-configuration))
+
+5. **Place your GitHub App private key** in the project root as `zeeeepa.2025-06-30.private-key.pem`
+
+6. **Start the development server:**
+   ```bash
+   bun dev
+   # or
+   npm run dev
+   ```
+
+## 🔑 Environment Configuration
+
+Create a `.env.local` file with the following variables:
+
+```env
+# NextAuth Configuration
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-secret-key-here-generate-a-secure-random-string
+
+# GitHub OAuth App Configuration
+GITHUB_CLIENT_ID=Iv23li9PqHMExi84gaq1
+GITHUB_CLIENT_SECRET=[YOUR_CLIENT_SECRET]
+
+# GitHub App Configuration
+GITHUB_APP_ID=1484403
+GITHUB_PRIVATE_KEY_PATH=./zeeeepa.2025-06-30.private-key.pem
+
+# GitHub Personal Access Token (optional)
+GITHUB_TOKEN=[YOUR_GITHUB_TOKEN]
+
+# Webhook Configuration
+GITHUB_WEBHOOK_SECRET=your-webhook-secret-here-generate-a-secure-random-string
+```
+
+### Generate Secure Secrets
 
 ```bash
-# Required: Your Codegen API token
-# Get it from https://app.codegen.com/settings
-REACT_APP_API_TOKEN=your_api_token_here
+# Generate NEXTAUTH_SECRET
+openssl rand -base64 32
 
-# Optional: Your default organization ID
-REACT_APP_DEFAULT_ORGANIZATION=your_org_id_here
-
-# Optional: API Base URL (defaults to https://api.codegen.com)
-REACT_APP_API_BASE_URL=https://api.codegen.com
-
-# Optional: Your user ID for personalized features
-REACT_APP_USER_ID=your_user_id_here
+# Generate GITHUB_WEBHOOK_SECRET
+openssl rand -base64 32
 ```
 
-### 4. Start the development server
+## 🏗️ GitHub App Setup
 
-```bash
-npm start
-```
+See [GITHUB_APP_SETUP.md](./GITHUB_APP_SETUP.md) for detailed GitHub App configuration instructions.
 
-The application will be available at `http://localhost:3000` (or the next available port).
+### Quick Setup Checklist
 
-## 🔧 Development
+1. ✅ Create GitHub App with proper permissions
+2. ✅ Configure OAuth callback URL: `http://localhost:3000/api/auth/callback/github`
+3. ✅ Set webhook URL: `https://webhook-gateway.pixeliumperfecto.workers.dev/api/webhooks/github`
+4. ✅ Install app on your GitHub account
+5. ✅ Place private key file in project root
+6. ✅ Configure environment variables
 
-### Available Scripts
-
-- `npm start` - Start the React development server
-- `npm run build` - Build the React app for production
-- `npm test` - Run the test suite
-- `npm run eject` - Eject from Create React App (not recommended)
-
-### Project Structure
+## 📁 Project Structure
 
 ```
-codegenApp/
-├── public/                 # Static assets
-│   ├── manifest.json      # PWA manifest
-│   ├── favicon.ico        # App icon
-│   └── logo*.png          # App logos
-├── src/                   # React source code
-│   ├── api/              # API client and types
-│   ├── utils/            # Utility functions
-│   ├── hooks/            # Custom React hooks
-│   ├── storage/          # Local storage utilities
-│   └── *.tsx             # React components
-├── .env                  # Environment variables
-└── README.md            # This file
+github.gg/
+├── lib/
+│   └── github-app.ts          # GitHub App integration
+├── pages/
+│   ├── api/
+│   │   ├── auth/
+│   │   │   └── [...nextauth].ts # NextAuth configuration
+│   │   └── webhooks/
+│   │       └── github.ts       # Webhook handler
+├── types/
+│   └── next-auth.d.ts         # TypeScript definitions
+├── .env.local.example         # Environment template
+├── github-app-config.json     # GitHub App configuration
+├── deploy-local.sh           # Setup script
+└── GITHUB_APP_SETUP.md       # Detailed setup guide
 ```
 
-## ⚙️ Configuration
+## 🔌 API Endpoints
 
-The application supports multiple configuration methods:
+### Authentication
+- `GET /api/auth/signin` - Sign in page
+- `GET /api/auth/callback/github` - GitHub OAuth callback
+- `GET /api/auth/signout` - Sign out
 
-1. **Environment Variables** (recommended): Set `REACT_APP_*` variables in `.env` file
-2. **Settings Page**: Configure credentials through the web interface
-3. **LocalStorage**: Automatically saves settings for future sessions
+### Webhooks
+- `POST /api/webhooks/github` - GitHub webhook endpoint
 
-### Environment Variable Validation
+## 🎯 Usage Examples
 
-The Settings page will show the status of your environment variables:
+### Analyzing a Repository
 
-- ✅ **Green**: All required variables are set
-- ⚠️ **Yellow**: Optional variables missing (warnings)
-- ❌ **Red**: Required variables missing (will prevent API calls)
+```typescript
+import { createGitHubService } from '../lib/github-app';
+
+// Using OAuth token
+const service = createGitHubService(accessToken);
+const analysis = await service.analyzeRepository('owner', 'repo');
+
+// Using installation
+const service = await createGitHubService(undefined, installationId);
+const stats = await service.getRepositoryStats('owner', 'repo');
+```
+
+### Processing Webhooks
+
+The webhook handler automatically processes various GitHub events:
+
+- Repository events (created, deleted, archived)
+- Push events
+- Pull request events
+- Issue events
+- Release events
+- Star/fork events
+- Installation events
+
+## 🔒 Security Features
+
+- **Webhook signature verification** - All webhooks are verified using HMAC-SHA256
+- **Rate limiting** - Built-in rate limiting for API calls
+- **Secure token handling** - OAuth tokens are handled securely
+- **Private key protection** - GitHub App private key is read from secure file
 
 ## 🚀 Deployment
 
-### Frontend Deployment
+### Development
+```bash
+npm run dev
+```
 
-The React app can be deployed to any static hosting service:
-
-#### Vercel
+### Production Build
 ```bash
 npm run build
-# Deploy the 'build' folder to Vercel
+npm start
 ```
 
-#### Netlify
+### Using Bun (Recommended)
 ```bash
-npm run build
-# Deploy the 'build' folder to Netlify
+bun dev      # Development
+bun build    # Build
+bun start    # Production
 ```
-
-#### GitHub Pages
-```bash
-npm run build
-# Deploy the 'build' folder to GitHub Pages
-```
-
-### Environment Variables for Production
-
-Set these environment variables in your hosting platform:
-
-```env
-REACT_APP_API_TOKEN=your_production_api_token
-REACT_APP_DEFAULT_ORGANIZATION=your_org_id
-REACT_APP_API_BASE_URL=https://api.codegen.com
-REACT_APP_USER_ID=your_user_id
-```
-
-## 🔐 Authentication
-
-1. Get your API token from the [Codegen Dashboard](https://app.codegen.com/settings)
-2. Add it to your `.env` file or enter it in the application's Settings page
-3. The application will validate your credentials and load your organizations
-
-## 🧪 Testing
-
-Run the test suite to ensure everything is working correctly:
-
-```bash
-npm test
-```
-
-The test suite includes:
-- Environment variable validation tests
-- Component rendering tests
-- API configuration tests
 
 ## 🐛 Troubleshooting
 
-### Missing Environment Variables
+### Common Issues
 
-If you see errors about missing environment variables:
+1. **Private key not found**
+   - Ensure `zeeeepa.2025-06-30.private-key.pem` is in the project root
+   - Check file permissions: `chmod 600 zeeeepa.2025-06-30.private-key.pem`
 
-1. Ensure your `.env` file is in the project root
-2. Restart the development server after creating/modifying `.env`
-3. Check the Settings page for validation status
+2. **OAuth callback mismatch**
+   - Verify callback URL in GitHub App settings matches exactly
+   - Check NEXTAUTH_URL environment variable
 
-### API Connection Issues
+3. **Webhook signature verification fails**
+   - Ensure GITHUB_WEBHOOK_SECRET matches the secret in GitHub App settings
+   - Check webhook URL is accessible
 
-If API calls are failing:
+4. **Rate limiting issues**
+   - Add GITHUB_TOKEN for higher rate limits
+   - Implement proper rate limiting in your application
 
-1. Verify your API token is correct
-2. Check that the API base URL is accessible (`https://api.codegen.com`)
-3. Ensure your organization ID is valid
-4. Check browser console for detailed error messages
+### Debug Mode
 
-### Development Server Issues
+Enable debug logging by setting:
+```env
+NODE_ENV=development
+```
 
-- Make sure port 3000 is available
-- Try restarting the server: `npm start`
-- Check the console for detailed error messages
+## 📚 Documentation
 
-## 📝 API Token Setup
-
-1. Visit [Codegen Dashboard](https://app.codegen.com/settings)
-2. Navigate to API settings
-3. Generate a new API token
-4. Copy the token and add it to your `.env` file or Settings page
+- [GitHub App Setup Guide](./GITHUB_APP_SETUP.md)
+- [GitHub Apps Documentation](https://docs.github.com/en/developers/apps)
+- [NextAuth.js Documentation](https://next-auth.js.org/)
+- [Octokit Documentation](https://octokit.github.io/rest.js/)
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
+## 🙏 Acknowledgments
 
-If you encounter any issues:
+- [Octokit](https://octokit.github.io/) - GitHub API client
+- [NextAuth.js](https://next-auth.js.org/) - Authentication
+- [Next.js](https://nextjs.org/) - React framework
+- [GitHub](https://github.com/) - Platform and APIs
 
-1. Check the troubleshooting section above
-2. Look for existing issues in the GitHub repository
-3. Create a new issue with detailed information about the problem
+---
 
-## 🔄 Updates
+**Need help?** Check the [troubleshooting section](#troubleshooting) or create an issue in the repository.
 
-To update the application:
-
-```bash
-git pull origin main
-npm install  # Updates dependencies
-npm start    # Restart the development server
-```
