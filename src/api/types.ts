@@ -5,6 +5,7 @@ export interface AgentRunResponse {
   organization_id: number;
   status: string;
   created_at: string;
+  updated_at?: string;
   web_url: string;
   result?: string;
 }
@@ -41,6 +42,19 @@ export interface ResumeAgentRunRequest {
 
 export interface StopAgentRunRequest {
   agent_run_id: number;
+}
+
+export interface ListAgentRunsRequest {
+  page?: number;
+  size?: number;
+}
+
+export interface ListAgentRunsResponse {
+  items: AgentRunResponse[];
+  total: number;
+  page: number;
+  size: number;
+  has_more: boolean;
 }
 
 // Paginated Response Type
