@@ -190,8 +190,7 @@ export default function ListAgentRuns() {
 
     try {
       // Try resume endpoint first (it might work for stopped runs too)
-      await apiClient.resumeAgentRun(organizationId, {
-        agent_run_id: agentRunId,
+      await apiClient.resumeAgentRun(organizationId, agentRunId, {
         prompt: prompt.trim(),
       });
 

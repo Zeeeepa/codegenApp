@@ -57,8 +57,7 @@ export function ResumeAgentRunDialog({
     setIsLoading(true);
     try {
       // Use the exact same API call pattern as the original resumeAgentRun function
-      await apiClient.resumeAgentRun(organizationId, {
-        agent_run_id: agentRunId,
+      await apiClient.resumeAgentRun(organizationId, agentRunId, {
         prompt: prompt.trim(),
       });
 
@@ -219,4 +218,3 @@ export function ResumeAgentRunDialog({
     </div>
   );
 }
-
