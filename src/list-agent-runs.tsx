@@ -476,8 +476,8 @@ export default function ListAgentRuns() {
                 AgentRunStatus.TIMEOUT,
                 AgentRunStatus.MAX_ITERATIONS_REACHED,
                 AgentRunStatus.OUT_OF_TOKENS
-              ].includes(run.status as AgentRunStatus) || 
-              run.status.toLowerCase() === 'stopped';
+              ].includes(run.status as AgentRunStatus) && 
+              run.status.toLowerCase() !== 'stopped'; // Don't show respond button for stopped runs
 
               const isSelected = selection.isSelected(run.id);
               const canViewResponse = run.status === AgentRunStatus.COMPLETE && run.result;
@@ -581,10 +581,15 @@ export default function ListAgentRuns() {
                       {canResume && (
                         <button
                           onClick={() => resumeAgentRun(run.id)}
-                          className="inline-flex items-center px-3 py-1.5 border border-green-600 text-sm font-medium rounded text-green-300 bg-green-900 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-gray-800"
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 border text-sm font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 ${
+                            run.status.toLowerCase() === 'stopped' 
+                              ? 'border-green-500 text-green-200 bg-green-700 hover:bg-green-600 focus:ring-green-400' 
+                              : 'border-green-600 text-green-300 bg-green-900 hover:bg-green-800 focus:ring-green-500'
+                          }`}
                           title="Resume Agent Run (Cmd+R)"
                         >
                           <Play className="h-4 w-4" />
+                          {run.status.toLowerCase() === 'stopped' ? 'Resume Agent Run' : ''}
                         </button>
                       )}
                       
