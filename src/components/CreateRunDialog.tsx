@@ -25,7 +25,6 @@ export function CreateRunDialog({ isOpen, onClose, onCreated }: CreateRunDialogP
   const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [defaultOrgId, setDefaultOrgId] = useState<string | null>(null);
 
   const [formValues, setFormValues] = useState<FormValues>({
     prompt: "",
@@ -72,7 +71,6 @@ export function CreateRunDialog({ isOpen, onClose, onCreated }: CreateRunDialogP
         // Set default organization
         if (validation.organizations && validation.organizations.length > 0) {
           const defaultOrg = validation.organizations[0];
-          setDefaultOrgId(defaultOrg.id.toString());
           setFormValues(prev => ({
             ...prev,
             organizationId: defaultOrg.id.toString()
