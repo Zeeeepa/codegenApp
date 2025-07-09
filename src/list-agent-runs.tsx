@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
 import { useDialog } from "./contexts/DialogContext";
-import { MonitorSelectedButton, AddToMonitorButton } from "./components/MonitorSelectedButton";
+
 import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
 import { ResumeAgentRunDialog } from "./components/ResumeAgentRunDialog";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
@@ -44,6 +44,7 @@ export default function ListAgentRuns() {
 
   const selection = useAgentRunSelection();
   const { openDialog, closeDialog, isDialogOpen, dialogData } = useDialog();
+  const navigate = useNavigate();
   const [searchText, setSearchText] = useState("");
   const [dateRanges] = useState(() => getDateRanges());
   const [responseModalRun, setResponseModalRun] = useState<CachedAgentRun | null>(null);
@@ -134,19 +135,49 @@ export default function ListAgentRuns() {
 
   // Format date for display
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    try {
+      // Handle various date formats
+      let date: Date;
+      if (dateString.includes('T') || dateString.includes('Z')) {
+        // ISO format
+        date = new Date(dateString);
+      } else {
+        // Try parsing as is
+        date = new Date(dateString);
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateString);
+        return dateString; // Return original string if parsing fails
+      }
+      
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return date.toLocaleDateString();
+      // Debug logging for timestamp issues
+      console.log('Date formatting:', {
+        original: dateString,
+        parsed: date.toISOString(),
+        now: now.toISOString(),
+        diffMs,
+        diffMins,
+        diffHours
+      });
+
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      
+      return date.toLocaleDateString();
+    } catch (error) {
+      console.error('Error formatting date:', error, dateString);
+      return dateString; // Return original string if error occurs
+    }
   };
 
   // Stop an agent run
@@ -165,7 +196,20 @@ export default function ListAgentRuns() {
       // Refresh to get updated status
       await refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to stop agent run");
+      console.error("Stop agent run error:", error);
+      
+      // Enhanced error handling with more specific messages
+      if (error instanceof Error) {
+        if (error.message.includes('404')) {
+          toast.error(`Stop endpoint not found. The stop feature may not be available for agent run #${agentRunId}.`);
+        } else if (error.message.includes('403')) {
+          toast.error(`Permission denied. You may not have access to stop agent run #${agentRunId}.`);
+        } else {
+          toast.error(`Failed to stop agent run: ${error.message}`);
+        }
+      } else {
+        toast.error("Failed to stop agent run: Unknown error");
+      }
     }
   };
 
@@ -177,7 +221,7 @@ export default function ListAgentRuns() {
     openDialog('resume-run', { agentRunId, organizationId });
   };
 
-  // Respond to an agent run (for stopped/failed runs)
+  // Respond to an agent run (for stopped/failed runs) - uses browser automation
   const respondToAgentRun = async (agentRunId: number) => {
     if (!organizationId) return;
 
@@ -189,17 +233,144 @@ export default function ListAgentRuns() {
     if (!prompt || !prompt.trim()) return;
 
     try {
-      // Try resume endpoint first (it might work for stopped runs too)
-      await apiClient.resumeAgentRun(organizationId, {
-        agent_run_id: agentRunId,
-        prompt: prompt.trim(),
+      console.log("🚀 Automating browser to respond to agent run:", {
+        organizationId,
+        agentRunId,
+        prompt: prompt.trim()
       });
+      
+      // Construct the Codegen chat URL for this agent run
+      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
+      
+      // Open INVISIBLE browser window in background
+      const browserWindow = window.open(chatUrl, '_blank', 'width=1,height=1,left=-2000,top=-2000,toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no,directories=no');
+      
+      if (!browserWindow) {
+        throw new Error("Failed to open browser window - popup blocked?");
+      }
 
-      toast.success(`Response sent to agent run #${agentRunId}`);
+      // Wait for page to load and then automate the chat input
+      setTimeout(async () => {
+        try {
+          const doc = browserWindow.document;
+          
+          // Wait for the page to fully load
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Try primary XPath selector first for the text input area
+          let chatInput = doc.evaluate(
+            '//*[@id="chat-bar"]/div/div[2]/div/form/fieldset/div/div[1]/div/textarea',
+            doc,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null
+          ).singleNodeValue as HTMLTextAreaElement;
+          
+          // Fallback XPath selectors
+          if (!chatInput) {
+            chatInput = doc.evaluate(
+              '//*[@id="chat-bar"]//textarea',
+              doc,
+              null,
+              XPathResult.FIRST_ORDERED_NODE_TYPE,
+              null
+            ).singleNodeValue as HTMLTextAreaElement;
+          }
+          
+          // CSS selector fallback
+          if (!chatInput) {
+            chatInput = doc.querySelector('#chat-bar textarea') as HTMLTextAreaElement;
+          }
+          
+          // Generic textarea fallback
+          if (!chatInput) {
+            chatInput = doc.querySelector('textarea[placeholder*="message"], textarea[placeholder*="Message"]') as HTMLTextAreaElement;
+          }
+          
+          if (!chatInput) {
+            throw new Error("Could not find chat input textarea element");
+          }
+          
+          // Focus and set the text
+          chatInput.focus();
+          chatInput.value = prompt.trim();
+          
+          // Trigger input events to ensure React state updates
+          chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+          chatInput.dispatchEvent(new Event('change', { bubbles: true }));
+          
+          // Wait a moment for React to process the input
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Find and click the send button using XPath
+          let sendButton = doc.evaluate(
+            '//*[@id="chat-bar"]//button[contains(@class, "send") or @type="submit" or contains(text(), "Send")]',
+            doc,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null
+          ).singleNodeValue as HTMLButtonElement;
+          
+          // Fallback CSS selectors for send button
+          if (!sendButton) {
+            sendButton = doc.querySelector('#chat-bar button[type="submit"]') as HTMLButtonElement;
+          }
+          
+          if (!sendButton) {
+            sendButton = doc.querySelector('#chat-bar button:last-child') as HTMLButtonElement;
+          }
+          
+          if (sendButton) {
+            sendButton.click();
+            
+            // Wait for message to be sent
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Close the browser window
+            browserWindow.close();
+            
+            toast.success(`Response sent to agent run #${agentRunId} successfully!`);
+            
+            // Refresh to show updated status
+            await refresh();
+          } else {
+            throw new Error("Could not find send button");
+          }
+          
+        } catch (automationError) {
+          console.error("Browser automation failed:", automationError);
+          browserWindow.close();
+          
+          // Fallback to manual approach
+          window.focus();
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const fallbackWindow = window.open(chatUrl, '_blank', 'noopener,noreferrer');
+          
+          try {
+            await navigator.clipboard.writeText(prompt.trim());
+            toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
+          } catch (clipboardError) {
+            console.error("Clipboard error:", clipboardError);
+            toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
+          }
+        }
+      }, 2000); // Wait 2 seconds for page to load
 
-      await refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to respond to agent run");
+      console.error("Failed to automate browser:", error);
+      
+      // Fallback to manual approach
+      window.focus();
+      const chatUrl = `https://codegen.com/agent/trace/${agentRunId}`;
+      window.open(chatUrl, '_blank', 'noopener,noreferrer');
+      
+      try {
+        await navigator.clipboard.writeText(prompt.trim());
+        toast.error(`Automation failed. Opened agent run in browser - your message is copied to clipboard.`);
+      } catch (clipboardError) {
+        console.error("Clipboard error:", clipboardError);
+        toast.error(`Automation failed. Opened agent run in browser - please paste: "${prompt.trim()}"`);
+      }
     }
   };
 
@@ -257,8 +428,6 @@ export default function ListAgentRuns() {
     }
   };
 
-  const navigate = useNavigate();
-
   if (error && !isLoading) {
     return (
       <div className="container mx-auto p-6 max-w-4xl">
@@ -300,22 +469,20 @@ export default function ListAgentRuns() {
                 }
                 return null;
               })()}
+              {/* Real-time status statistics */}
+              <div className="flex items-center space-x-2 text-sm">
+                {filteredRuns.filter(run => run.status === AgentRunStatus.ACTIVE).length > 0 && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-900/30 text-blue-300 border border-blue-500/20 animate-pulse">
+                    ⚡ {filteredRuns.filter(run => run.status === AgentRunStatus.ACTIVE).length} Active
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center space-x-3">
-              {selection.hasSelection && organizationId && (
-                <MonitorSelectedButton 
-                  organizationId={organizationId} 
-                  onMonitoringComplete={refresh}
-                />
-              )}
-              {organizationId && (
-                <AddToMonitorButton 
-                  organizationId={organizationId} 
-                  onAddComplete={refresh}
-                />
-              )}
+
+
               <button
-                onClick={() => navigate('/create-agent-run')}
+                onClick={() => openDialog('create-run', { organizationId })}
                 className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -433,12 +600,6 @@ export default function ListAgentRuns() {
                 : "Create your first agent run to get started"}
             </p>
             <div className="flex justify-center space-x-3">
-              {organizationId && (
-                <AddToMonitorButton 
-                  organizationId={organizationId} 
-                  onAddComplete={refresh}
-                />
-              )}
               <button
                 onClick={() => navigate('/create-agent-run')}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -468,8 +629,10 @@ export default function ListAgentRuns() {
               const canStop = run.status === AgentRunStatus.ACTIVE;
               const canResume = run.status === AgentRunStatus.PAUSED || 
                                 run.status === AgentRunStatus.COMPLETE ||
+                                run.status === AgentRunStatus.CANCELLED ||
                                 run.status.toLowerCase() === 'stopped' ||
-                                run.status.toLowerCase() === 'paused';
+                                run.status.toLowerCase() === 'paused' ||
+                                run.status.toLowerCase() === 'cancelled';
               const canRespond = [
                 AgentRunStatus.FAILED,
                 AgentRunStatus.ERROR,
@@ -516,13 +679,19 @@ export default function ListAgentRuns() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
                           <h3 className="text-lg font-medium text-white">Agent Run #{run.id}</h3>
-                          {/* Monitoring indicator */}
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-900/50 text-green-300 border border-green-500/30">
-                            🔍 Monitored
-                          </span>
+
+                          {/* Real-time status indicator */}
+                          {run.status === AgentRunStatus.ACTIVE && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-900/50 text-blue-300 border border-blue-500/30 animate-pulse">
+                              ⚡ Live
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center space-x-4 text-sm text-gray-500">
                           <span>Created {formatDate(run.created_at)}</span>
+                          {run.lastUpdated && run.lastUpdated !== run.created_at && (
+                            <span className="text-yellow-400">• Updated {formatDate(run.lastUpdated)}</span>
+                          )}
                           {run.result && (
                             <span className="text-blue-400">• Has Response</span>
                           )}
@@ -583,9 +752,10 @@ export default function ListAgentRuns() {
                         <button
                           onClick={() => resumeAgentRun(run.id)}
                           className="inline-flex items-center px-3 py-1.5 border border-green-600 text-sm font-medium rounded text-green-300 bg-green-900 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-gray-800"
-                          title="Resume Agent Run (Cmd+R)"
+                          title={`Resume Agent Run #${run.id}`}
                         >
-                          <Play className="h-4 w-4" />
+                          <Play className="h-4 w-4 mr-1" />
+                          Resume
                         </button>
                       )}
                       
