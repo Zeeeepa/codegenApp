@@ -49,6 +49,8 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
 
     setLoadingOrgs(true);
     try {
+      console.log('🔄 Loading organizations with token:', token.substring(0, 10) + '...');
+      
       // Update preferences with current token before making API call
       await setPreferenceValues({
         apiToken: token,
@@ -59,12 +61,24 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
       // Force refresh credentials to pick up the new token
       await apiClient.refreshCredentials();
       
+      console.log('🌐 Making organizations API call...');
       const orgs = await apiClient.getOrganizations();
+      console.log('✅ Organizations response:', orgs);
+      
       setOrganizations(orgs.items);
       toast.success(`Loaded ${orgs.items.length} organizations`);
     } catch (error) {
-      console.error('Failed to load organizations:', error);
-      toast.error('Failed to load organizations. Check your API token.');
+      console.error('❌ Failed to load organizations:', error);
+      
+      // More detailed error message
+      let errorMessage = 'Failed to load organizations. ';
+      if (error instanceof Error) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += 'Check your API token and network connection.';
+      }
+      
+      toast.error(errorMessage);
       setOrganizations([]);
     } finally {
       setLoadingOrgs(false);
