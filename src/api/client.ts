@@ -153,13 +153,18 @@ export class CodegenAPIClient {
   async resumeAgentRun(
     organizationId: number,
     agentRunId: number,
-    request: ResumeAgentRunRequest
+    request: Omit<ResumeAgentRunRequest, 'agent_run_id'>
   ): Promise<AgentRunResponse> {
+    const fullRequest: ResumeAgentRunRequest = {
+      ...request,
+      agent_run_id: agentRunId,
+    };
+    
     return this.makeRequest<AgentRunResponse>(
-      API_ENDPOINTS.AGENT_RUN_RESUME(organizationId, agentRunId),
+      API_ENDPOINTS.AGENT_RUN_RESUME(organizationId),
       {
         method: "POST",
-        body: JSON.stringify(request),
+        body: JSON.stringify(fullRequest),
       }
     );
   }
