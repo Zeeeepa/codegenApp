@@ -50,27 +50,70 @@ export function ResumeAgentRunDialog({
 
   const handleResumeAgentRun = async () => {
     if (!prompt.trim()) {
-      toast.error("Please enter a prompt");
+      toast.error("Please enter a prompt to resume the agent run");
       return;
     }
 
     setIsLoading(true);
-    try {
-      // Use the exact same API call pattern as the original resumeAgentRun function
-      await apiClient.resumeAgentRun(organizationId, {
-        agent_run_id: agentRunId,
-        prompt: prompt.trim(),
-      });
 
-      // Use the exact same success message pattern
-      toast.success(`Agent run #${agentRunId} has been resumed`);
+    try {
+      console.log("🚀 Using backend automation service to resume agent run:", {
+        organizationId,
+        agentRunId,
+        prompt: prompt.trim(),
+        agentRunStatus: agentRunDetails?.status
+      });
       
-      setPrompt("Continue with the previous task"); // Reset to default
-      onResumed?.(); // Trigger refresh
-      onClose();
+      // Call backend automation service
+      const result = await apiClient.resumeAgentRunAutomation(
+        agentRunId,
+        organizationId,
+        prompt.trim()
+      );
+
+      if (result.success) {
+        toast.success(`Agent run #${agentRunId} has been resumed successfully!`);
+        
+        // Update local cache to reflect ACTIVE status
+        try {
+          const { getAgentRunCache } = await import('../storage/agentRunCache');
+          const cache = getAgentRunCache();
+          
+          // Update the agent run status to ACTIVE
+          if (agentRunDetails) {
+            const updatedAgentRun = {
+              ...agentRunDetails,
+              status: 'ACTIVE'
+            };
+            await cache.updateAgentRun(organizationId, updatedAgentRun);
+          }
+        } catch (cacheError) {
+          console.warn('Failed to update cache after resume:', cacheError);
+        }
+        
+        // Reset to default and trigger refresh
+        setPrompt("Continue with the previous task");
+        onResumed?.(); // Trigger refresh to show updated status
+        onClose();
+      } else {
+        throw new Error(result.error || 'Backend automation failed');
+      }
+      
     } catch (error) {
-      // Use the exact same error handling pattern
-      toast.error(error instanceof Error ? error.message : "Failed to resume agent run");
+      console.error("Backend automation failed:", error);
+      
+      // Provide helpful error message based on error type
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        if (error.message.includes('Backend automation service not available') || 
+            error.message.includes('Cannot connect to backend')) {
+          errorMessage = `${error.message}\n\nTo enable resume functionality:\n1. Navigate to the 'backend' directory\n2. Run 'npm install' then 'npm start'\n3. Ensure the backend server is running on port 3500`;
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast.error(`Failed to resume agent run: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -155,7 +198,7 @@ export function ResumeAgentRunDialog({
                   <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-3">
                     <p className="text-blue-200 text-sm">
                       💡 <strong>Resume Instructions:</strong> Enter a prompt to continue this agent run. 
-                      The agent will receive your message and continue from where it left off.
+                      The system will automatically open the agent chat and send your message.
                     </p>
                   </div>
                 </div>
@@ -219,4 +262,3 @@ export function ResumeAgentRunDialog({
     </div>
   );
 }
-
