@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { 
   Play, 
@@ -19,9 +18,9 @@ import {
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
 import { useDialog } from "./contexts/DialogContext";
-import { MonitorSelectedButton, AddToMonitorButton } from "./components/MonitorSelectedButton";
 import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
 import { ResumeAgentRunDialog } from "./components/ResumeAgentRunDialog";
+import { CreateRunDialog } from "./components/CreateRunDialog";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";
 import { getAPIClient } from "./api/client";
 import { getAgentRunCache } from "./storage/agentRunCache";
@@ -47,6 +46,7 @@ export default function ListAgentRuns() {
   const [searchText, setSearchText] = useState("");
   const [dateRanges] = useState(() => getDateRanges());
   const [responseModalRun, setResponseModalRun] = useState<CachedAgentRun | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const apiClient = getAPIClient();
   const cache = getAgentRunCache();
 
@@ -301,24 +301,12 @@ export default function ListAgentRuns() {
               })()}
             </div>
             <div className="flex items-center space-x-3">
-              {selection.hasSelection && organizationId && (
-                <MonitorSelectedButton 
-                  organizationId={organizationId} 
-                  onMonitoringComplete={refresh}
-                />
-              )}
-              {organizationId && (
-                <AddToMonitorButton 
-                  organizationId={organizationId} 
-                  onAddComplete={refresh}
-                />
-              )}
               <button
-                onClick={() => navigate('/create-agent-run')}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                onClick={() => setShowCreateDialog(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-gray-800 transition-colors"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Create Run
+                Create Agent Run
               </button>
               {selection.hasSelection && (
                 <button
@@ -432,15 +420,9 @@ export default function ListAgentRuns() {
                 : "Create your first agent run to get started"}
             </p>
             <div className="flex justify-center space-x-3">
-              {organizationId && (
-                <AddToMonitorButton 
-                  organizationId={organizationId} 
-                  onAddComplete={refresh}
-                />
-              )}
               <button
-                onClick={() => navigate('/create-agent-run')}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                onClick={() => setShowCreateDialog(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-gray-800 transition-colors"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Agent Run
@@ -637,6 +619,13 @@ export default function ListAgentRuns() {
             onResumed={refresh}
           />
         )}
+
+        {/* Create Agent Run Dialog */}
+        <CreateRunDialog
+          isOpen={showCreateDialog}
+          onClose={() => setShowCreateDialog(false)}
+          onCreated={refresh}
+        />
       </div>
     </div>
   );
