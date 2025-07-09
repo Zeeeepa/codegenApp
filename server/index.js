@@ -45,7 +45,12 @@ app.use('/api/v1', async (req, res) => {
     console.log(`🔑 Authorization: ${req.headers.authorization ? req.headers.authorization.substring(0, 20) + '...' : 'MISSING'}`);
     
     // Forward the request to Codegen API
-    const response = await fetch(targetUrl + (req.url.includes('?') ? '&' + req.url.split('?')[1] : ''), {
+    const queryString = req.url.includes('?') ? req.url.split('?')[1] : '';
+    const fullUrl = queryString ? `${targetUrl}?${queryString}` : targetUrl;
+    
+    console.log(`🌐 Full URL: ${fullUrl}`);
+    
+    const response = await fetch(fullUrl, {
       method: req.method,
       headers: {
         'Content-Type': 'application/json',
