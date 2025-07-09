@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { showToast, ToastStyle } from "../utils/toast";
-import { AgentRunResponse, AgentRunFilters, SortOptions } from "../api/types";
+import { CachedAgentRun, AgentRunFilters, SortOptions } from "../api/types";
 import { getAgentRunCache } from "../storage/agentRunCache";
 import { getAPIClient } from "../api/client";
 import { filterAgentRuns, sortAgentRuns } from "../utils/filtering";
@@ -9,8 +9,8 @@ import { SyncStatus } from "../storage/cacheTypes";
 import { getBackgroundMonitoringService } from "../utils/backgroundMonitoring";
 
 interface UseCachedAgentRunsResult {
-  agentRuns: AgentRunResponse[];
-  filteredRuns: AgentRunResponse[];
+  agentRuns: CachedAgentRun[];
+  filteredRuns: CachedAgentRun[];
   isLoading: boolean;
   isRefreshing: boolean;
   error: string | null;
@@ -22,15 +22,17 @@ interface UseCachedAgentRunsResult {
   sortOptions: SortOptions;
   organizationId: number | null;
   setOrganizationId: (orgId: number) => void;
+  addNewAgentRun: (agentRun: CachedAgentRun) => Promise<void>;
 }
 
 export function useCachedAgentRuns(): UseCachedAgentRunsResult {
-  const [agentRuns, setAgentRuns] = useState<AgentRunResponse[]>([]);
+  const [agentRuns, setAgentRuns] = useState<CachedAgentRun[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(SyncStatus.IDLE);
   const [organizationId, setOrganizationIdState] = useState<number | null>(null);
+  const [forceRender, setForceRender] = useState(0); // Force re-render counter
   
   // Filter and sort state
   const [filters, setFilters] = useState<AgentRunFilters>({});
@@ -184,6 +186,77 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
     localStorage.setItem("defaultOrganizationId", orgId.toString());
   }, []);
 
+  // Add new agent run immediately to state AND persist to cache
+  const addNewAgentRun = useCallback(async (agentRun: CachedAgentRun) => {
+    console.log(`🔄 Adding new agent run #${agentRun.id} to state and cache immediately`);
+    console.log(`📊 Current organization ID: ${organizationId} (type: ${typeof organizationId}), Agent run org: ${agentRun.organization_id} (type: ${typeof agentRun.organization_id})`);
+    console.log(`🔍 Current filters:`, filters);
+    
+    // Handle race condition: if organizationId is not set yet, try to get it from localStorage
+    let currentOrgId = Number(organizationId);
+    if (!currentOrgId) {
+      const storedOrgId = localStorage.getItem("defaultOrganizationId");
+      if (storedOrgId) {
+        currentOrgId = Number(storedOrgId);
+        console.log(`📦 Using stored organization ID: ${currentOrgId}`);
+      }
+    }
+    
+    const agentRunOrgId = Number(agentRun.organization_id);
+    
+    // If we still don't have an organization ID, add the run anyway (better UX)
+    if (!currentOrgId) {
+      console.log(`⚠️ No organization ID available, adding agent run anyway for better UX`);
+      setAgentRuns(prevRuns => {
+        const newRuns = [agentRun, ...prevRuns];
+        console.log(`📋 Updated runs list: ${newRuns.length} total runs`);
+        return newRuns;
+      });
+      setForceRender(prev => prev + 1);
+      console.log(`✅ Added agent run #${agentRun.id} to UI state (no org check)`);
+      return;
+    }
+    
+    if (currentOrgId === agentRunOrgId) {
+      // FORCE CLEAR ALL FILTERS FIRST - NO FUCKING FILTERS HIDING NEW RUNS
+      console.log(`🧹 CLEARING ALL FILTERS TO ENSURE NEW RUN IS VISIBLE`);
+      setFilters({});
+      
+      // Update UI state immediately with detailed logging
+      setAgentRuns(prevRuns => {
+        const newRuns = [agentRun, ...prevRuns];
+        console.log(`📋 FORCE UPDATED runs list: ${newRuns.length} total runs (was ${prevRuns.length})`);
+        console.log(`🆕 NEW RUN ADDED at position 0: #${agentRun.id} - ${agentRun.status}`);
+        return newRuns;
+      });
+      
+      // Force multiple re-renders to ensure UI updates
+      setForceRender(prev => prev + 1);
+      
+      // Additional force update after a tiny delay
+      setTimeout(() => {
+        setForceRender(prev => prev + 1);
+        console.log(`🔄 ADDITIONAL FORCE RENDER TRIGGERED`);
+      }, 50);
+      
+      console.log(`✅ FORCEFULLY ADDED agent run #${agentRun.id} to UI state for org ${currentOrgId}`);
+      
+      // Persist to cache for persistence between sessions
+      try {
+        // Convert CachedAgentRun to AgentRunResponse for cache storage
+        const { lastUpdated, organizationName, isPolling, ...agentRunResponse } = agentRun;
+        await cache.updateAgentRun(currentOrgId, agentRunResponse as any);
+        console.log(`💾 Persisted agent run #${agentRun.id} to cache`);
+      } catch (error) {
+        console.error(`❌ Failed to persist agent run #${agentRun.id} to cache:`, error);
+        // Don't throw - UI update succeeded, cache failure shouldn't break UX
+      }
+    } else {
+      console.log(`❌ Skipped adding agent run #${agentRun.id} - organization mismatch (${currentOrgId} !== ${agentRunOrgId})`);
+      throw new Error(`Organization mismatch: expected ${currentOrgId}, got ${agentRunOrgId}`);
+    }
+  }, [organizationId, cache, filters, setFilters]);
+
   // Initial load
   useEffect(() => {
     if (organizationId) {
@@ -245,11 +318,19 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
 
   // Apply filters and sorting - memoized for performance
   const filteredRuns = useMemo(() => {
-    return sortAgentRuns(
-      filterAgentRuns(agentRuns, filters),
-      sortOptions
-    );
-  }, [agentRuns, filters, sortOptions]);
+    console.log(`🔍 Filtering ${agentRuns.length} agent runs with filters:`, filters);
+    console.log(`📊 Current organization ID for filtering: ${organizationId}`);
+    
+    const filtered = filterAgentRuns(agentRuns, filters);
+    const sorted = sortAgentRuns(filtered, sortOptions);
+    
+    console.log(`📋 After filtering: ${filtered.length} runs, after sorting: ${sorted.length} runs`);
+    if (sorted.length > 0) {
+      console.log(`🆕 First run in sorted list: #${sorted[0].id} - ${sorted[0].status} (org: ${sorted[0].organization_id})`);
+    }
+    
+    return sorted;
+  }, [agentRuns, filters, sortOptions, organizationId, forceRender]);
 
   return {
     agentRuns,
@@ -265,5 +346,6 @@ export function useCachedAgentRuns(): UseCachedAgentRunsResult {
     sortOptions,
     organizationId,
     setOrganizationId,
+    addNewAgentRun,
   };
 }

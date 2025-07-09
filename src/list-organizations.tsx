@@ -1,6 +1,6 @@
 // Load environment variables first
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+
 import toast from "react-hot-toast";
 import { Building, Star, StarOff, Copy, RefreshCw, AlertCircle } from "lucide-react";
 import { getAPIClient } from "./api/client";
@@ -21,7 +21,7 @@ export default function ListOrganizations() {
   const [defaultOrgId, setDefaultOrgId] = useState<number | null>(null);
   const [searchText, setSearchText] = useState<string>("");
 
-  const navigate = useNavigate();
+
   const apiClient = getAPIClient();
   const { displayName: userDisplayName } = useCurrentUser();
 
@@ -258,7 +258,7 @@ export default function ListOrganizations() {
                       // Use apiClient to check organization details
                       console.log('API Client available:', !!apiClient);
                       // Navigate to agent runs for this organization
-                      navigate('/list-agent-runs');
+                      window.location.href = '/agent-runs';
                     }}
                     className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     title="View Agent Runs"
