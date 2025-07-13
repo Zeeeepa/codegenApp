@@ -8,6 +8,7 @@ export interface Preferences {
   userId?: string;
   apiBaseUrl?: string;
   githubToken?: string;
+  planningStatement?: string;
 }
 
 const PREFERENCES_KEY = 'app_preferences';

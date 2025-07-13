@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { Settings } from 'lucide-react';
 import ListAgentRuns from './list-agent-runs';
 import { SetupGuide } from './components/SetupGuide';
+import { ProjectDashboard } from './components/ProjectDashboard';
 import { AgentRunSelectionProvider } from './contexts/AgentRunSelectionContext';
 import { DialogProvider } from './contexts/DialogContext';
 import { SettingsDialog } from './components/SettingsDialog';
 import { ProjectDropdown } from './components/ProjectDropdown';
 import { validateEnvironmentConfiguration } from './utils/preferences';
 import { CachedProject } from './api/types';
+import { getCachedProjects } from './storage/projectCache';
 import './App.css';
 
 // Header component with project dropdown and settings gear icon
@@ -60,11 +62,52 @@ interface DashboardProps {
 }
 
 function Dashboard({ selectedProject }: DashboardProps) {
+  const [hasProjects, setHasProjects] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
   const envValidation = validateEnvironmentConfiguration();
+  
+  // Check if user has any projects
+  useEffect(() => {
+    const checkProjects = async () => {
+      try {
+        const projects = await getCachedProjects();
+        setHasProjects(projects.length > 0);
+      } catch (error) {
+        console.error('Failed to check projects:', error);
+        setHasProjects(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkProjects();
+  }, []);
   
   // Show setup guide if configuration is invalid
   if (!envValidation.isValid) {
     return <SetupGuide />;
+  }
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
+  // Show project dashboard if user has projects, otherwise show agent runs list
+  if (hasProjects) {
+    return (
+      <ProjectDashboard 
+        selectedProject={selectedProject} 
+        onProjectSelect={(project) => {
+          // This will be handled by the parent component
+          window.location.reload(); // Simple way to refresh the app state
+        }} 
+      />
+    );
   }
   
   return <ListAgentRuns selectedProject={selectedProject} />;

@@ -20,7 +20,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
   const [envValidation, setEnvValidation] = useState(validateEnvironmentConfiguration());
   const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
-  const [activeTab, setActiveTab] = useState<'settings' | 'organizations' | 'github'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'organizations' | 'github' | 'planning'>('settings');
   
   // GitHub-related state
   const [githubToken, setGithubToken] = useState('');
@@ -28,6 +28,9 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
   const [githubRepos, setGithubRepos] = useState<GitHubRepository[]>([]);
   const [loadingGithubRepos, setLoadingGithubRepos] = useState(false);
   const [githubTokenValid, setGithubTokenValid] = useState<boolean | null>(null);
+  
+  // Planning statement state
+  const [planningStatement, setPlanningStatement] = useState('');
 
   const handleSave = async () => {
     try {
@@ -36,6 +39,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
         apiToken: token,
         defaultOrganization: orgId,
         githubToken: githubToken,
+        planningStatement: planningStatement,
       });
       
       // Get the updated .env content
@@ -167,6 +171,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
           setOrgId(preferences.defaultOrganization || '');
           setToken(preferences.apiToken || '');
           setGithubToken(preferences.githubToken || '');
+          setPlanningStatement(preferences.planningStatement || '');
           
           console.log('Loaded preferences:', {
             hasToken: !!preferences.apiToken,
@@ -258,6 +263,16 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
             >
               <Github className="h-4 w-4 inline mr-1" />
               GitHub
+            </button>
+            <button
+              onClick={() => setActiveTab('planning')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'planning'
+                  ? 'border-blue-500 text-blue-400'
+                  : 'border-transparent text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              📋 Planning Statement
             </button>
           </nav>
         </div>
@@ -589,6 +604,65 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                     <p className="text-gray-400">No repositories loaded. Click "Load Repositories" to fetch them.</p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'planning' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-medium text-white mb-2">Planning Statement</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  Configure a global planning statement that will be prepended to all agent run prompts. 
+                  This helps provide consistent context and instructions to the agent across all projects.
+                </p>
+              </div>
+              
+              <div>
+                <label htmlFor="planning_statement" className="block text-sm font-medium text-gray-300 mb-2">
+                  Global Planning Statement
+                </label>
+                <textarea
+                  id="planning_statement"
+                  value={planningStatement}
+                  onChange={(e) => setPlanningStatement(e.target.value)}
+                  placeholder="Enter your global planning statement here. This will be sent to the agent along with the user's target and project context..."
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows={12}
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  This statement will be combined with project-specific context and user targets when creating agent runs.
+                  Projects can override this with their own planning statements in project settings.
+                </p>
+              </div>
+
+              <div className="p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+                <h4 className="text-blue-300 font-medium mb-2">💡 Tips for effective planning statements:</h4>
+                <ul className="text-blue-200 text-sm space-y-1">
+                  <li>• Be specific about coding standards and best practices</li>
+                  <li>• Include preferred frameworks, libraries, or tools</li>
+                  <li>• Specify testing requirements and documentation standards</li>
+                  <li>• Mention any security or performance considerations</li>
+                  <li>• Include workflow preferences (commit messages, PR descriptions, etc.)</li>
+                </ul>
+              </div>
+
+              <div className="p-4 bg-gray-800 border border-gray-600 rounded-lg">
+                <h4 className="text-gray-300 font-medium mb-2">Example Planning Statement:</h4>
+                <pre className="text-gray-400 text-sm whitespace-pre-wrap">
+{`You are an expert software engineer. When working on projects:
+
+1. Follow TypeScript best practices and use strict typing
+2. Write comprehensive tests for all new functionality
+3. Use meaningful commit messages following conventional commits
+4. Add JSDoc comments for all public functions
+5. Ensure code is accessible and follows WCAG guidelines
+6. Use React hooks and functional components
+7. Implement proper error handling and loading states
+8. Follow the existing code style and patterns in the project
+
+Always explain your approach before implementing changes.`}
+                </pre>
               </div>
             </div>
           )}
