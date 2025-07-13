@@ -1,6 +1,6 @@
 // Project Settings Storage System
 
-import { LocalStorage } from './userStorage';
+import { LocalStorage } from '../utils/storage';
 
 export interface ProjectSettings {
   projectId: string;

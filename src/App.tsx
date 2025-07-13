@@ -110,7 +110,7 @@ function Dashboard({ selectedProject }: DashboardProps) {
     );
   }
   
-  return <ListAgentRuns selectedProject={selectedProject} />;
+  return <ListAgentRuns />;
 }
 
 function App() {

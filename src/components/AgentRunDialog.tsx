@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, Play, AlertCircle } from 'lucide-react';
 import { CachedProject } from '../api/types';
 import { getAPIClient } from '../api/client';
 import { getProjectSettings } from '../storage/projectSettings';
 import { getPreferenceValues } from '../utils/preferences';
 import { associateAgentRunWithProject } from '../storage/projectCache';
+import { validateCredentials } from '../utils/credentials';
 import toast from 'react-hot-toast';
 
 interface AgentRunDialogProps {
@@ -18,14 +19,9 @@ export function AgentRunDialog({ isOpen, onClose, project, autoConfirm }: AgentR
   const [target, setTarget] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [planningStatement, setPlanningStatement] = useState('');
+  const [organizationId, setOrganizationId] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadPlanningStatement();
-    }
-  }, [isOpen, project.id]);
-
-  const loadPlanningStatement = async () => {
+  const loadPlanningStatement = useCallback(async () => {
     try {
       const preferences = await getPreferenceValues();
       const projectSettings = await getProjectSettings(project.id);
@@ -36,7 +32,28 @@ export function AgentRunDialog({ isOpen, onClose, project, autoConfirm }: AgentR
     } catch (error) {
       console.error('Failed to load planning statement:', error);
     }
-  };
+  }, [project.id]);
+
+  // Load organization ID
+  const loadOrganization = useCallback(async () => {
+    try {
+      const validation = await validateCredentials();
+      if (validation.organizations && validation.organizations.length > 0) {
+        setOrganizationId(validation.organizations[0].id);
+      }
+    } catch (error) {
+      console.error('Failed to load organization:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadPlanningStatement();
+      loadOrganization();
+    }
+  }, [isOpen, loadPlanningStatement, loadOrganization]);
+
+
 
   const handleSubmit = async () => {
     if (!target.trim()) {
@@ -65,7 +82,11 @@ export function AgentRunDialog({ isOpen, onClose, project, autoConfirm }: AgentR
       console.log('Creating agent run with prompt:', fullPrompt);
 
       // Create the agent run
-      const agentRun = await apiClient.createAgentRun({
+      if (!organizationId) {
+        throw new Error('No organization available');
+      }
+      
+      const agentRun = await apiClient.createAgentRun(organizationId, {
         prompt: fullPrompt,
       });
 

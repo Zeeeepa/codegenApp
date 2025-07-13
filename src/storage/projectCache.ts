@@ -1,8 +1,8 @@
 // Project Cache Storage System
 
-import { LocalStorage } from './userStorage';
+import { LocalStorage } from '../utils/storage';
 import { Project, CachedProject, ProjectFilters } from '../api/types';
-import { GitHubRepository, GitHubPullRequest } from '../api/githubTypes';
+import { GitHubRepository } from '../api/githubTypes';
 import { getGitHubClient } from '../api/github';
 
 const PROJECTS_CACHE_KEY = 'projects_cache';
@@ -112,7 +112,7 @@ export async function removeProjectFromCache(projectId: string): Promise<void> {
 export async function getSelectedProject(): Promise<string | null> {
   try {
     const selected = await LocalStorage.getItem(SELECTED_PROJECT_KEY);
-    return selected;
+    return selected || null;
   } catch (error) {
     console.error('Failed to get selected project:', error);
     return null;

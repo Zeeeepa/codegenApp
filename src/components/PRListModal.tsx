@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, ExternalLink, GitPullRequest, User, Calendar } from 'lucide-react';
 import { CachedProject } from '../api/types';
 import { GitHubPullRequest } from '../api/githubTypes';
 import { getGitHubClient } from '../api/github';
 import { getPreferenceValues } from '../utils/preferences';
-import toast from 'react-hot-toast';
+
 
 interface PRListModalProps {
   isOpen: boolean;
@@ -17,13 +17,7 @@ export function PRListModal({ isOpen, onClose, project }: PRListModalProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadPullRequests();
-    }
-  }, [isOpen, project.id]);
-
-  const loadPullRequests = async () => {
+  const loadPullRequests = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -35,23 +29,31 @@ export function PRListModal({ isOpen, onClose, project }: PRListModalProps) {
       }
 
       const client = getGitHubClient(preferences.githubToken);
-      const [owner, repo] = project.id.split('/');
-      if (!owner || !repo) {
-        setError('Invalid project format');
-        return;
-      }
-
-      // Get PRs ahead of main branch
-      const prs = await client.getPullRequestsAheadOfMain(owner, repo, project.defaultBranch);
-      setPullRequests(prs);
+      const [owner, repo] = project.fullName.split('/');
+      
+      // Get default branch first
+      const repoData = await client.getRepository(owner, repo);
+      const defaultBranch = repoData.default_branch;
+      
+      // Get pull requests that are ahead of the default branch
+      const pullRequests = await client.getPullRequestsAheadOfMain(owner, repo, defaultBranch);
+      
+      setPullRequests(pullRequests);
     } catch (error) {
       console.error('Failed to load pull requests:', error);
       setError('Failed to load pull requests');
-      toast.error('Failed to load pull requests');
     } finally {
       setLoading(false);
     }
-  };
+  }, [project.fullName]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadPullRequests();
+    }
+  }, [isOpen, loadPullRequests]);
+
+
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

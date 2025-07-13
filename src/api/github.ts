@@ -6,11 +6,17 @@ import {
   GitHubUser,
   GitHubBranch,
   GitHubCommit,
-  GitHubAPIError,
   GitHubRateLimit,
   GitHubRepoFilters,
   GitHubPRFilters,
 } from './githubTypes';
+
+// Define GitHubAPIError interface locally
+interface GitHubAPIError {
+  message: string;
+  status: number;
+  documentation_url?: string;
+}
 
 export class GitHubAPIClient {
   private token: string;
@@ -45,7 +51,7 @@ export class GitHubAPIClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new GitHubAPIError({
+        throw new GitHubAPIErrorClass({
           message: errorData.message || `HTTP ${response.status}: ${response.statusText}`,
           status: response.status,
           documentation_url: errorData.documentation_url,
@@ -54,12 +60,12 @@ export class GitHubAPIClient {
 
       return await response.json();
     } catch (error) {
-      if (error instanceof GitHubAPIError) {
+      if (error instanceof GitHubAPIErrorClass) {
         throw error;
       }
       
       // Network or other errors
-      throw new GitHubAPIError({
+      throw new GitHubAPIErrorClass({
         message: error instanceof Error ? error.message : 'Unknown error occurred',
         status: 0,
       });
@@ -207,7 +213,7 @@ export class GitHubAPIClient {
       const user = await this.getCurrentUser();
       return { valid: true, user };
     } catch (error) {
-      if (error instanceof GitHubAPIError) {
+      if (error instanceof GitHubAPIErrorClass) {
         return { 
           valid: false, 
           error: error.status === 401 ? 'Invalid or expired token' : error.message 
@@ -247,7 +253,7 @@ export class GitHubAPIClient {
 }
 
 // Error class for GitHub API errors
-class GitHubAPIError extends Error {
+class GitHubAPIErrorClass extends Error {
   public status: number;
   public documentation_url?: string;
 
