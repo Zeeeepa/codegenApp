@@ -1,0 +1,161 @@
+name: Automated PR Validation
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, develop, master]
+jobs:
+  validate-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for proper diff analysis
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-validation-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-validation-
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install graph-sitter
+          
+          # Install project dependencies if they exist
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          
+          if [ -f pyproject.toml ]; then
+            pip install -e .
+          fi
+      - name: Get changed files
+        id: changed-files
+        run: |
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }})
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          
+          # Save to environment for later steps
+          echo "CHANGED_FILES<> $GITHUB_ENV
+          echo "$CHANGED_FILES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      - name: Run PR Validation
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          echo "🔍 Running automated PR validation..."
+          python pr_validator.py
+      - name: Upload validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: pr-validation-report-${{ github.event.pull_request.number }}
+          path: |
+            pr_validation_report.md
+            pr_validation_result.json
+          retention-days: 30
+      - name: Comment validation results on PR
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            // Read validation report
+            let report = '';
+            try {
+              report = fs.readFileSync('pr_validation_report.md', 'utf8');
+            } catch (error) {
+              report = '❌ **Validation Failed**: Could not generate validation report.\n\nError: ' + error.message;
+            }
+            
+            // Read validation result
+            let result = null;
+            try {
+              const resultData = fs.readFileSync('pr_validation_result.json', 'utf8');
+              result = JSON.parse(resultData);
+            } catch (error) {
+              console.log('Could not parse validation result:', error.message);
+            }
+            
+            // Create comment body
+            const commentBody = `## 🤖 Automated PR Validation
+            
+${report}
+---
+*This validation was performed automatically using graph-sitter analysis.*
+*Report generated at: ${new Date().toISOString()}*`;
+            
+            // Post comment
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
+      - name: Set PR status check
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            // Read validation result
+            let isValid = false;
+            let errorCount = 0;
+            
+            try {
+              const resultData = fs.readFileSync('pr_validation_result.json', 'utf8');
+              const result = JSON.parse(resultData);
+              isValid = result.is_valid;
+              errorCount = result.summary.errors || 0;
+            } catch (error) {
+              console.log('Could not parse validation result:', error.message);
+            }
+            
+            // Set status check
+            const state = isValid ? 'success' : 'failure';
+            const description = isValid 
+              ? '✅ All validation checks passed'
+              : `❌ Validation failed with ${errorCount} error(s)`;
+            
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.pull_request.head.sha }}',
+              state: state,
+              target_url: `${context.payload.pull_request.html_url}/checks`,
+              description: description,
+              context: 'PR Validation'
+            });
+      - name: Fail job if validation failed
+        if: always()
+        run: |
+          # Check if validation passed
+          if [ -f pr_validation_result.json ]; then
+            IS_VALID=$(python -c "import json; result = json.load(open('pr_validation_result.json')); print(result['is_valid'])")
+            if [ "$IS_VALID" = "False" ]; then
+              echo "❌ PR validation failed"
+              exit 1
+            else
+              echo "✅ PR validation passed"
+            fi
+          else
+            echo "❌ Validation result not found"
+            exit 1
+          fi
