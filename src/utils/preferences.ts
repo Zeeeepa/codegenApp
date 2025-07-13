@@ -7,6 +7,7 @@ export interface Preferences {
   defaultOrganization?: string;
   userId?: string;
   apiBaseUrl?: string;
+  githubToken?: string;
 }
 
 const PREFERENCES_KEY = 'app_preferences';
@@ -28,6 +29,10 @@ function preferencesToEnvContent(preferences: Partial<Preferences>): string {
   
   if (preferences.apiToken) {
     lines.push(`token=${preferences.apiToken}`);
+  }
+  
+  if (preferences.githubToken) {
+    lines.push(`github_token=${preferences.githubToken}`);
   }
   
   if (preferences.apiBaseUrl && preferences.apiBaseUrl !== DEFAULT_PREFERENCES.apiBaseUrl) {
