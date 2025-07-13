@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Building, Settings as SettingsIcon } from 'lucide-react';
+import { X, Building, Settings as SettingsIcon, Github } from 'lucide-react';
 import { getPreferenceValues, setPreferenceValues, getEnvFileContent, validateEnvironmentConfiguration } from '../utils/preferences';
 import { getAPIClient } from '../api/client';
 import { OrganizationResponse } from '../api/types';
+import { getGitHubClient, resetGitHubClient } from '../api/github';
+import { GitHubRepository, GitHubUser } from '../api/githubTypes';
 import toast from 'react-hot-toast';
 
 interface SettingsDialogProps {
@@ -18,7 +20,17 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
   const [envValidation, setEnvValidation] = useState(validateEnvironmentConfiguration());
   const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
-  const [activeTab, setActiveTab] = useState<'settings' | 'organizations'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'organizations' | 'github' | 'planning'>('settings');
+  
+  // GitHub-related state
+  const [githubToken, setGithubToken] = useState('');
+  const [githubUser, setGithubUser] = useState<GitHubUser | null>(null);
+  const [githubRepos, setGithubRepos] = useState<GitHubRepository[]>([]);
+  const [loadingGithubRepos, setLoadingGithubRepos] = useState(false);
+  const [githubTokenValid, setGithubTokenValid] = useState<boolean | null>(null);
+  
+  // Planning statement state
+  const [planningStatement, setPlanningStatement] = useState('');
 
   const handleSave = async () => {
     try {
@@ -26,6 +38,8 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
       await setPreferenceValues({
         apiToken: token,
         defaultOrganization: orgId,
+        githubToken: githubToken,
+        planningStatement: planningStatement,
       });
       
       // Get the updated .env content
@@ -90,6 +104,64 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
     toast.success(`Selected organization: ${org.name}`);
   };
 
+  const validateGithubToken = async () => {
+    if (!githubToken) {
+      toast.error('Please enter a GitHub token first');
+      return;
+    }
+
+    try {
+      const client = getGitHubClient(githubToken);
+      const validation = await client.validateToken();
+      
+      if (validation.valid && validation.user) {
+        setGithubUser(validation.user);
+        setGithubTokenValid(true);
+        toast.success(`GitHub token validated! Welcome, ${validation.user.login}`);
+      } else {
+        setGithubUser(null);
+        setGithubTokenValid(false);
+        toast.error(validation.error || 'Invalid GitHub token');
+      }
+    } catch (error) {
+      console.error('GitHub token validation failed:', error);
+      setGithubUser(null);
+      setGithubTokenValid(false);
+      toast.error('Failed to validate GitHub token');
+    }
+  };
+
+  const loadGithubRepositories = async () => {
+    if (!githubToken) {
+      toast.error('Please enter and validate your GitHub token first');
+      return;
+    }
+
+    if (!githubTokenValid) {
+      toast.error('Please validate your GitHub token first');
+      return;
+    }
+
+    setLoadingGithubRepos(true);
+    try {
+      const client = getGitHubClient(githubToken);
+      const repos = await client.getUserRepositories({
+        sort: 'updated',
+        direction: 'desc',
+        per_page: 50,
+      });
+      
+      setGithubRepos(repos);
+      toast.success(`Loaded ${repos.length} repositories`);
+    } catch (error) {
+      console.error('Failed to load GitHub repositories:', error);
+      toast.error('Failed to load repositories');
+      setGithubRepos([]);
+    } finally {
+      setLoadingGithubRepos(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       // Load existing values using the preference system
@@ -98,10 +170,13 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
           const preferences = await getPreferenceValues();
           setOrgId(preferences.defaultOrganization || '');
           setToken(preferences.apiToken || '');
+          setGithubToken(preferences.githubToken || '');
+          setPlanningStatement(preferences.planningStatement || '');
           
           console.log('Loaded preferences:', {
             hasToken: !!preferences.apiToken,
             hasOrgId: !!preferences.defaultOrganization,
+            hasGithubToken: !!preferences.githubToken,
             apiBaseUrl: preferences.apiBaseUrl
           });
           
@@ -177,6 +252,27 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
               }`}
             >
               🏢 Organizations
+            </button>
+            <button
+              onClick={() => setActiveTab('github')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'github'
+                  ? 'border-blue-500 text-blue-400'
+                  : 'border-transparent text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              <Github className="h-4 w-4 inline mr-1" />
+              GitHub
+            </button>
+            <button
+              onClick={() => setActiveTab('planning')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'planning'
+                  ? 'border-blue-500 text-blue-400'
+                  : 'border-transparent text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              📋 Planning Statement
             </button>
           </nav>
         </div>
@@ -359,6 +455,215 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                   <p className="text-gray-400">No organizations loaded. Click "Load Organizations" to fetch them.</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'github' && (
+            <div className="space-y-6">
+              <div>
+                <label htmlFor="github_token" className="block text-sm font-medium text-gray-300 mb-2">
+                  GitHub Personal Access Token
+                </label>
+                <div className="space-y-3">
+                  <input
+                    type="password"
+                    id="github_token"
+                    value={githubToken}
+                    onChange={(e) => {
+                      setGithubToken(e.target.value);
+                      setGithubTokenValid(null);
+                      setGithubUser(null);
+                    }}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                  />
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={validateGithubToken}
+                      disabled={!githubToken}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
+                    >
+                      Validate Token
+                    </button>
+                    
+                    {githubTokenValid === true && (
+                      <span className="text-green-400 text-sm font-medium flex items-center">
+                        ✓ Token is valid
+                      </span>
+                    )}
+                    
+                    {githubTokenValid === false && (
+                      <span className="text-red-400 text-sm font-medium flex items-center">
+                        ✗ Token is invalid
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="mt-3 p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
+                  <p className="text-blue-300 text-sm">
+                    <strong>How to create a GitHub token:</strong>
+                  </p>
+                  <ol className="text-blue-300 text-xs mt-2 space-y-1 list-decimal list-inside">
+                    <li>Go to GitHub Settings → Developer settings → Personal access tokens</li>
+                    <li>Click "Generate new token (classic)"</li>
+                    <li>Select scopes: <code className="bg-gray-700 px-1 rounded">repo</code>, <code className="bg-gray-700 px-1 rounded">read:user</code></li>
+                    <li>Copy the generated token and paste it above</li>
+                  </ol>
+                </div>
+              </div>
+
+              {githubUser && (
+                <div className="p-4 bg-gray-800 border border-gray-600 rounded-lg">
+                  <h3 className="text-lg font-medium text-white mb-3">GitHub Account</h3>
+                  <div className="flex items-center space-x-3">
+                    <img
+                      src={githubUser.avatar_url}
+                      alt={githubUser.login}
+                      className="w-10 h-10 rounded-full"
+                    />
+                    <div>
+                      <p className="text-white font-medium">{githubUser.name || githubUser.login}</p>
+                      <p className="text-gray-400 text-sm">@{githubUser.login}</p>
+                      {githubUser.email && (
+                        <p className="text-gray-400 text-sm">{githubUser.email}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
+                    <div className="text-center">
+                      <p className="text-white font-medium">{githubUser.public_repos}</p>
+                      <p className="text-gray-400">Repositories</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-white font-medium">{githubUser.followers}</p>
+                      <p className="text-gray-400">Followers</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-white font-medium">{githubUser.following}</p>
+                      <p className="text-gray-400">Following</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium text-white">Your Repositories</h3>
+                  <button
+                    onClick={loadGithubRepositories}
+                    disabled={loadingGithubRepos || !githubTokenValid}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
+                  >
+                    {loadingGithubRepos ? 'Loading...' : 'Load Repositories'}
+                  </button>
+                </div>
+
+                {!githubTokenValid && (
+                  <div className="p-4 bg-yellow-900/20 border border-yellow-700 rounded-lg">
+                    <p className="text-yellow-300 text-sm">
+                      Please validate your GitHub token first to load repositories.
+                    </p>
+                  </div>
+                )}
+
+                {githubRepos.length > 0 && (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {githubRepos.map((repo) => (
+                      <div
+                        key={repo.id}
+                        className="p-3 border border-gray-600 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-1">
+                              <h4 className="text-white font-medium">{repo.name}</h4>
+                              <p className="text-gray-400 text-sm">{repo.full_name}</p>
+                              {repo.description && (
+                                <p className="text-gray-300 text-sm mt-1">{repo.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-4 text-xs text-gray-400">
+                            {repo.language && (
+                              <span className="px-2 py-1 bg-gray-700 rounded">{repo.language}</span>
+                            )}
+                            {repo.private && (
+                              <span className="px-2 py-1 bg-yellow-700 rounded">Private</span>
+                            )}
+                            <span>⭐ {repo.stargazers_count}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {githubRepos.length === 0 && githubTokenValid && !loadingGithubRepos && (
+                  <div className="p-4 bg-gray-800 border border-gray-600 rounded-lg text-center">
+                    <p className="text-gray-400">No repositories loaded. Click "Load Repositories" to fetch them.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'planning' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-medium text-white mb-2">Planning Statement</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  Configure a global planning statement that will be prepended to all agent run prompts. 
+                  This helps provide consistent context and instructions to the agent across all projects.
+                </p>
+              </div>
+              
+              <div>
+                <label htmlFor="planning_statement" className="block text-sm font-medium text-gray-300 mb-2">
+                  Global Planning Statement
+                </label>
+                <textarea
+                  id="planning_statement"
+                  value={planningStatement}
+                  onChange={(e) => setPlanningStatement(e.target.value)}
+                  placeholder="Enter your global planning statement here. This will be sent to the agent along with the user's target and project context..."
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows={12}
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  This statement will be combined with project-specific context and user targets when creating agent runs.
+                  Projects can override this with their own planning statements in project settings.
+                </p>
+              </div>
+
+              <div className="p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+                <h4 className="text-blue-300 font-medium mb-2">💡 Tips for effective planning statements:</h4>
+                <ul className="text-blue-200 text-sm space-y-1">
+                  <li>• Be specific about coding standards and best practices</li>
+                  <li>• Include preferred frameworks, libraries, or tools</li>
+                  <li>• Specify testing requirements and documentation standards</li>
+                  <li>• Mention any security or performance considerations</li>
+                  <li>• Include workflow preferences (commit messages, PR descriptions, etc.)</li>
+                </ul>
+              </div>
+
+              <div className="p-4 bg-gray-800 border border-gray-600 rounded-lg">
+                <h4 className="text-gray-300 font-medium mb-2">Example Planning Statement:</h4>
+                <pre className="text-gray-400 text-sm whitespace-pre-wrap">
+{`You are an expert software engineer. When working on projects:
+
+1. Follow TypeScript best practices and use strict typing
+2. Write comprehensive tests for all new functionality
+3. Use meaningful commit messages following conventional commits
+4. Add JSDoc comments for all public functions
+5. Ensure code is accessible and follows WCAG guidelines
+6. Use React hooks and functional components
+7. Implement proper error handling and loading states
+8. Follow the existing code style and patterns in the project
+
+Always explain your approach before implementing changes.`}
+                </pre>
+              </div>
             </div>
           )}
         </div>

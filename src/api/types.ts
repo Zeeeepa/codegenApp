@@ -133,3 +133,61 @@ export interface TrackedAgentRun {
   webUrl: string;
   addedAt: string; // When it was added to tracking
 }
+
+// Project Types
+export interface Project {
+  id: string; // GitHub repository full name (owner/repo)
+  name: string;
+  fullName: string;
+  description: string | null;
+  htmlUrl: string;
+  defaultBranch: string;
+  private: boolean;
+  language: string | null;
+  stargazersCount: number;
+  forksCount: number;
+  openIssuesCount: number;
+  owner: {
+    login: string;
+    avatarUrl: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+  pushedAt: string;
+  // Local metadata
+  addedAt: string;
+  lastSyncAt: string;
+  prCount?: number; // PRs ahead of main branch
+  agentRunIds: number[]; // Associated agent run IDs
+}
+
+// Cached Project
+export interface CachedProject extends Project {
+  lastUpdated: string;
+  isSelected?: boolean;
+}
+
+// Project Filters
+export interface ProjectFilters {
+  language?: string;
+  private?: boolean;
+  searchQuery?: string;
+  sortBy?: 'name' | 'updated' | 'created' | 'stars' | 'prCount';
+  sortDirection?: 'asc' | 'desc';
+}
+
+// Project with PR Info
+export interface ProjectWithPRs extends Project {
+  pullRequests: {
+    id: number;
+    number: number;
+    title: string;
+    htmlUrl: string;
+    state: 'open' | 'closed' | 'draft';
+    createdAt: string;
+    user: {
+      login: string;
+      avatarUrl: string;
+    };
+  }[];
+}
