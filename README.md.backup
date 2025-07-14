@@ -64,6 +64,18 @@ A comprehensive web application for managing Codegen agent runs with integrated 
 
 The platform integrates seamlessly into modern development workflows:
 
+```mermaid
+graph LR
+    A[Code Push] --> B[GitHub PR]
+    B --> C[Deploy Preview]
+    C --> D[Web-Eval-Agent]
+    D --> E[Automated Testing]
+    E --> F[Quality Report]
+    F --> G[Approval/Merge]
+    G --> H[Production Deploy]
+    H --> I[Post-Deploy Validation]
+```
+
 ### Web-Eval-Agent Role in CI/CD
 
 1. **PR Creation**: Automatically triggered when PRs are opened
@@ -227,118 +239,118 @@ The Settings page will show the status of your environment variables:
 - ⚠️ **Yellow**: Optional variables missing (warnings)
 - ❌ **Red**: Required variables missing (will prevent API calls)
 
-## 🔌 API Documentation
+## 🚀 Deployment
 
-### Web-Eval-Agent Endpoints
+### Frontend Deployment
 
-- `POST /api/web-eval/evaluate` - Evaluate web application
-- `POST /api/web-eval/test-github-pr` - Test GitHub PR deployment
-- `POST /api/web-eval/test-github-branch` - Test GitHub branch deployment
-- `GET /api/web-eval/active` - Get active evaluations
-- `GET /api/web-eval/health` - Health check
+The React app can be deployed to any static hosting service:
 
-### Example Request
-
-```http
-POST /api/web-eval/evaluate
-Content-Type: application/json
-
-{
-  "url": "http://localhost:3000",
-  "task": "Test the main navigation and verify the page loads correctly",
-  "headless": true
-}
+#### Vercel
+```bash
+npm run build
+# Deploy the 'build' folder to Vercel
 ```
 
-### Response Format
-
-```json
-{
-  "sessionId": "eval_1234567890_abc123def",
-  "status": "completed",
-  "result": [
-    {
-      "type": "text",
-      "text": "Detailed evaluation report..."
-    }
-  ],
-  "metadata": {
-    "url": "http://localhost:3000",
-    "duration": 15420
-  }
-}
+#### Netlify
+```bash
+npm run build
+# Deploy the 'build' folder to Netlify
 ```
 
-## 📚 Usage Examples
-
-### Web Evaluation Panel
-1. Navigate to Web Evaluation section
-2. Choose testing method (URL/GitHub PR/GitHub Branch)
-3. Configure test parameters
-4. Start evaluation and monitor results
-
-### Programmatic Usage
-
-```typescript
-import { useWebEval } from './hooks/useWebEval';
-
-function MyComponent() {
-  const { evaluateUrl, isLoading, error, lastResult } = useWebEval();
-
-  const handleEvaluate = async () => {
-    const result = await evaluateUrl({
-      url: 'http://localhost:3000',
-      task: 'Test the main user flow',
-      headless: true
-    });
-  };
-
-  return (
-    <button onClick={handleEvaluate} disabled={isLoading}>
-      {isLoading ? 'Evaluating...' : 'Start Evaluation'}
-    </button>
-  );
-}
+#### GitHub Pages
+```bash
+npm run build
+# Deploy the 'build' folder to GitHub Pages
 ```
 
-## 🔍 Troubleshooting
+### Environment Variables for Production
+
+Set these environment variables in your hosting platform:
+
+```env
+REACT_APP_API_TOKEN=your_production_api_token
+REACT_APP_DEFAULT_ORGANIZATION=your_org_id
+REACT_APP_API_BASE_URL=https://api.codegen.com
+REACT_APP_USER_ID=your_user_id
+```
+
+## 🔐 Authentication
+
+1. Get your API token from the [Codegen Dashboard](https://app.codegen.com/settings)
+2. Add it to your `.env` file or enter it in the application's Settings page
+3. The application will validate your credentials and load your organizations
+
+## 🧪 Testing
+
+Run the test suite to ensure everything is working correctly:
+
+```bash
+npm test
+```
+
+The test suite includes:
+- Environment variable validation tests
+- Component rendering tests
+- API configuration tests
+
+## 🐛 Troubleshooting
+
+### Missing Environment Variables
+
+If you see errors about missing environment variables:
+
+1. Ensure your `.env` file is in the project root
+2. Restart the development server after creating/modifying `.env`
+3. Check the Settings page for validation status
 
 ### API Connection Issues
-- Verify API token is correct
-- Check API base URL accessibility
-- Ensure organization ID is valid
-- Check browser console for errors
 
-### Web-Eval-Agent Issues
-- Verify GEMINI_API_KEY is set
-- Check Python dependencies are installed
-- Ensure Playwright browsers are installed
-- Check MCP server logs for errors
+If API calls are failing:
+
+1. Verify your API token is correct
+2. Check that the API base URL is accessible (`https://api.codegen.com`)
+3. Ensure your organization ID is valid
+4. Check browser console for detailed error messages
+
+### Development Server Issues
+
+- Make sure port 3000 is available
+- Try restarting the server: `npm start`
+- Check the console for detailed error messages
+
+## 📝 API Token Setup
+
+1. Visit [Codegen Dashboard](https://app.codegen.com/settings)
+2. Navigate to API settings
+3. Generate a new API token
+4. Copy the token and add it to your `.env` file or Settings page
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open Pull Request
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
 
 ## 📄 License
 
-MIT License - see LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🆘 Support
 
-For issues:
-1. Check troubleshooting section
-2. Search existing GitHub issues
-3. Create new issue with detailed information
+If you encounter any issues:
+
+1. Check the troubleshooting section above
+2. Look for existing issues in the GitHub repository
+3. Create a new issue with detailed information about the problem
 
 ## 🔄 Updates
 
+To update the application:
+
 ```bash
 git pull origin main
-npm install
-npm start
+npm install  # Updates dependencies
+npm start    # Restart the development server
 ```
-

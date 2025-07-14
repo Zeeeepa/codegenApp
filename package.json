@@ -28,6 +28,11 @@
     "server:install": "cd server && npm install",
     "server:start": "cd server && npm start",
     "server:dev": "cd server && npm run dev",
+    "server:test": "cd server && npm test",
+    "test:web-eval": "jest --testPathPattern=tests/web-eval-agent",
+    "test:web-eval:watch": "jest --testPathPattern=tests/web-eval-agent --watch",
+    "test:web-eval:coverage": "jest --testPathPattern=tests/web-eval-agent --coverage",
+    "test:all": "npm test && npm run server:test && npm run test:web-eval",
     "postinstall": "npm run server:install"
   },
   "eslintConfig": {
@@ -63,6 +68,8 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.3",
-    "dotenv": "^16.5.0"
+    "dotenv": "^16.5.0",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.2"
   }
 }

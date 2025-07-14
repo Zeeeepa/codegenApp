@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, RefreshCw } from 'lucide-react';
 import { CachedProject, ProjectFilters } from '../api/types';
 import { getCachedProjects, filterProjects } from '../storage/projectCache';
 import { ProjectCard } from './ProjectCard';
+import { WebEvalPanel } from './WebEvalPanel';
 import { getPreferenceValues } from '../utils/preferences';
 import { getGitHubClient } from '../api/github';
 import { updateProjectPRCount } from '../storage/projectCache';
@@ -18,6 +19,7 @@ export function ProjectDashboard({ selectedProject, onProjectSelect }: ProjectDa
   const [filteredProjects, setFilteredProjects] = useState<CachedProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'projects' | 'web-eval'>('projects');
   const [filters, setFilters] = useState<ProjectFilters>({
     sortBy: 'updated',
     sortDirection: 'desc',
@@ -129,14 +131,44 @@ export function ProjectDashboard({ selectedProject, onProjectSelect }: ProjectDa
 
   return (
     <div className="space-y-6">
-      {/* Header with Search and Filters */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <h2 className="text-2xl font-bold text-white">Projects</h2>
-          <span className="text-sm text-gray-400">
-            {filteredProjects.length} of {projects.length} projects
-          </span>
-        </div>
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-700">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('projects')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'projects'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+            }`}
+          >
+            📁 Projects ({projects.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('web-eval')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'web-eval'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+            }`}
+          >
+            <RefreshCw className="inline w-4 h-4 mr-1" />
+            Web Evaluation
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'projects' && (
+        <div className="space-y-6">
+          {/* Header with Search and Filters */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-2xl font-bold text-white">Projects</h2>
+              <span className="text-sm text-gray-400">
+                {filteredProjects.length} of {projects.length} projects
+              </span>
+            </div>
         
         <div className="flex items-center space-x-3">
           {/* Search */}
@@ -190,6 +222,15 @@ export function ProjectDashboard({ selectedProject, onProjectSelect }: ProjectDa
               onUpdate={handleProjectUpdate}
             />
           ))}
+        </div>
+      )}
+        </div>
+      )}
+
+      {/* Web Evaluation Tab */}
+      {activeTab === 'web-eval' && (
+        <div className="max-w-4xl mx-auto">
+          <WebEvalPanel />
         </div>
       )}
     </div>
