@@ -1,0 +1,135 @@
+# Library Kit Integration Configuration
+# This file configures the integration framework components
+
+# Global settings
+environment: development
+debug: true
+log_level: INFO
+version: 1.0.0
+
+# Core settings
+max_concurrent_workflows: 10
+default_timeout: 300
+retry_attempts: 3
+retry_delay: 1.0
+
+# Database settings
+database_url: ${DATABASE_URL:sqlite:///./app.db}
+redis_url: ${REDIS_URL:redis://localhost:6379/0}
+
+# Security settings
+jwt_secret_key: ${JWT_SECRET_KEY:your-secret-key-change-in-production}
+api_key_salt: ${API_KEY_SALT:your-api-key-salt}
+cors_origins:
+  - "http://localhost:3000"
+  - "http://localhost:8000"
+  - "http://localhost:8001"
+
+# Component configurations
+components:
+  codegen:
+    enabled: true
+    config:
+      api_base_url: ${CODEGEN_API_BASE_URL:https://api.codegen.com}
+      timeout: 30
+      max_retries: 3
+      rate_limit: 100
+    environment_overrides:
+      development:
+        timeout: 60
+        rate_limit: 50
+      production:
+        timeout: 15
+        rate_limit: 1000
+
+  grainchain:
+    enabled: true
+    config:
+      default_provider: local
+      default_timeout: 300
+      max_concurrent_sandboxes: 10
+      working_directory: /tmp
+      environment_vars: {}
+    environment_overrides:
+      development:
+        max_concurrent_sandboxes: 5
+        default_timeout: 600
+      production:
+        default_provider: docker
+        max_concurrent_sandboxes: 50
+
+  graph_sitter:
+    enabled: true
+    config:
+      supported_languages:
+        - python
+        - javascript
+        - typescript
+        - java
+        - go
+      cache_enabled: true
+      cache_size: 1000
+      analysis_timeout: 30
+    environment_overrides:
+      production:
+        cache_size: 5000
+        analysis_timeout: 60
+
+  web_eval_agent:
+    enabled: true
+    config:
+      default_timeout: 60
+      max_concurrent_evaluations: 5
+      evaluation_types:
+        - performance
+        - accessibility
+        - seo
+      device_types:
+        - desktop
+        - mobile
+    environment_overrides:
+      production:
+        max_concurrent_evaluations: 20
+        default_timeout: 120
+
+# Shared settings available to all components
+shared_settings:
+  user_agent: "Codegen-Agent-Manager/1.0.0"
+  request_timeout: 30
+  max_retries: 3
+  
+# Plugin settings
+plugins:
+  search_paths:
+    - ./plugins
+    - ./app/plugins
+  auto_discover: true
+  auto_load: true
+
+# Event bus settings
+event_bus:
+  max_queue_size: 10000
+  max_history_size: 1000
+  enable_persistence: false
+
+# Workflow settings
+workflows:
+  max_concurrent: 10
+  default_timeout: 1800  # 30 minutes
+  cleanup_delay: 300     # 5 minutes
+  enable_templates: true
+
+# Monitoring and metrics
+monitoring:
+  enable_metrics: true
+  metrics_port: 8002
+  health_check_interval: 30
+  
+# Logging configuration
+logging:
+  level: ${LOG_LEVEL:INFO}
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: ${LOG_FILE:}
+  max_size: 10MB
+  backup_count: 5
+

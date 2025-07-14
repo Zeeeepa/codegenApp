@@ -83,6 +83,11 @@ opentelemetry-sdk==1.21.0
 PyYAML==6.0.1
 toml==0.10.2
 
+# Integration framework dependencies
+dataclasses-json==0.6.3  # For dataclass serialization
+importlib-metadata==6.8.0  # For plugin discovery
+pathspec==0.11.2  # For file pattern matching
+
 # Optional: For enhanced graph-sitter functionality
 # numpy>=1.24.0  # For numerical computations if needed
 # networkx>=3.2  # For graph algorithms if needed
