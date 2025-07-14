@@ -496,7 +496,7 @@ export function IntegrationDashboard() {
               <button
                 onClick={() => {
                   // TODO: Implement workflow creation from template
-                  toast.info('Workflow creation from templates coming soon!');
+                  toast('Workflow creation from templates coming soon!', { icon: 'ℹ️' });
                 }}
                 className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               >
@@ -510,4 +510,3 @@ export function IntegrationDashboard() {
     </div>
   );
 }
-

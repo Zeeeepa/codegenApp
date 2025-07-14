@@ -38,6 +38,12 @@ export class CodegenAPIClient {
     this.apiToken = credentials.apiToken;
   }
 
+  // Get auth token (for external use)
+  public async getAuthToken(): Promise<string> {
+    await this.initializeCredentials();
+    return this.apiToken;
+  }
+
   private async makeRequest<T>(
     endpoint: string,
     options: RequestInit = {}

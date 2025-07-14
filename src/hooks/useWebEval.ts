@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { apiClient } from '../api/client';
+import { getAPIClient } from '../api/client';
 
 export interface WebEvalRequest {
   url: string;
@@ -76,8 +76,9 @@ export const useWebEval = () => {
   // Fetch active evaluations
   const fetchActiveEvaluations = useCallback(async () => {
     try {
-      const response = await apiClient.get('/api/web-eval/active');
-      setActiveEvaluations(response.data.evaluations || []);
+      const response = await fetch('/api/web-eval/active');
+      const data = await response.json();
+      setActiveEvaluations(data.evaluations || []);
     } catch (err) {
       console.error('Failed to fetch active evaluations:', err);
     }
@@ -86,8 +87,9 @@ export const useWebEval = () => {
   // Fetch health status
   const fetchHealth = useCallback(async () => {
     try {
-      const response = await apiClient.get('/api/web-eval/health');
-      setHealth(response.data);
+      const response = await fetch('/api/web-eval/health');
+      const data = await response.json();
+      setHealth(data);
     } catch (err) {
       console.error('Failed to fetch health status:', err);
       setHealth({
@@ -119,15 +121,21 @@ export const useWebEval = () => {
     setError(null);
 
     try {
-      const response = await apiClient.post('/api/web-eval/evaluate', request);
-      const result = response.data as EvaluationResult;
+      const response = await fetch('/api/web-eval/evaluate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+      const result = await response.json() as EvaluationResult;
       
       setLastResult(result);
       await fetchActiveEvaluations(); // Refresh active evaluations
       
       return result;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to evaluate URL';
+      const errorMessage = err.message || 'Failed to evaluate URL';
       setError(errorMessage);
       return null;
     } finally {
@@ -141,15 +149,21 @@ export const useWebEval = () => {
     setError(null);
 
     try {
-      const response = await apiClient.post('/api/web-eval/test-github-pr', request);
-      const result = response.data as EvaluationResult;
+      const response = await fetch('/api/web-eval/test-github-pr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+      const result = await response.json() as EvaluationResult;
       
       setLastResult(result);
       await fetchActiveEvaluations();
       
       return result;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to test GitHub PR';
+      const errorMessage = err.message || 'Failed to test GitHub PR';
       setError(errorMessage);
       return null;
     } finally {
@@ -163,15 +177,21 @@ export const useWebEval = () => {
     setError(null);
 
     try {
-      const response = await apiClient.post('/api/web-eval/test-github-branch', request);
-      const result = response.data as EvaluationResult;
+      const response = await fetch('/api/web-eval/test-github-branch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+      const result = await response.json() as EvaluationResult;
       
       setLastResult(result);
       await fetchActiveEvaluations();
       
       return result;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to test GitHub branch';
+      const errorMessage = err.message || 'Failed to test GitHub branch';
       setError(errorMessage);
       return null;
     } finally {
@@ -185,14 +205,20 @@ export const useWebEval = () => {
     setError(null);
 
     try {
-      const response = await apiClient.post('/api/web-eval/setup-browser', request);
-      const result = response.data as EvaluationResult;
+      const response = await fetch('/api/web-eval/setup-browser', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+      const result = await response.json() as EvaluationResult;
       
       setLastResult(result);
       
       return result;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to setup browser';
+      const errorMessage = err.message || 'Failed to setup browser';
       setError(errorMessage);
       return null;
     } finally {
@@ -203,8 +229,9 @@ export const useWebEval = () => {
   // Get evaluation status
   const getEvaluationStatus = useCallback(async (sessionId: string): Promise<ActiveEvaluation | null> => {
     try {
-      const response = await apiClient.get(`/api/web-eval/status/${sessionId}`);
-      return response.data;
+      const response = await fetch(`/api/web-eval/status/${sessionId}`);
+      const data = await response.json();
+      return data;
     } catch (err) {
       console.error(`Failed to get status for session ${sessionId}:`, err);
       return null;
@@ -214,7 +241,9 @@ export const useWebEval = () => {
   // Cancel evaluation
   const cancelEvaluation = useCallback(async (sessionId: string): Promise<boolean> => {
     try {
-      await apiClient.delete(`/api/web-eval/cancel/${sessionId}`);
+      await fetch(`/api/web-eval/cancel/${sessionId}`, {
+        method: 'DELETE',
+      });
       await fetchActiveEvaluations(); // Refresh active evaluations
       return true;
     } catch (err) {
@@ -263,4 +292,3 @@ export const useWebEval = () => {
     maxConcurrentEvaluations: health?.config?.maxConcurrent || 0
   };
 };
-

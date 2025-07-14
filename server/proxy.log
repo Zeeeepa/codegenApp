@@ -1,0 +1,18 @@
+🚀 Proxy server running on port 3001
+🎯 Proxying to: https://api.codegen.com
+🌐 Health check: http://localhost:3001/health
+🔄 Proxying GET /integration/status to https://api.codegen.com/v1/integration/status
+🔑 Authorization: Bearer sk-ce027fa7-3...
+🌐 Full URL: https://api.codegen.com/v1/integration/status
+🔄 Proxying GET /integration/workflow-templates to https://api.codegen.com/v1/integration/workflow-templates
+🔑 Authorization: Bearer sk-ce027fa7-3...
+🌐 Full URL: https://api.codegen.com/v1/integration/workflow-templates
+🔄 Proxying GET /integration/workflow-templates to https://api.codegen.com/v1/integration/workflow-templates
+🔑 Authorization: Bearer sk-ce027fa7-3...
+🌐 Full URL: https://api.codegen.com/v1/integration/workflow-templates
+🔄 Proxying GET /integration/status to https://api.codegen.com/v1/integration/status
+🔑 Authorization: Bearer sk-ce027fa7-3...
+🌐 Full URL: https://api.codegen.com/v1/integration/status
+🔄 Proxying GET /organizations to https://api.codegen.com/v1/organizations
+🔑 Authorization: Bearer sk-ce027fa7-3...
+🌐 Full URL: https://api.codegen.com/v1/organizations?page=1&size=50

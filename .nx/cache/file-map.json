@@ -1,0 +1,904 @@
+{
+  "version": "6.0",
+  "nxVersion": "17.3.2",
+  "deps": {
+    "@types/react": "^18.2.6",
+    "@types/react-dom": "^18.2.4",
+    "autoprefixer": "^10.4.14",
+    "concurrently": "^8.2.0",
+    "lucide-react": "^0.263.1",
+    "node-fetch": "^3.3.2",
+    "postcss": "^8.4.24",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.4.1",
+    "react-router-dom": "^6.8.0",
+    "react-scripts": "5.0.1",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^4.9.5",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.3",
+    "dotenv": "^16.5.0",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.2",
+    "lerna": "^8.1.2",
+    "@nrwl/workspace": "^17.3.2",
+    "nx": "^17.3.2",
+    "@nrwl/node": "^17.3.2",
+    "@nrwl/react": "^17.3.2",
+    "turbo": "^1.13.2"
+  },
+  "pathMappings": {
+    "@codegenapp/shared-types": [
+      "packages/shared-types/src/index.ts"
+    ],
+    "@codegenapp/core-utils": [
+      "packages/core-utils/src/index.ts"
+    ],
+    "@codegenapp/api-client": [
+      "packages/api-client/src/index.ts"
+    ],
+    "@/*": [
+      "src/*"
+    ]
+  },
+  "nxJsonPlugins": [],
+  "fileMap": {
+    "projectFileMap": {
+      "@codegenapp/core-utils": [
+        {
+          "file": "packages/core-utils/package.json",
+          "hash": "10408913328539642220",
+          "deps": [
+            "@codegenapp/shared-types",
+            "npm:typescript",
+            "npm:jest",
+            "npm:@types/jest"
+          ]
+        },
+        {
+          "file": "packages/core-utils/src/async.ts",
+          "hash": "17944032905834917785"
+        },
+        {
+          "file": "packages/core-utils/src/constants.ts",
+          "hash": "7531486452668284403"
+        },
+        {
+          "file": "packages/core-utils/src/crypto.ts",
+          "hash": "7746441040847555780"
+        },
+        {
+          "file": "packages/core-utils/src/date-time.ts",
+          "hash": "3871614101328529255"
+        },
+        {
+          "file": "packages/core-utils/src/error-handling.ts",
+          "hash": "11014305986130072252"
+        },
+        {
+          "file": "packages/core-utils/src/formatting.ts",
+          "hash": "14969250664832568209"
+        },
+        {
+          "file": "packages/core-utils/src/index.ts",
+          "hash": "11591950292305947102"
+        },
+        {
+          "file": "packages/core-utils/src/logging.ts",
+          "hash": "14530342882900394279"
+        },
+        {
+          "file": "packages/core-utils/src/storage.ts",
+          "hash": "5693547263453158951"
+        },
+        {
+          "file": "packages/core-utils/src/validation.ts",
+          "hash": "5372764143264892717"
+        },
+        {
+          "file": "packages/core-utils/tsconfig.json",
+          "hash": "6902877393340120749"
+        }
+      ],
+      "@codegenapp/shared-types": [
+        {
+          "file": "packages/shared-types/package.json",
+          "hash": "8538969416653596998",
+          "deps": [
+            "npm:typescript",
+            "npm:jest",
+            "npm:@types/jest"
+          ]
+        },
+        {
+          "file": "packages/shared-types/src/api.ts",
+          "hash": "12222293095677357499"
+        },
+        {
+          "file": "packages/shared-types/src/common.ts",
+          "hash": "16239977289530543240"
+        },
+        {
+          "file": "packages/shared-types/src/domain.ts",
+          "hash": "17248521158619415204"
+        },
+        {
+          "file": "packages/shared-types/src/index.ts",
+          "hash": "13430866705177501417"
+        },
+        {
+          "file": "packages/shared-types/src/integration.ts",
+          "hash": "13673216980622873428"
+        },
+        {
+          "file": "packages/shared-types/src/validation.ts",
+          "hash": "491956665753157307"
+        },
+        {
+          "file": "packages/shared-types/src/workflow.ts",
+          "hash": "18038758570278271853"
+        },
+        {
+          "file": "packages/shared-types/tsconfig.json",
+          "hash": "3485440756108604877"
+        }
+      ],
+      "@codegenapp/api-client": [
+        {
+          "file": "packages/api-client/package.json",
+          "hash": "2303969230792820223",
+          "deps": [
+            "@codegenapp/shared-types",
+            "@codegenapp/core-utils",
+            "npm:node-fetch",
+            "npm:typescript",
+            "npm:jest",
+            "npm:@types/jest",
+            "npm:@types/node"
+          ]
+        },
+        {
+          "file": "packages/api-client/src/client.ts",
+          "hash": "8374253428400189564",
+          "deps": [
+            "@codegenapp/core-utils"
+          ]
+        },
+        {
+          "file": "packages/api-client/src/index.ts",
+          "hash": "13721218403200318924"
+        },
+        {
+          "file": "packages/api-client/src/types.ts",
+          "hash": "8453450689097640257"
+        },
+        {
+          "file": "packages/api-client/tsconfig.json",
+          "hash": "15547229481105357953"
+        }
+      ]
+    },
+    "nonProjectFiles": [
+      {
+        "file": ".env.example",
+        "hash": "17710672915376050756"
+      },
+      {
+        "file": ".github/scripts/intelligent_pr_validator.py",
+        "hash": "2048593122351478378"
+      },
+      {
+        "file": ".github/scripts/pr_validator.py",
+        "hash": "12700033726014051703"
+      },
+      {
+        "file": ".github/workflows/claude.yaml",
+        "hash": "7064908715272742483"
+      },
+      {
+        "file": ".github/workflows/intelligent-pr-validation-workflow.yml",
+        "hash": "17175127047695656800"
+      },
+      {
+        "file": ".github/workflows/pr-validation-workflow.yml",
+        "hash": "8738433234625459746"
+      },
+      {
+        "file": ".github/workflows/web-eval-pr.yml",
+        "hash": "6800432241187639187"
+      },
+      {
+        "file": ".gitignore",
+        "hash": "12847453588310035289"
+      },
+      {
+        "file": "README.md",
+        "hash": "12051321492945401460"
+      },
+      {
+        "file": "README.md.backup",
+        "hash": "4937993221270348453"
+      },
+      {
+        "file": "backend/ARCHITECTURE.md",
+        "hash": "9534918889104958393"
+      },
+      {
+        "file": "backend/app/__init__.py",
+        "hash": "6018091364321414833"
+      },
+      {
+        "file": "backend/app/__pycache__/__init__.cpython-313.pyc",
+        "hash": "3407710974096026293"
+      },
+      {
+        "file": "backend/app/api/__init__.py",
+        "hash": "4825470382103437839"
+      },
+      {
+        "file": "backend/app/api/__pycache__/__init__.cpython-313.pyc",
+        "hash": "2002874526872537943"
+      },
+      {
+        "file": "backend/app/api/v1/__init__.py",
+        "hash": "2488933098759206208"
+      },
+      {
+        "file": "backend/app/api/v1/__pycache__/__init__.cpython-313.pyc",
+        "hash": "9689600859329342902"
+      },
+      {
+        "file": "backend/app/api/v1/__pycache__/dependencies.cpython-313.pyc",
+        "hash": "15586965107506820506"
+      },
+      {
+        "file": "backend/app/api/v1/dependencies.py",
+        "hash": "9012388678914612414"
+      },
+      {
+        "file": "backend/app/api/v1/routes/__init__.py",
+        "hash": "16779033444138777562"
+      },
+      {
+        "file": "backend/app/api/v1/routes/__pycache__/__init__.cpython-313.pyc",
+        "hash": "18441059298368805878"
+      },
+      {
+        "file": "backend/app/api/v1/routes/__pycache__/integration.cpython-313.pyc",
+        "hash": "11847401769910414244"
+      },
+      {
+        "file": "backend/app/api/v1/routes/analysis.py",
+        "hash": "9375440107274795629"
+      },
+      {
+        "file": "backend/app/api/v1/routes/integration.py",
+        "hash": "13175248352604229002"
+      },
+      {
+        "file": "backend/app/api/v1/routes/workflow.py",
+        "hash": "4837518569070058849"
+      },
+      {
+        "file": "backend/app/config/__init__.py",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "backend/app/config/__pycache__/__init__.cpython-313.pyc",
+        "hash": "8922900164707449602"
+      },
+      {
+        "file": "backend/app/config/__pycache__/settings.cpython-313.pyc",
+        "hash": "9007904444305453931"
+      },
+      {
+        "file": "backend/app/config/settings.py",
+        "hash": "1249711399056456641"
+      },
+      {
+        "file": "backend/app/core/__init__.py",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "backend/app/core/__pycache__/__init__.cpython-313.pyc",
+        "hash": "354438243761621197"
+      },
+      {
+        "file": "backend/app/core/integration/__init__.py",
+        "hash": "15155544546238312335"
+      },
+      {
+        "file": "backend/app/core/integration/__pycache__/__init__.cpython-313.pyc",
+        "hash": "9984279509769349898"
+      },
+      {
+        "file": "backend/app/core/integration/__pycache__/config_manager.cpython-313.pyc",
+        "hash": "3091053954110541377"
+      },
+      {
+        "file": "backend/app/core/integration/__pycache__/event_bus.cpython-313.pyc",
+        "hash": "14983724068969662084"
+      },
+      {
+        "file": "backend/app/core/integration/__pycache__/integration_manager.cpython-313.pyc",
+        "hash": "16945373000044177619"
+      },
+      {
+        "file": "backend/app/core/integration/__pycache__/plugin_system.cpython-313.pyc",
+        "hash": "1258350978716388622"
+      },
+      {
+        "file": "backend/app/core/integration/config_manager.py",
+        "hash": "12954456483184254692"
+      },
+      {
+        "file": "backend/app/core/integration/event_bus.py",
+        "hash": "1147480448899373903"
+      },
+      {
+        "file": "backend/app/core/integration/integration_manager.py",
+        "hash": "12161728539506263629"
+      },
+      {
+        "file": "backend/app/core/integration/plugin_system.py",
+        "hash": "14670906772296824595"
+      },
+      {
+        "file": "backend/app/core/orchestration/__init__.py",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "backend/app/core/orchestration/__pycache__/__init__.cpython-313.pyc",
+        "hash": "13996632420457025996"
+      },
+      {
+        "file": "backend/app/core/orchestration/__pycache__/coordinator.cpython-313.pyc",
+        "hash": "12278026220857493402"
+      },
+      {
+        "file": "backend/app/core/orchestration/__pycache__/state_manager.cpython-313.pyc",
+        "hash": "14005903497564232888"
+      },
+      {
+        "file": "backend/app/core/orchestration/coordinator.py",
+        "hash": "12320656835580938614"
+      },
+      {
+        "file": "backend/app/core/orchestration/state_manager.py",
+        "hash": "15527900703880382069"
+      },
+      {
+        "file": "backend/app/core/workflow/__init__.py",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "backend/app/core/workflow/__pycache__/__init__.cpython-313.pyc",
+        "hash": "14499007678130132843"
+      },
+      {
+        "file": "backend/app/core/workflow/__pycache__/engine.cpython-313.pyc",
+        "hash": "1003171225834457748"
+      },
+      {
+        "file": "backend/app/core/workflow/engine.py",
+        "hash": "1958796321111782762"
+      },
+      {
+        "file": "backend/app/core/workflow/templates/ci_cd_workflow.py",
+        "hash": "17537282218464657503"
+      },
+      {
+        "file": "backend/app/db/__init__.py",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "backend/app/models/__init__.py",
+        "hash": "14565499961729513011"
+      },
+      {
+        "file": "backend/app/models/__pycache__/__init__.cpython-313.pyc",
+        "hash": "8554025766614847281"
+      },
+      {
+        "file": "backend/app/models/api/__init__.py",
+        "hash": "2787293891888878316"
+      },
+      {
+        "file": "backend/app/models/api/analysis.py",
+        "hash": "4724378408263040520"
+      },
+      {
+        "file": "backend/app/models/api/api_models.py",
+        "hash": "10052723549030925672"
+      },
+      {
+        "file": "backend/app/models/domain/__init__.py",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "backend/app/models/domain/__pycache__/__init__.cpython-313.pyc",
+        "hash": "3024859617083386534"
+      },
+      {
+        "file": "backend/app/models/domain/__pycache__/workflow.cpython-313.pyc",
+        "hash": "10160337363312757307"
+      },
+      {
+        "file": "backend/app/models/domain/workflow.py",
+        "hash": "14898627482224411250"
+      },
+      {
+        "file": "backend/app/services/__init__.py",
+        "hash": "18032459416124082886"
+      },
+      {
+        "file": "backend/app/services/__pycache__/__init__.cpython-313.pyc",
+        "hash": "13794001324176987865"
+      },
+      {
+        "file": "backend/app/services/adapters/__init__.py",
+        "hash": "5450455325494617833"
+      },
+      {
+        "file": "backend/app/services/adapters/__pycache__/__init__.cpython-313.pyc",
+        "hash": "2155609705280811855"
+      },
+      {
+        "file": "backend/app/services/adapters/__pycache__/codegen_adapter.cpython-313.pyc",
+        "hash": "11993961864233245652"
+      },
+      {
+        "file": "backend/app/services/adapters/codegen_adapter.py",
+        "hash": "10093189194249508568"
+      },
+      {
+        "file": "backend/app/services/adapters/grainchain_adapter.py",
+        "hash": "4749740973268531455"
+      },
+      {
+        "file": "backend/app/services/adapters/graph_sitter_adapter.py",
+        "hash": "3552020192924614925"
+      },
+      {
+        "file": "backend/app/services/analysis_service.py",
+        "hash": "2279521335822498380"
+      },
+      {
+        "file": "backend/app/services/external/__init__.py",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "backend/app/services/visualization_service.py",
+        "hash": "6010709810691684279"
+      },
+      {
+        "file": "backend/app/utils/__init__.py",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "backend/app/utils/__pycache__/__init__.cpython-313.pyc",
+        "hash": "9832918197195410362"
+      },
+      {
+        "file": "backend/app/utils/__pycache__/exceptions.cpython-313.pyc",
+        "hash": "14144545061513385279"
+      },
+      {
+        "file": "backend/app/utils/exceptions.py",
+        "hash": "11572430393417567599"
+      },
+      {
+        "file": "backend/app/workflows/templates/__init__.py",
+        "hash": "4601023977648099594"
+      },
+      {
+        "file": "backend/app/workflows/templates/__pycache__/__init__.cpython-313.pyc",
+        "hash": "2920313914541340250"
+      },
+      {
+        "file": "backend/app/workflows/templates/__pycache__/code_analysis_workflow.cpython-313.pyc",
+        "hash": "2942576939349893835"
+      },
+      {
+        "file": "backend/app/workflows/templates/__pycache__/deployment_validation_workflow.cpython-313.pyc",
+        "hash": "4171610917742025415"
+      },
+      {
+        "file": "backend/app/workflows/templates/__pycache__/testing_pipeline_workflow.cpython-313.pyc",
+        "hash": "7634990455122471813"
+      },
+      {
+        "file": "backend/app/workflows/templates/code_analysis_workflow.py",
+        "hash": "13637957694153779529"
+      },
+      {
+        "file": "backend/app/workflows/templates/deployment_validation_workflow.py",
+        "hash": "8740981491782959681"
+      },
+      {
+        "file": "backend/app/workflows/templates/testing_pipeline_workflow.py",
+        "hash": "7524121446855248910"
+      },
+      {
+        "file": "backend/config.yaml",
+        "hash": "3992938165323022003"
+      },
+      {
+        "file": "backend/main.py",
+        "hash": "12120479655421558047"
+      },
+      {
+        "file": "backend/pytest.ini",
+        "hash": "8471439311616085376"
+      },
+      {
+        "file": "backend/requirements.txt",
+        "hash": "2922959557705895582"
+      },
+      {
+        "file": "docs/graph_sitter_integration.md",
+        "hash": "8837117678775375584"
+      },
+      {
+        "file": "env.d.ts",
+        "hash": "3929788696389531465"
+      },
+      {
+        "file": "examples/repository_analysis.py",
+        "hash": "17973518306668879217"
+      },
+      {
+        "file": "jest.config.js",
+        "hash": "11286689604131464399"
+      },
+      {
+        "file": "lerna.json",
+        "hash": "8730927135294983931"
+      },
+      {
+        "file": "nx.json",
+        "hash": "7004193088661247728"
+      },
+      {
+        "file": "package-lock.json",
+        "hash": "4925868395535791118"
+      },
+      {
+        "file": "package.json",
+        "hash": "8456092788055386116"
+      },
+      {
+        "file": "postcss.config.js",
+        "hash": "17016897333719261072"
+      },
+      {
+        "file": "public/favicon.ico",
+        "hash": "8307103432831222687"
+      },
+      {
+        "file": "public/favicon.svg",
+        "hash": "8307103432831222687"
+      },
+      {
+        "file": "public/index.html",
+        "hash": "3833138241886613676"
+      },
+      {
+        "file": "public/logo192.png",
+        "hash": "5267462189507201904"
+      },
+      {
+        "file": "public/logo192.svg",
+        "hash": "5267462189507201904"
+      },
+      {
+        "file": "public/logo512.png",
+        "hash": "9939345265242722644"
+      },
+      {
+        "file": "public/logo512.svg",
+        "hash": "9939345265242722644"
+      },
+      {
+        "file": "public/manifest.json",
+        "hash": "11075761775486729436"
+      },
+      {
+        "file": "renovate.json",
+        "hash": "17754747776914184589"
+      },
+      {
+        "file": "server/.env.example",
+        "hash": "7088965144730886065"
+      },
+      {
+        "file": "server/index.js",
+        "hash": "7040791367976465121"
+      },
+      {
+        "file": "server/package-lock.json",
+        "hash": "12047740567240259440"
+      },
+      {
+        "file": "server/package.json",
+        "hash": "2426575770315451519"
+      },
+      {
+        "file": "server/server.log",
+        "hash": "5804511457102491452"
+      },
+      {
+        "file": "server/web-eval-routes.js",
+        "hash": "8008489557934564103"
+      },
+      {
+        "file": "src/App.css",
+        "hash": "9182866874304849465"
+      },
+      {
+        "file": "src/App.test.tsx",
+        "hash": "3352316863786093444"
+      },
+      {
+        "file": "src/App.tsx",
+        "hash": "3181923023189709786"
+      },
+      {
+        "file": "src/api/client.ts",
+        "hash": "5227201318844269199"
+      },
+      {
+        "file": "src/api/constants.ts",
+        "hash": "3263510964951339261"
+      },
+      {
+        "file": "src/api/github.ts",
+        "hash": "18069622437745555317"
+      },
+      {
+        "file": "src/api/githubTypes.ts",
+        "hash": "1952335450159889900"
+      },
+      {
+        "file": "src/api/types.ts",
+        "hash": "11076835716167259427"
+      },
+      {
+        "file": "src/components/AgentRunDialog.tsx",
+        "hash": "7616288348633212276"
+      },
+      {
+        "file": "src/components/AgentRunResponseModal.tsx",
+        "hash": "18354360306140480307"
+      },
+      {
+        "file": "src/components/CreateRunDialog.tsx",
+        "hash": "8903530999624892938"
+      },
+      {
+        "file": "src/components/IntegrationDashboard.tsx",
+        "hash": "17077178872737813558"
+      },
+      {
+        "file": "src/components/MonitorSelectedButton.tsx",
+        "hash": "6056067178565410162"
+      },
+      {
+        "file": "src/components/PRListModal.tsx",
+        "hash": "4009143191168190056"
+      },
+      {
+        "file": "src/components/ProjectCard.tsx",
+        "hash": "16855940658350371425"
+      },
+      {
+        "file": "src/components/ProjectDashboard.tsx",
+        "hash": "8793212647579499932"
+      },
+      {
+        "file": "src/components/ProjectDropdown.tsx",
+        "hash": "5334282957036236713"
+      },
+      {
+        "file": "src/components/ProjectSettingsDialog.tsx",
+        "hash": "18119130480391038618"
+      },
+      {
+        "file": "src/components/ResumeAgentRunDialog.tsx",
+        "hash": "641992054043823307"
+      },
+      {
+        "file": "src/components/SettingsDialog.tsx",
+        "hash": "833474859784583809"
+      },
+      {
+        "file": "src/components/SetupGuide.tsx",
+        "hash": "17460544808067616813"
+      },
+      {
+        "file": "src/components/WebEvalPanel.tsx",
+        "hash": "121014412511751803"
+      },
+      {
+        "file": "src/contexts/AgentRunSelectionContext.tsx",
+        "hash": "14212807013209880618"
+      },
+      {
+        "file": "src/contexts/DialogContext.tsx",
+        "hash": "652071447374663115"
+      },
+      {
+        "file": "src/create-agent-run.tsx",
+        "hash": "2788401372634353260"
+      },
+      {
+        "file": "src/hooks/useCachedAgentRuns.ts",
+        "hash": "16712640903172121692"
+      },
+      {
+        "file": "src/hooks/useCurrentUser.ts",
+        "hash": "11999316486147928788"
+      },
+      {
+        "file": "src/hooks/useWebEval.ts",
+        "hash": "7376586486251357744"
+      },
+      {
+        "file": "src/index.css",
+        "hash": "12829892292236901348"
+      },
+      {
+        "file": "src/index.tsx",
+        "hash": "1165081766106421003"
+      },
+      {
+        "file": "src/list-agent-runs.tsx",
+        "hash": "16510310715760265963"
+      },
+      {
+        "file": "src/list-organizations.tsx",
+        "hash": "10662141993941184222"
+      },
+      {
+        "file": "src/react-app-env.d.ts",
+        "hash": "18228676865082871462"
+      },
+      {
+        "file": "src/setupTests.ts",
+        "hash": "10532331174962558354"
+      },
+      {
+        "file": "src/storage/agentRunCache.ts",
+        "hash": "18241193088071902676"
+      },
+      {
+        "file": "src/storage/cacheTypes.ts",
+        "hash": "4799173156242593122"
+      },
+      {
+        "file": "src/storage/projectCache.ts",
+        "hash": "10097958621052396677"
+      },
+      {
+        "file": "src/storage/projectSettings.ts",
+        "hash": "6198323830922484377"
+      },
+      {
+        "file": "src/storage/userStorage.ts",
+        "hash": "15637872866095982728"
+      },
+      {
+        "file": "src/types/jest.d.ts",
+        "hash": "13320229237647467237"
+      },
+      {
+        "file": "src/utils/backgroundMonitoring.ts",
+        "hash": "14244246619620479777"
+      },
+      {
+        "file": "src/utils/credentials.ts",
+        "hash": "15923158804810464530"
+      },
+      {
+        "file": "src/utils/filtering.ts",
+        "hash": "3389307616541400749"
+      },
+      {
+        "file": "src/utils/notifications.ts",
+        "hash": "10663256539781547748"
+      },
+      {
+        "file": "src/utils/preferences.test.ts",
+        "hash": "9194541809079415374"
+      },
+      {
+        "file": "src/utils/preferences.ts",
+        "hash": "6228941780332419176"
+      },
+      {
+        "file": "src/utils/storage.ts",
+        "hash": "15051562566570946794"
+      },
+      {
+        "file": "src/utils/toast.ts",
+        "hash": "8233624936581969973"
+      },
+      {
+        "file": "src/utils/userProfile.ts",
+        "hash": "18376698315210297847"
+      },
+      {
+        "file": "tailwind.config.js",
+        "hash": "10925081133942263945"
+      },
+      {
+        "file": "tests/__init__.py",
+        "hash": "10530555391305414344"
+      },
+      {
+        "file": "tests/integration/__init__.py",
+        "hash": "6690914808496737075"
+      },
+      {
+        "file": "tests/integration/api/__init__.py",
+        "hash": "10337764858297434333"
+      },
+      {
+        "file": "tests/integration/api/test_analysis_endpoints.py",
+        "hash": "12923414959345319347"
+      },
+      {
+        "file": "tests/unit/__init__.py",
+        "hash": "17869765397963003273"
+      },
+      {
+        "file": "tests/unit/services/__init__.py",
+        "hash": "12178075562684057912"
+      },
+      {
+        "file": "tests/unit/services/test_graph_sitter_adapter.py",
+        "hash": "6832655569337876949"
+      },
+      {
+        "file": "tests/web-eval-agent/e2e/github-pr-testing.test.js",
+        "hash": "7646057651687933037"
+      },
+      {
+        "file": "tests/web-eval-agent/fixtures/sample-responses.js",
+        "hash": "13217340630698968138"
+      },
+      {
+        "file": "tests/web-eval-agent/integration/mcp-server.test.js",
+        "hash": "8869706483885907925"
+      },
+      {
+        "file": "tests/web-eval-agent/mocks/mcp-server-mock.js",
+        "hash": "3594254030143656186"
+      },
+      {
+        "file": "tests/web-eval-agent/setup.js",
+        "hash": "7637387664188747517"
+      },
+      {
+        "file": "tests/web-eval-agent/unit/web-eval-routes.test.js",
+        "hash": "13779820537258050441"
+      },
+      {
+        "file": "tsconfig.base.json",
+        "hash": "15505843311960689566"
+      },
+      {
+        "file": "tsconfig.json",
+        "hash": "6473528659338892131"
+      },
+      {
+        "file": "turbo.json",
+        "hash": "7088618917996119743"
+      }
+    ]
+  }
+}
