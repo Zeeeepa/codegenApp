@@ -3,9 +3,8 @@ FastAPI Backend for Strands-Agents Workflow Orchestration System
 Integrates: Codegen SDK, grainchain, graph-sitter, web-eval-agent
 """
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from contextlib import asynccontextmanager
 import uvicorn
 import logging
@@ -13,13 +12,15 @@ from typing import Dict, Any
 import asyncio
 
 # Import our properly structured components
-from app.api.v1.router import api_router
 from app.config.settings import get_settings
 from app.core.workflow.engine import WorkflowEngine, WorkflowEngineFactory
 from app.core.orchestration.coordinator import ServiceCoordinator
-from app.core.orchestration.state_manager import WorkflowStateManager
-from app.services.adapters.codegen_adapter import CodegenAdapter
-from app.models.api.workflow import HealthResponse
+from app.core.orchestration.state_manager import StateManagerFactory
+from app.services.adapters.codegen_adapter import CodegenService
+from app.services.adapters.grainchain_adapter import GrainchainAdapter
+from app.api.v1.dependencies import set_global_dependencies
+from app.api.v1.routes.workflow import router as workflow_router
+from app.models.api.api_models import HealthResponse
 
 # Configure logging
 logging.basicConfig(
@@ -28,103 +29,129 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Global services
-services = {}
+# Global instances
+workflow_engine: WorkflowEngine = None
+service_coordinator: ServiceCoordinator = None
+state_manager = None
+codegen_adapter = None
+grainchain_adapter = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
-    logger.info("🚀 Starting Strands-Agents Backend...")
+    # Startup
+    logger.info("🚀 Starting Strands-Agents Backend")
     
-    # Initialize services
     settings = get_settings()
     
+    # Initialize global instances
+    global workflow_engine, service_coordinator, state_manager, codegen_adapter, grainchain_adapter
+    
     try:
-        # Initialize all services
-        services['codegen'] = CodegenService(settings.codegen_api_token)
-        services['grainchain'] = GrainchainService(settings.grainchain_config)
-        services['graph_sitter'] = GraphSitterService()
-        services['web_eval'] = WebEvalService(settings.web_eval_config)
-        services['orchestrator'] = WorkflowOrchestrator(services)
+        # Initialize state manager
+        state_manager = StateManagerFactory.create_in_memory_manager()
+        await state_manager.start()
+        
+        # Initialize service coordinator
+        service_coordinator = ServiceCoordinator()
+        
+        # Initialize service adapters
+        codegen_adapter = CodegenService(
+            api_token=settings.codegen_api_token,
+            base_url=settings.codegen_api_base_url
+        )
+        
+        grainchain_adapter = GrainchainAdapter(settings.grainchain_config)
+        
+        # Register adapters with coordinator
+        service_coordinator.register_adapter("codegen", codegen_adapter)
+        service_coordinator.register_adapter("grainchain", grainchain_adapter)
+        
+        # Initialize workflow engine
+        workflow_engine = WorkflowEngineFactory.create_engine(
+            coordinator=service_coordinator,
+            state_manager=state_manager
+        )
+        
+        # Set global dependencies for API routes
+        set_global_dependencies(
+            engine=workflow_engine,
+            coordinator=service_coordinator,
+            state_manager=state_manager,
+            codegen_adapter=codegen_adapter
+        )
         
         logger.info("✅ All services initialized successfully")
-        
-        yield
         
     except Exception as e:
         logger.error(f"❌ Failed to initialize services: {e}")
         raise
-    finally:
-        # Cleanup
-        logger.info("🛑 Shutting down services...")
-        for service_name, service in services.items():
-            if hasattr(service, 'cleanup'):
-                await service.cleanup()
+    
+    yield
+    
+    # Shutdown
+    logger.info("🛑 Shutting down Strands-Agents Backend")
+    
+    # Cleanup services
+    if state_manager:
+        await state_manager.stop()
+    if codegen_adapter:
+        await codegen_adapter.cleanup()
+    if grainchain_adapter:
+        await grainchain_adapter.cleanup()
+
 
 # Create FastAPI app
 app = FastAPI(
-    title="Strands-Agents Workflow Orchestration API",
+    title="Strands-Agents Workflow Orchestration",
     description="Backend API for orchestrating Codegen SDK, grainchain, graph-sitter, and web-eval-agent",
     version="1.0.0",
     lifespan=lifespan
 )
 
-# CORS middleware
+# Add CORS middleware
+settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8000"],  # React dev server
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Security
-security = HTTPBearer()
+# Include API routes
+app.include_router(workflow_router, prefix="/api/v1")
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Validate API token and get current user"""
-    token = credentials.credentials
-    
-    # Validate token with Codegen API
-    codegen_service = services.get('codegen')
-    if not codegen_service:
-        raise HTTPException(status_code=500, detail="Codegen service not available")
-    
-    try:
-        user = await codegen_service.validate_token(token)
-        return user
-    except Exception as e:
-        logger.error(f"Token validation failed: {e}")
-        raise HTTPException(status_code=401, detail="Invalid authentication token")
 
 # Health check endpoint
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
-    service_status = {}
-    
-    for service_name, service in services.items():
-        try:
-            if hasattr(service, 'health_check'):
-                status = await service.health_check()
-                service_status[service_name] = status
-            else:
-                service_status[service_name] = "available"
-        except Exception as e:
-            service_status[service_name] = f"error: {str(e)}"
-    
-    return HealthResponse(
-        status="healthy" if all(status == "available" or status.startswith("healthy") 
-                              for status in service_status.values()) else "degraded",
-        services=service_status,
-        version="1.0.0"
-    )
+    try:
+        # Check all services
+        service_statuses = {}
+        
+        if service_coordinator:
+            service_statuses = await service_coordinator.health_check_all()
+        
+        # Determine overall status
+        overall_status = "healthy"
+        if any(status.startswith("unhealthy") for status in service_statuses.values()):
+            overall_status = "unhealthy"
+        elif any(status.startswith("degraded") for status in service_statuses.values()):
+            overall_status = "degraded"
+        
+        return HealthResponse(
+            status=overall_status,
+            services=service_statuses,
+            version="1.0.0"
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ Health check failed: {e}")
+        raise HTTPException(status_code=500, detail="Health check failed")
 
-# Include API routes
-app.include_router(api_router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
-
-# Include WebSocket routes
-app.include_router(websocket_router, prefix="/ws")
 
 # Root endpoint
 @app.get("/")
@@ -134,8 +161,10 @@ async def root():
         "message": "Strands-Agents Workflow Orchestration API",
         "version": "1.0.0",
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
+        "api": "/api/v1"
     }
+
 
 if __name__ == "__main__":
     settings = get_settings()
@@ -144,5 +173,5 @@ if __name__ == "__main__":
         host=settings.host,
         port=settings.port,
         reload=settings.debug,
-        log_level="info" if not settings.debug else "debug"
+        log_level=settings.log_level.lower()
     )
