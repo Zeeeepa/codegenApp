@@ -1,0 +1,38 @@
+{
+  "name": "@codegenapp/shared-types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript type definitions for CodegenApp platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "src/**/*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [
+    "typescript",
+    "types",
+    "codegen",
+    "api",
+    "shared"
+  ],
+  "author": "CodegenApp Team",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^4.9.5",
+    "jest": "^29.7.0",
+    "@types/jest": "^30.0.0"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}
+

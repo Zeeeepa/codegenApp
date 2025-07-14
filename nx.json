@@ -1,0 +1,81 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "npmScope": "codegenapp",
+  "affected": {
+    "defaultBase": "main"
+  },
+  "cli": {
+    "defaultCollection": "@nrwl/workspace"
+  },
+  "implicitDependencies": {
+    "package.json": {
+      "dependencies": "*",
+      "devDependencies": "*"
+    },
+    "tsconfig.base.json": "*",
+    "nx.json": "*"
+  },
+  "projects": {
+    "shared-types": {
+      "root": "packages/shared-types",
+      "sourceRoot": "packages/shared-types/src",
+      "projectType": "library"
+    },
+    "core-utils": {
+      "root": "packages/core-utils",
+      "sourceRoot": "packages/core-utils/src",
+      "projectType": "library"
+    },
+    "api-client": {
+      "root": "packages/api-client",
+      "sourceRoot": "packages/api-client/src",
+      "projectType": "library"
+    },
+    "frontend": {
+      "root": "src",
+      "sourceRoot": "src",
+      "projectType": "application"
+    },
+    "backend": {
+      "root": "backend",
+      "sourceRoot": "backend/app",
+      "projectType": "application"
+    }
+  },
+  "targetDependencies": {
+    "build": [
+      {
+        "target": "build",
+        "projects": "dependencies"
+      }
+    ]
+  },
+  "generators": {
+    "@nrwl/react": {
+      "application": {
+        "style": "css",
+        "linter": "eslint",
+        "bundler": "webpack",
+        "babel": true
+      },
+      "component": {
+        "style": "css"
+      },
+      "library": {
+        "style": "css",
+        "linter": "eslint",
+        "unitTestRunner": "jest"
+      }
+    },
+    "@nrwl/node": {
+      "application": {
+        "linter": "eslint"
+      },
+      "library": {
+        "linter": "eslint"
+      }
+    }
+  },
+  "defaultProject": "frontend"
+}
+
