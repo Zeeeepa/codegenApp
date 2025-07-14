@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
+import webEvalRoutes from './web-eval-routes.js';
 
 dotenv.config();
 
@@ -35,6 +36,9 @@ app.use(express.json());
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Web-eval-agent routes
+app.use('/api/web-eval', webEvalRoutes);
 
 // Proxy all API requests to Codegen API
 app.use('/api/v1', async (req, res) => {

@@ -1,0 +1,258 @@
+name: Web Evaluation Agent - PR Testing
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [ opened, synchronize, reopened ]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to test'
+        required: true
+        type: string
+      task:
+        description: 'Testing task description'
+        required: false
+        default: 'Test the PR changes and verify functionality'
+        type: string
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # Job 1: Run unit and integration tests
+  test-web-eval-agent:
+    runs-on: ubuntu-latest
+    name: Test Web-Eval-Agent Integration
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        npm ci
+        npm run server:install
+        
+    - name: Install Python dependencies for web-eval-agent
+      run: |
+        pip install playwright pytest
+        playwright install chromium
+        
+    - name: Run web-eval-agent unit tests
+      run: npm run test:web-eval
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Run server tests
+      run: npm run server:test
+      
+    - name: Build application
+      run: npm run build
+      
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: |
+          coverage/
+          test-results/
+          
+  # Job 2: Deploy preview and run web evaluation (only for actual PRs)
+  deploy-and-evaluate:
+    runs-on: ubuntu-latest
+    name: Deploy Preview & Run Web Evaluation
+    needs: test-web-eval-agent
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        npm ci
+        npm run server:install
+        
+    - name: Build application
+      run: npm run build
+      
+    - name: Deploy to Netlify (Preview)
+      id: netlify-deploy
+      uses: netlify/actions/cli@master
+      with:
+        args: deploy --dir=build --alias=pr-${{ github.event.number }}
+      env:
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        
+    - name: Install web-eval-agent
+      run: |
+        pip install playwright python-dotenv
+        playwright install chromium
+        # Clone and setup web-eval-agent (assuming it's available)
+        git clone https://github.com/Zeeeepa/web-eval-agent.git /tmp/web-eval-agent
+        cd /tmp/web-eval-agent
+        pip install -r requirements.txt
+        
+    - name: Run web evaluation on PR deployment
+      id: web-eval
+      run: |
+        cd /tmp/web-eval-agent
+        python -m webEvalAgent.mcp_server &
+        MCP_PID=$!
+        
+        # Wait for MCP server to start
+        sleep 5
+        
+        # Run evaluation using the API
+        DEPLOYMENT_URL="${{ steps.netlify-deploy.outputs.deploy-url }}"
+        
+        curl -X POST http://localhost:3001/api/web-eval/test-github-pr \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"git_repo\": \"${{ github.repository }}\",
+            \"pull_request\": ${{ github.event.number }},
+            \"task\": \"Test the PR changes and verify that new features work correctly. Check for any UI issues or broken functionality.\",
+            \"headless\": true
+          }" > evaluation_result.json
+          
+        # Kill MCP server
+        kill $MCP_PID || true
+        
+        # Output results
+        cat evaluation_result.json
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true
+      
+    - name: Comment PR with evaluation results
+      uses: actions/github-script@v7
+      if: always()
+      with:
+        script: |
+          const fs = require('fs');
+          let evaluationResult = '';
+          
+          try {
+            const result = JSON.parse(fs.readFileSync('evaluation_result.json', 'utf8'));
+            
+            if (result.status === 'completed' && result.result) {
+              evaluationResult = result.result.map(item => item.text || '').join('\n\n');
+            } else if (result.error) {
+              evaluationResult = `❌ Evaluation failed: ${result.error}`;
+            } else {
+              evaluationResult = '⚠️ Evaluation completed but no results available';
+            }
+          } catch (error) {
+            evaluationResult = `❌ Failed to parse evaluation results: ${error.message}`;
+          }
+          
+          const deploymentUrl = '${{ steps.netlify-deploy.outputs.deploy-url }}';
+          
+          const comment = `## 🤖 Web Evaluation Agent Report
+          
+          **PR Deployment:** ${deploymentUrl}
+          
+          ### Evaluation Results:
+          \`\`\`
+          ${evaluationResult}
+          \`\`\`
+          
+          ---
+          *This evaluation was automatically generated by the Web Evaluation Agent*`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+          
+    - name: Upload evaluation artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: web-evaluation-results
+        path: |
+          evaluation_result.json
+          screenshots/
+          
+  # Job 3: Manual web evaluation (for workflow_dispatch)
+  manual-evaluation:
+    runs-on: ubuntu-latest
+    name: Manual Web Evaluation
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install web-eval-agent
+      run: |
+        pip install playwright python-dotenv
+        playwright install chromium
+        git clone https://github.com/Zeeeepa/web-eval-agent.git /tmp/web-eval-agent
+        cd /tmp/web-eval-agent
+        pip install -r requirements.txt
+        
+    - name: Run manual web evaluation
+      run: |
+        cd /tmp/web-eval-agent
+        python -m webEvalAgent.mcp_server &
+        MCP_PID=$!
+        
+        sleep 5
+        
+        curl -X POST http://localhost:3001/api/web-eval/test-github-pr \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"git_repo\": \"${{ github.repository }}\",
+            \"pull_request\": ${{ github.event.inputs.pr_number }},
+            \"task\": \"${{ github.event.inputs.task }}\",
+            \"headless\": true
+          }" > manual_evaluation_result.json
+          
+        kill $MCP_PID || true
+        cat manual_evaluation_result.json
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Upload manual evaluation results
+      uses: actions/upload-artifact@v4
+      with:
+        name: manual-evaluation-results
+        path: manual_evaluation_result.json
+
