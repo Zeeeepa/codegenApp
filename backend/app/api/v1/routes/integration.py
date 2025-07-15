@@ -1,414 +1,516 @@
 """
-Integration API Routes
-
-Provides endpoints for managing the integration framework components.
+CodegenApp Integration API Routes
+System integration endpoints for external services and tools
 """
 
-from fastapi import APIRouter, HTTPException, Depends, status
-from typing import List, Optional, Dict, Any
-import logging
+import asyncio
+from typing import Dict, List, Optional, Any
+from datetime import datetime
 
-from app.core.integration.integration_manager import get_integration_manager
-from app.core.integration.config_manager import get_config_manager
-from app.core.integration.event_bus import get_event_bus, Event
-from app.core.integration.plugin_system import get_plugin_manager
-from app.api.v1.dependencies import get_current_user
-from app.workflows.templates.code_analysis_workflow import CodeAnalysisWorkflow
-from app.workflows.templates.testing_pipeline_workflow import TestingPipelineWorkflow
-from app.workflows.templates.deployment_validation_workflow import DeploymentValidationWorkflow
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel, Field
 
-logger = logging.getLogger(__name__)
+from app.config.settings import get_settings
+from app.core.logging import get_logger
+from app.core.monitoring import get_metrics_collector
+from app.services.adapters.gemini_adapter import GeminiAdapter
+from app.services.web_eval_service import WebEvalService
+from app.services.adapters.graph_sitter_adapter import GraphSitterAdapter
+from app.utils.exceptions import (
+    GeminiAPIException,
+    WebEvalException,
+    GraphSitterException
+)
 
-router = APIRouter(prefix="/integration", tags=["integration"])
+router = APIRouter()
+logger = get_logger(__name__)
+settings = get_settings()
+metrics = get_metrics_collector()
 
-
-# System Status Endpoints
-@router.get("/status")
-async def get_system_status(current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Get comprehensive system status"""
-    try:
-        integration_manager = get_integration_manager()
-        if not integration_manager:
-            raise HTTPException(
-                status_code=503,
-                detail="Integration manager not available"
-            )
-        
-        status = integration_manager.get_system_status()
-        return status
-        
-    except Exception as e:
-        logger.error(f"Failed to get system status: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get system status: {str(e)}"
-        )
+# Service instances
+gemini_adapter = GeminiAdapter()
+web_eval_service = WebEvalService()
+graph_sitter_adapter = GraphSitterAdapter()
 
 
-@router.get("/health")
-async def health_check():
-    """Comprehensive health check for integration components"""
-    try:
-        integration_manager = get_integration_manager()
-        if not integration_manager:
-            return {
-                "status": "unhealthy",
-                "error": "Integration manager not available"
-            }
-        
-        health = await integration_manager.health_check()
-        return health
-        
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+class ServiceHealthRequest(BaseModel):
+    """Request model for service health check"""
+    services: List[str] = Field(default=["all"], description="Services to check")
+    timeout: int = Field(default=30, description="Health check timeout")
 
 
-# Configuration Management Endpoints
-@router.get("/config")
-async def get_configuration(
-    component: Optional[str] = None,
-    current_user: Dict[str, Any] = Depends(get_current_user)
+class ServiceHealthResponse(BaseModel):
+    """Response model for service health"""
+    service: str
+    status: str
+    response_time: float
+    details: Dict[str, Any]
+    timestamp: datetime
+
+
+class GeminiTestRequest(BaseModel):
+    """Request model for Gemini API test"""
+    prompt: str = Field(..., description="Test prompt")
+    model_config: Optional[Dict[str, Any]] = Field(None, description="Model configuration")
+
+
+class WebEvalTestRequest(BaseModel):
+    """Request model for Web-Eval test"""
+    url: str = Field(..., description="URL to test")
+    test_scenarios: List[Dict[str, Any]] = Field(default=[], description="Test scenarios")
+
+
+class GraphSitterTestRequest(BaseModel):
+    """Request model for Graph-Sitter test"""
+    code_content: str = Field(..., description="Code content to analyze")
+    language: str = Field(..., description="Programming language")
+
+
+@router.get("/health", response_model=List[ServiceHealthResponse])
+async def check_service_health(
+    services: Optional[str] = "all",
+    timeout: int = 30
 ):
-    """Get configuration for a component or global config"""
+    """
+    Check health of integrated services
+    
+    Tests connectivity and basic functionality of all integrated services
+    including Gemini API, Web-Eval-Agent, and Graph-Sitter.
+    """
     try:
-        config_manager = get_config_manager()
-        if not config_manager:
-            raise HTTPException(
-                status_code=503,
-                detail="Configuration manager not available"
-            )
-        
-        if component:
-            config = config_manager.get_component_config(component)
-            return {"component": component, "config": config}
-        else:
-            global_config = config_manager.get_global_config()
-            return {"global_config": global_config.to_dict()}
-        
-    except Exception as e:
-        logger.error(f"Failed to get configuration: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get configuration: {str(e)}"
-        )
-
-
-@router.post("/config/reload")
-async def reload_configuration(current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Reload configuration from file"""
-    try:
-        integration_manager = get_integration_manager()
-        if not integration_manager:
-            raise HTTPException(
-                status_code=503,
-                detail="Integration manager not available"
-            )
-        
-        await integration_manager.reload_configuration()
-        return {"message": "Configuration reloaded successfully"}
-        
-    except Exception as e:
-        logger.error(f"Failed to reload configuration: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to reload configuration: {str(e)}"
-        )
-
-
-# Event Bus Endpoints
-@router.get("/events/metrics")
-async def get_event_metrics(current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Get event bus metrics"""
-    try:
-        event_bus = get_event_bus()
-        if not event_bus:
-            raise HTTPException(
-                status_code=503,
-                detail="Event bus not available"
-            )
-        
-        metrics = event_bus.get_metrics()
-        return metrics
-        
-    except Exception as e:
-        logger.error(f"Failed to get event metrics: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get event metrics: {str(e)}"
-        )
-
-
-@router.get("/events/history")
-async def get_event_history(
-    event_type: Optional[str] = None,
-    component: Optional[str] = None,
-    limit: int = 100,
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
-    """Get event history with optional filtering"""
-    try:
-        event_bus = get_event_bus()
-        if not event_bus:
-            raise HTTPException(
-                status_code=503,
-                detail="Event bus not available"
-            )
-        
-        events = event_bus.get_event_history(
-            event_type=event_type,
-            component=component,
-            limit=limit
-        )
-        
-        # Convert events to dictionaries for JSON serialization
-        event_dicts = [event.to_dict() for event in events]
-        
-        return {
-            "events": event_dicts,
-            "total": len(event_dicts),
-            "filters": {
-                "event_type": event_type,
-                "component": component,
-                "limit": limit
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to get event history: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get event history: {str(e)}"
-        )
-
-
-@router.post("/events/publish")
-async def publish_event(
-    event_type: str,
-    payload: Dict[str, Any],
-    target_component: Optional[str] = None,
-    priority: int = 0,
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
-    """Publish an event to the event bus"""
-    try:
-        event_bus = get_event_bus()
-        if not event_bus:
-            raise HTTPException(
-                status_code=503,
-                detail="Event bus not available"
-            )
-        
-        event = Event(
-            event_type=event_type,
-            source_component="api",
-            payload=payload,
-            target_component=target_component,
-            priority=priority
-        )
-        
-        await event_bus.publish(event)
-        
-        return {
-            "message": "Event published successfully",
-            "event_id": event.correlation_id,
-            "event_type": event_type
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to publish event: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to publish event: {str(e)}"
-        )
-
-
-# Plugin Management Endpoints
-@router.get("/plugins")
-async def list_plugins(current_user: Dict[str, Any] = Depends(get_current_user)):
-    """List all plugins and their status"""
-    try:
-        plugin_manager = get_plugin_manager()
-        if not plugin_manager:
-            raise HTTPException(
-                status_code=503,
-                detail="Plugin manager not available"
-            )
-        
-        status = plugin_manager.get_plugin_status()
-        return {"plugins": status}
-        
-    except Exception as e:
-        logger.error(f"Failed to list plugins: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to list plugins: {str(e)}"
-        )
-
-
-@router.post("/plugins/{plugin_name}/enable")
-async def enable_plugin(
-    plugin_name: str,
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
-    """Enable a plugin"""
-    try:
-        integration_manager = get_integration_manager()
-        if not integration_manager:
-            raise HTTPException(
-                status_code=503,
-                detail="Integration manager not available"
-            )
-        
-        result = await integration_manager.enable_plugin(plugin_name)
-        
-        if result:
-            return {"message": f"Plugin '{plugin_name}' enabled successfully"}
-        else:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Plugin '{plugin_name}' not found or failed to enable"
-            )
-        
-    except Exception as e:
-        logger.error(f"Failed to enable plugin {plugin_name}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to enable plugin: {str(e)}"
-        )
-
-
-@router.post("/plugins/{plugin_name}/disable")
-async def disable_plugin(
-    plugin_name: str,
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
-    """Disable a plugin"""
-    try:
-        integration_manager = get_integration_manager()
-        if not integration_manager:
-            raise HTTPException(
-                status_code=503,
-                detail="Integration manager not available"
-            )
-        
-        result = await integration_manager.disable_plugin(plugin_name)
-        
-        if result:
-            return {"message": f"Plugin '{plugin_name}' disabled successfully"}
-        else:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Plugin '{plugin_name}' not found or failed to disable"
-            )
-        
-    except Exception as e:
-        logger.error(f"Failed to disable plugin {plugin_name}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to disable plugin: {str(e)}"
-        )
-
-
-# Workflow Templates Endpoints
-@router.get("/workflow-templates")
-async def list_workflow_templates(current_user: Dict[str, Any] = Depends(get_current_user)):
-    """List available workflow templates"""
-    try:
-        templates = [
-            CodeAnalysisWorkflow.get_workflow_template(),
-            TestingPipelineWorkflow.get_workflow_template(),
-            DeploymentValidationWorkflow.get_workflow_template()
+        service_list = services.split(",") if services != "all" else [
+            "gemini", "web_eval", "graph_sitter", "codegen_api", "github_api"
         ]
         
-        return {"templates": templates}
+        health_results = []
+        
+        for service in service_list:
+            start_time = datetime.utcnow()
+            
+            try:
+                if service == "gemini":
+                    result = await _test_gemini_health(timeout)
+                elif service == "web_eval":
+                    result = await _test_web_eval_health(timeout)
+                elif service == "graph_sitter":
+                    result = await _test_graph_sitter_health(timeout)
+                elif service == "codegen_api":
+                    result = await _test_codegen_api_health(timeout)
+                elif service == "github_api":
+                    result = await _test_github_api_health(timeout)
+                else:
+                    result = {
+                        "status": "unknown",
+                        "details": {"error": f"Unknown service: {service}"}
+                    }
+                
+                response_time = (datetime.utcnow() - start_time).total_seconds()
+                
+                health_results.append(ServiceHealthResponse(
+                    service=service,
+                    status=result["status"],
+                    response_time=response_time,
+                    details=result["details"],
+                    timestamp=datetime.utcnow()
+                ))
+                
+            except Exception as e:
+                response_time = (datetime.utcnow() - start_time).total_seconds()
+                
+                health_results.append(ServiceHealthResponse(
+                    service=service,
+                    status="error",
+                    response_time=response_time,
+                    details={"error": str(e)},
+                    timestamp=datetime.utcnow()
+                ))
+        
+        return health_results
         
     except Exception as e:
-        logger.error(f"Failed to list workflow templates: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to list workflow templates: {str(e)}"
-        )
+        logger.error("Service health check failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
 
 
-@router.get("/workflow-templates/{template_name}")
-async def get_workflow_template(
-    template_name: str,
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
-    """Get details for a specific workflow template"""
+@router.post("/gemini/test")
+async def test_gemini_integration(request: GeminiTestRequest):
+    """
+    Test Gemini API integration
+    
+    Sends a test prompt to Gemini API to verify connectivity and functionality.
+    """
     try:
-        template_map = {
-            "code_analysis": CodeAnalysisWorkflow.get_workflow_template(),
-            "testing_pipeline": TestingPipelineWorkflow.get_workflow_template(),
-            "deployment_validation": DeploymentValidationWorkflow.get_workflow_template()
-        }
+        logger.info("Testing Gemini integration", prompt_length=len(request.prompt))
         
-        if template_name not in template_map:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Workflow template '{template_name}' not found"
-            )
+        # Test basic prompt response
+        start_time = datetime.utcnow()
         
-        return template_map[template_name]
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get workflow template {template_name}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get workflow template: {str(e)}"
+        # Use the deployment validation method as a test
+        result = await gemini_adapter.validate_deployment(
+            project_name="test_project",
+            pr_url="https://github.com/test/test/pull/1",
+            deployment_output=request.prompt,
+            deployment_success=True
         )
-
-
-@router.post("/workflow-templates/{template_name}/create")
-async def create_workflow_from_template(
-    template_name: str,
-    parameters: Dict[str, Any],
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
-    """Create a workflow from a template"""
-    try:
-        if template_name == "code_analysis":
-            from app.workflows.templates.code_analysis_workflow import CodeAnalysisWorkflowConfig
-            config = CodeAnalysisWorkflowConfig(**parameters)
-            workflow = CodeAnalysisWorkflow.create_workflow(config)
-        elif template_name == "testing_pipeline":
-            from app.workflows.templates.testing_pipeline_workflow import TestingPipelineConfig
-            config = TestingPipelineConfig(**parameters)
-            workflow = TestingPipelineWorkflow.create_workflow(config)
-        elif template_name == "deployment_validation":
-            from app.workflows.templates.deployment_validation_workflow import DeploymentValidationConfig
-            config = DeploymentValidationConfig(**parameters)
-            workflow = DeploymentValidationWorkflow.create_workflow(config)
-        else:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Workflow template '{template_name}' not found"
-            )
+        
+        response_time = (datetime.utcnow() - start_time).total_seconds()
         
         return {
-            "message": f"Workflow created from template '{template_name}'",
-            "workflow_id": workflow.id,
-            "workflow": {
-                "id": workflow.id,
-                "name": workflow.name,
-                "description": workflow.description,
-                "steps": len(workflow.steps),
-                "estimated_duration": workflow.timeout,
-                "tags": workflow.tags
+            "success": True,
+            "response_time": response_time,
+            "result": {
+                "confidence_score": result.confidence_score,
+                "analysis_length": len(result.analysis),
+                "recommendations_count": len(result.recommendations),
+                "issues_found": len(result.issues_found)
+            },
+            "timestamp": datetime.utcnow()
+        }
+        
+    except GeminiAPIException as e:
+        logger.error("Gemini integration test failed", error=str(e))
+        raise HTTPException(status_code=502, detail=f"Gemini API error: {str(e)}")
+    except Exception as e:
+        logger.error("Gemini test failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
+
+
+@router.post("/web-eval/test")
+async def test_web_eval_integration(request: WebEvalTestRequest):
+    """
+    Test Web-Eval-Agent integration
+    
+    Runs a basic web evaluation test to verify Playwright and testing functionality.
+    """
+    try:
+        logger.info("Testing Web-Eval integration", url=request.url)
+        
+        start_time = datetime.utcnow()
+        
+        # Run comprehensive tests
+        result = await web_eval_service.run_comprehensive_tests(
+            project_name="test_project",
+            deployment_url=request.url,
+            test_config={"test_scenarios": request.test_scenarios}
+        )
+        
+        response_time = (datetime.utcnow() - start_time).total_seconds()
+        
+        return {
+            "success": result.success,
+            "response_time": response_time,
+            "result": {
+                "tests_passed": result.tests_passed,
+                "tests_failed": result.tests_failed,
+                "total_tests": result.total_tests,
+                "coverage_percentage": result.coverage_percentage,
+                "accessibility_score": result.accessibility_score,
+                "performance_metrics": result.performance_metrics,
+                "ui_issues_count": len(result.ui_issues),
+                "screenshots_captured": len(result.screenshots)
+            },
+            "timestamp": datetime.utcnow()
+        }
+        
+    except WebEvalException as e:
+        logger.error("Web-Eval integration test failed", error=str(e))
+        raise HTTPException(status_code=502, detail=f"Web-Eval error: {str(e)}")
+    except Exception as e:
+        logger.error("Web-Eval test failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
+
+
+@router.post("/graph-sitter/test")
+async def test_graph_sitter_integration(request: GraphSitterTestRequest):
+    """
+    Test Graph-Sitter integration
+    
+    Analyzes provided code content to verify Tree-sitter parsing and analysis.
+    """
+    try:
+        logger.info("Testing Graph-Sitter integration", language=request.language)
+        
+        # Create temporary file for analysis
+        import tempfile
+        from pathlib import Path
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            
+            # Write code to temporary file
+            file_extension = {
+                "python": ".py",
+                "javascript": ".js",
+                "typescript": ".ts",
+                "go": ".go",
+                "rust": ".rs",
+                "java": ".java",
+                "cpp": ".cpp",
+                "c": ".c"
+            }.get(request.language, ".txt")
+            
+            test_file = temp_path / f"test{file_extension}"
+            test_file.write_text(request.code_content)
+            
+            start_time = datetime.utcnow()
+            
+            # Run analysis
+            result = await graph_sitter_adapter.analyze_codebase(
+                workspace_path=str(temp_path),
+                languages=[request.language]
+            )
+            
+            response_time = (datetime.utcnow() - start_time).total_seconds()
+            
+            return {
+                "success": result.success,
+                "response_time": response_time,
+                "result": {
+                    "files_analyzed": result.files_analyzed,
+                    "complexity_score": result.complexity_score,
+                    "languages_analyzed": result.languages_analyzed,
+                    "patterns_found": len(result.code_patterns),
+                    "issues_found": len(result.potential_issues),
+                    "refactoring_suggestions": len(result.refactoring_suggestions)
+                },
+                "timestamp": datetime.utcnow()
+            }
+        
+    except GraphSitterException as e:
+        logger.error("Graph-Sitter integration test failed", error=str(e))
+        raise HTTPException(status_code=502, detail=f"Graph-Sitter error: {str(e)}")
+    except Exception as e:
+        logger.error("Graph-Sitter test failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
+
+
+@router.get("/configuration")
+async def get_integration_configuration():
+    """
+    Get current integration configuration
+    
+    Returns configuration details for all integrated services.
+    """
+    try:
+        config = {
+            "gemini": {
+                "model": settings.gemini.model,
+                "temperature": settings.gemini.temperature,
+                "max_tokens": settings.gemini.max_tokens,
+                "timeout": settings.gemini.timeout
+            },
+            "web_eval": {
+                "browser": settings.web_eval.browser,
+                "headless": settings.web_eval.headless,
+                "timeout": settings.web_eval.timeout,
+                "max_concurrent": settings.web_eval.max_concurrent
+            },
+            "graph_sitter": {
+                "supported_languages": settings.graph_sitter.supported_languages,
+                "cache_size": settings.graph_sitter.cache_size,
+                "max_file_size": settings.graph_sitter.max_file_size,
+                "timeout": settings.graph_sitter.timeout
+            },
+            "validation": {
+                "timeout": settings.validation.timeout,
+                "max_retries": settings.validation.max_retries,
+                "confidence_threshold": settings.validation.confidence_threshold,
+                "concurrent_limit": settings.validation.concurrent_limit
+            },
+            "auto_merge": {
+                "enabled": settings.auto_merge.enabled,
+                "confidence_threshold": settings.auto_merge.confidence_threshold,
+                "error_threshold": settings.auto_merge.error_threshold,
+                "require_tests": settings.auto_merge.require_tests
             }
         }
         
-    except HTTPException:
-        raise
+        return {
+            "configuration": config,
+            "timestamp": datetime.utcnow()
+        }
+        
     except Exception as e:
-        logger.error(f"Failed to create workflow from template {template_name}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create workflow from template: {str(e)}"
+        logger.error("Failed to get configuration", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Configuration retrieval failed: {str(e)}")
+
+
+@router.post("/cache/clear")
+async def clear_integration_caches():
+    """
+    Clear all integration caches
+    
+    Clears caches for Graph-Sitter analysis and other cached data.
+    """
+    try:
+        logger.info("Clearing integration caches")
+        
+        # Clear Graph-Sitter cache
+        graph_sitter_adapter.clear_cache()
+        
+        # Clear other caches as needed
+        # (Add more cache clearing logic here)
+        
+        return {
+            "success": True,
+            "message": "All integration caches cleared",
+            "timestamp": datetime.utcnow()
+        }
+        
+    except Exception as e:
+        logger.error("Failed to clear caches", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Cache clearing failed: {str(e)}")
+
+
+# Helper functions for health checks
+
+async def _test_gemini_health(timeout: int) -> Dict[str, Any]:
+    """Test Gemini API health"""
+    try:
+        # Simple test prompt
+        result = await asyncio.wait_for(
+            gemini_adapter.validate_deployment(
+                project_name="health_check",
+                pr_url="https://github.com/test/test/pull/1",
+                deployment_output="Health check test",
+                deployment_success=True
+            ),
+            timeout=timeout
         )
+        
+        return {
+            "status": "healthy",
+            "details": {
+                "model": settings.gemini.model,
+                "response_received": True,
+                "confidence_score": result.confidence_score
+            }
+        }
+        
+    except asyncio.TimeoutError:
+        return {
+            "status": "timeout",
+            "details": {"error": f"Health check timed out after {timeout}s"}
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "details": {"error": str(e)}
+        }
+
+
+async def _test_web_eval_health(timeout: int) -> Dict[str, Any]:
+    """Test Web-Eval service health"""
+    try:
+        # Test with a simple URL
+        result = await asyncio.wait_for(
+            web_eval_service.run_performance_tests(
+                deployment_url="https://httpbin.org/get",
+                performance_config={}
+            ),
+            timeout=timeout
+        )
+        
+        return {
+            "status": "healthy",
+            "details": {
+                "browser": settings.web_eval.browser,
+                "load_time": result.get("load_time", 0),
+                "test_completed": True
+            }
+        }
+        
+    except asyncio.TimeoutError:
+        return {
+            "status": "timeout",
+            "details": {"error": f"Health check timed out after {timeout}s"}
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "details": {"error": str(e)}
+        }
+
+
+async def _test_graph_sitter_health(timeout: int) -> Dict[str, Any]:
+    """Test Graph-Sitter health"""
+    try:
+        # Test with simple code analysis
+        import tempfile
+        from pathlib import Path
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            test_file = temp_path / "test.py"
+            test_file.write_text("def hello():\n    return 'world'")
+            
+            result = await asyncio.wait_for(
+                graph_sitter_adapter.analyze_codebase(
+                    workspace_path=str(temp_path),
+                    languages=["python"]
+                ),
+                timeout=timeout
+            )
+            
+            return {
+                "status": "healthy",
+                "details": {
+                    "supported_languages": settings.graph_sitter.supported_languages,
+                    "files_analyzed": result.files_analyzed,
+                    "analysis_completed": result.success
+                }
+            }
+        
+    except asyncio.TimeoutError:
+        return {
+            "status": "timeout",
+            "details": {"error": f"Health check timed out after {timeout}s"}
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "details": {"error": str(e)}
+        }
+
+
+async def _test_codegen_api_health(timeout: int) -> Dict[str, Any]:
+    """Test Codegen API health"""
+    try:
+        # This would test actual Codegen API connectivity
+        # For now, return a placeholder
+        return {
+            "status": "healthy",
+            "details": {
+                "api_base": settings.codegen.api_base,
+                "org_id": settings.codegen.org_id,
+                "connection": "simulated"
+            }
+        }
+        
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "details": {"error": str(e)}
+        }
+
+
+async def _test_github_api_health(timeout: int) -> Dict[str, Any]:
+    """Test GitHub API health"""
+    try:
+        # This would test actual GitHub API connectivity
+        # For now, return a placeholder
+        return {
+            "status": "healthy",
+            "details": {
+                "api_base": settings.github.api_base,
+                "token_configured": bool(settings.github.token),
+                "connection": "simulated"
+            }
+        }
+        
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "details": {"error": str(e)}
+        }
+

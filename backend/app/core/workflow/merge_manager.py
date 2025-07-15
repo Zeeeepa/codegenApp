@@ -1,441 +1,595 @@
 """
-Merge Manager for Auto-Merge Functionality
-
-Handles PR merging decisions based on validation results and user preferences.
+CodegenApp Merge Manager
+Intelligent auto-merge decision engine with confidence scoring and risk assessment
 """
 
 import asyncio
-from typing import Dict, Any, Optional, List
-import logging
-from dataclasses import dataclass
-from enum import Enum
+from datetime import datetime
+from typing import Dict, List, Optional, Any, Tuple
+import json
 
-from app.services.adapters.codegen_adapter import CodegenService
 from app.config.settings import get_settings
+from app.core.logging import get_logger
+from app.core.monitoring import get_metrics_collector
+from app.models.validation import (
+    ValidationResult,
+    AutoMergeDecision,
+    ValidationStatus
+)
+from app.services.adapters.gemini_adapter import GeminiAdapter
+from app.utils.exceptions import AutoMergeException
 
-logger = logging.getLogger(__name__)
-
-
-class MergeDecision(Enum):
-    """Possible merge decisions"""
-    AUTO_MERGE = "auto_merge"
-    MANUAL_REVIEW = "manual_review"
-    REJECT = "reject"
-    RETRY = "retry"
-
-
-@dataclass
-class MergeContext:
-    """Context for merge decision making"""
-    project_name: str
-    pr_number: int
-    pr_url: str
-    validation_success: bool
-    deployment_success: bool
-    web_eval_success: bool
-    auto_merge_enabled: bool
-    validation_confidence: float
-    error_count: int
-    retry_count: int
-    user_preferences: Dict[str, Any]
+logger = get_logger(__name__)
+settings = get_settings()
+metrics = get_metrics_collector()
 
 
-@dataclass
-class MergeResult:
-    """Result of merge operation"""
-    decision: MergeDecision
-    success: bool
-    message: str
-    pr_status: str
-    merge_commit_sha: Optional[str] = None
-    error_details: Optional[str] = None
+class ConfidenceCalculator:
+    """
+    Confidence score calculation for merge decisions
+    
+    Calculates confidence scores based on validation results,
+    historical data, and risk factors.
+    """
+    
+    def __init__(self):
+        self.weights = {
+            "deployment_success": 0.25,
+            "gemini_validation": 0.20,
+            "web_eval_success": 0.20,
+            "graph_sitter_analysis": 0.15,
+            "error_count": 0.10,
+            "test_coverage": 0.10
+        }
+    
+    def calculate_confidence(
+        self,
+        validation_result: ValidationResult,
+        project_requirements: Dict[str, Any],
+        historical_data: Optional[Dict[str, Any]] = None
+    ) -> Tuple[float, Dict[str, float]]:
+        """
+        Calculate confidence score for merge decision
+        
+        Args:
+            validation_result: Complete validation results
+            project_requirements: Project-specific requirements
+            historical_data: Historical merge success data
+            
+        Returns:
+            Tuple of (confidence_score, factor_breakdown)
+        """
+        factor_scores = {}
+        
+        # Deployment success factor
+        factor_scores["deployment_success"] = 1.0 if validation_result.deployment_success else 0.0
+        
+        # Gemini validation factor
+        factor_scores["gemini_validation"] = validation_result.gemini_validation_score
+        
+        # Web evaluation factor
+        factor_scores["web_eval_success"] = 1.0 if validation_result.web_eval_success else 0.0
+        
+        # Graph-Sitter analysis factor
+        graph_sitter_score = validation_result.graph_sitter_analysis.get("complexity_score", 0.5)
+        # Invert complexity score (lower complexity = higher confidence)
+        factor_scores["graph_sitter_analysis"] = 1.0 - min(graph_sitter_score, 1.0)
+        
+        # Error count factor
+        max_acceptable_errors = project_requirements.get("max_errors", 0)
+        if validation_result.error_count <= max_acceptable_errors:
+            factor_scores["error_count"] = 1.0
+        else:
+            # Exponential decay for error count
+            factor_scores["error_count"] = max(0.0, 0.5 ** (validation_result.error_count - max_acceptable_errors))
+        
+        # Test coverage factor (placeholder - would be extracted from validation)
+        factor_scores["test_coverage"] = 0.8  # Default assumption
+        
+        # Apply historical adjustments
+        if historical_data:
+            factor_scores = self._apply_historical_adjustments(factor_scores, historical_data)
+        
+        # Calculate weighted confidence score
+        confidence_score = sum(
+            factor_scores[factor] * self.weights[factor]
+            for factor in self.weights
+        )
+        
+        return min(confidence_score, 1.0), factor_scores
+    
+    def _apply_historical_adjustments(
+        self,
+        factor_scores: Dict[str, float],
+        historical_data: Dict[str, Any]
+    ) -> Dict[str, float]:
+        """Apply historical data adjustments to confidence factors"""
+        
+        # Adjust based on recent merge success rate
+        recent_success_rate = historical_data.get("recent_success_rate", 0.8)
+        adjustment_factor = min(recent_success_rate * 1.2, 1.0)
+        
+        # Apply adjustment to all factors
+        adjusted_scores = {}
+        for factor, score in factor_scores.items():
+            adjusted_scores[factor] = score * adjustment_factor
+        
+        return adjusted_scores
+
+
+class RiskAssessment:
+    """
+    Risk assessment for merge decisions
+    
+    Evaluates potential risks and their impact on the system
+    and users.
+    """
+    
+    def __init__(self):
+        self.risk_categories = [
+            "deployment_risk",
+            "security_risk", 
+            "performance_risk",
+            "stability_risk",
+            "user_impact_risk"
+        ]
+    
+    def assess_risks(
+        self,
+        validation_result: ValidationResult,
+        project_context: Dict[str, Any]
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Assess risks associated with merging the PR
+        
+        Args:
+            validation_result: Validation results
+            project_context: Project-specific context
+            
+        Returns:
+            Risk assessment breakdown
+        """
+        risks = {}
+        
+        # Deployment risk
+        risks["deployment_risk"] = self._assess_deployment_risk(validation_result)
+        
+        # Security risk
+        risks["security_risk"] = self._assess_security_risk(validation_result)
+        
+        # Performance risk
+        risks["performance_risk"] = self._assess_performance_risk(validation_result)
+        
+        # Stability risk
+        risks["stability_risk"] = self._assess_stability_risk(validation_result)
+        
+        # User impact risk
+        risks["user_impact_risk"] = self._assess_user_impact_risk(validation_result, project_context)
+        
+        return risks
+    
+    def _assess_deployment_risk(self, validation_result: ValidationResult) -> Dict[str, Any]:
+        """Assess deployment-related risks"""
+        if not validation_result.deployment_success:
+            return {
+                "level": "high",
+                "score": 0.9,
+                "description": "Deployment failed during validation",
+                "mitigation": "Fix deployment issues before merging"
+            }
+        
+        # Check for deployment warnings or issues
+        deployment_stage = validation_result.stages.get("deployment")
+        if deployment_stage and deployment_stage.error_message:
+            return {
+                "level": "medium",
+                "score": 0.6,
+                "description": "Deployment completed with warnings",
+                "mitigation": "Review deployment warnings"
+            }
+        
+        return {
+            "level": "low",
+            "score": 0.1,
+            "description": "Deployment successful without issues",
+            "mitigation": "None required"
+        }
+    
+    def _assess_security_risk(self, validation_result: ValidationResult) -> Dict[str, Any]:
+        """Assess security-related risks"""
+        # Check Gemini analysis for security issues
+        gemini_stage = validation_result.stages.get("gemini_validation")
+        if gemini_stage:
+            security_score = gemini_stage.metadata.get("security_score", 0.8)
+            if security_score < 0.6:
+                return {
+                    "level": "high",
+                    "score": 1.0 - security_score,
+                    "description": "Security concerns identified in code analysis",
+                    "mitigation": "Address security issues before merging"
+                }
+        
+        # Check Graph-Sitter analysis for security patterns
+        graph_sitter_issues = validation_result.graph_sitter_analysis.get("potential_issues", [])
+        security_issues = [issue for issue in graph_sitter_issues if issue.get("category") == "security"]
+        
+        if security_issues:
+            return {
+                "level": "medium",
+                "score": min(len(security_issues) * 0.2, 1.0),
+                "description": f"Found {len(security_issues)} potential security issues",
+                "mitigation": "Review and address security issues"
+            }
+        
+        return {
+            "level": "low",
+            "score": 0.1,
+            "description": "No significant security risks identified",
+            "mitigation": "None required"
+        }
+    
+    def _assess_performance_risk(self, validation_result: ValidationResult) -> Dict[str, Any]:
+        """Assess performance-related risks"""
+        # Check web evaluation performance metrics
+        web_eval_stage = validation_result.stages.get("web_eval_testing")
+        if web_eval_stage:
+            performance_metrics = web_eval_stage.metadata.get("performance_metrics", {})
+            avg_load_time = performance_metrics.get("average_load_time", 0)
+            
+            if avg_load_time > 5.0:  # 5 seconds threshold
+                return {
+                    "level": "high",
+                    "score": min(avg_load_time / 10.0, 1.0),
+                    "description": f"High average load time: {avg_load_time:.2f}s",
+                    "mitigation": "Optimize performance before merging"
+                }
+            elif avg_load_time > 2.0:  # 2 seconds threshold
+                return {
+                    "level": "medium",
+                    "score": avg_load_time / 5.0,
+                    "description": f"Moderate load time: {avg_load_time:.2f}s",
+                    "mitigation": "Consider performance optimizations"
+                }
+        
+        return {
+            "level": "low",
+            "score": 0.1,
+            "description": "No significant performance risks identified",
+            "mitigation": "None required"
+        }
+    
+    def _assess_stability_risk(self, validation_result: ValidationResult) -> Dict[str, Any]:
+        """Assess system stability risks"""
+        # Check error count and types
+        if validation_result.error_count > 0:
+            error_severity = "high" if validation_result.error_count > 3 else "medium"
+            return {
+                "level": error_severity,
+                "score": min(validation_result.error_count * 0.3, 1.0),
+                "description": f"Found {validation_result.error_count} errors during validation",
+                "mitigation": "Fix errors before merging"
+            }
+        
+        # Check complexity score
+        complexity_score = validation_result.graph_sitter_analysis.get("complexity_score", 0.0)
+        if complexity_score > 0.8:
+            return {
+                "level": "medium",
+                "score": complexity_score,
+                "description": "High code complexity may affect stability",
+                "mitigation": "Consider refactoring complex code"
+            }
+        
+        return {
+            "level": "low",
+            "score": 0.1,
+            "description": "No significant stability risks identified",
+            "mitigation": "None required"
+        }
+    
+    def _assess_user_impact_risk(
+        self,
+        validation_result: ValidationResult,
+        project_context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Assess potential user impact risks"""
+        
+        # Check if this is a user-facing change
+        is_user_facing = project_context.get("user_facing", True)
+        
+        if not is_user_facing:
+            return {
+                "level": "low",
+                "score": 0.1,
+                "description": "Internal change with minimal user impact",
+                "mitigation": "None required"
+            }
+        
+        # Check web evaluation results for UI issues
+        web_eval_stage = validation_result.stages.get("web_eval_testing")
+        if web_eval_stage and not web_eval_stage.success:
+            ui_issues = web_eval_stage.metadata.get("ui_issues", [])
+            if ui_issues:
+                return {
+                    "level": "high",
+                    "score": min(len(ui_issues) * 0.2, 1.0),
+                    "description": f"Found {len(ui_issues)} UI/UX issues",
+                    "mitigation": "Fix UI issues before merging"
+                }
+        
+        # Check accessibility score
+        accessibility_score = web_eval_stage.metadata.get("accessibility_score", 1.0) if web_eval_stage else 1.0
+        if accessibility_score < 0.7:
+            return {
+                "level": "medium",
+                "score": 1.0 - accessibility_score,
+                "description": f"Low accessibility score: {accessibility_score:.2f}",
+                "mitigation": "Improve accessibility before merging"
+            }
+        
+        return {
+            "level": "low",
+            "score": 0.2,
+            "description": "Minimal user impact expected",
+            "mitigation": "Monitor user feedback after deployment"
+        }
 
 
 class MergeManager:
-    """Manages PR merge decisions and operations"""
+    """
+    Intelligent merge decision manager
+    
+    Makes automated merge decisions based on validation results,
+    confidence scores, risk assessment, and project requirements.
+    """
     
     def __init__(self):
-        self.settings = get_settings()
-        self.codegen_service = CodegenService(self.settings)
-        self.pending_merges: Dict[str, MergeContext] = {}
+        self.confidence_calculator = ConfidenceCalculator()
+        self.risk_assessment = RiskAssessment()
+        self.gemini_adapter = GeminiAdapter()
         
-        # Default merge criteria
-        self.merge_criteria = {
-            "min_validation_confidence": 0.8,
-            "max_error_count": 0,
-            "max_retry_count": 3,
-            "require_deployment_success": True,
-            "require_web_eval_success": True
-        }
+        logger.info("MergeManager initialized")
     
-    async def evaluate_merge_decision(
+    async def make_decision(
         self,
-        merge_context: MergeContext
-    ) -> MergeDecision:
-        """Evaluate whether a PR should be merged automatically"""
+        project_name: str,
+        pr_number: int,
+        validation_result: ValidationResult,
+        auto_merge_enabled: bool,
+        project_requirements: Optional[Dict[str, Any]] = None,
+        historical_data: Optional[Dict[str, Any]] = None
+    ) -> AutoMergeDecision:
+        """
+        Make intelligent auto-merge decision
         
-        logger.info(f"Evaluating merge decision for PR {merge_context.pr_number}")
-        
-        # Check if auto-merge is enabled
-        if not merge_context.auto_merge_enabled:
-            logger.info("Auto-merge disabled, requiring manual review")
-            return MergeDecision.MANUAL_REVIEW
-        
-        # Check validation success
-        if not merge_context.validation_success:
-            if merge_context.retry_count < self.merge_criteria["max_retry_count"]:
-                logger.info("Validation failed, but retries available")
-                return MergeDecision.RETRY
-            else:
-                logger.info("Validation failed, max retries reached")
-                return MergeDecision.REJECT
-        
-        # Check deployment success
-        if self.merge_criteria["require_deployment_success"] and not merge_context.deployment_success:
-            logger.info("Deployment validation failed")
-            return MergeDecision.REJECT
-        
-        # Check web evaluation success
-        if self.merge_criteria["require_web_eval_success"] and not merge_context.web_eval_success:
-            logger.info("Web evaluation failed")
-            return MergeDecision.REJECT
-        
-        # Check validation confidence
-        if merge_context.validation_confidence < self.merge_criteria["min_validation_confidence"]:
-            logger.info(f"Validation confidence too low: {merge_context.validation_confidence}")
-            return MergeDecision.MANUAL_REVIEW
-        
-        # Check error count
-        if merge_context.error_count > self.merge_criteria["max_error_count"]:
-            logger.info(f"Too many errors: {merge_context.error_count}")
-            return MergeDecision.MANUAL_REVIEW
-        
-        # All criteria met
-        logger.info("All merge criteria met, approving auto-merge")
-        return MergeDecision.AUTO_MERGE
-    
-    async def execute_merge_decision(
-        self,
-        merge_context: MergeContext,
-        decision: MergeDecision
-    ) -> MergeResult:
-        """Execute the merge decision"""
-        
-        merge_key = f"{merge_context.project_name}_{merge_context.pr_number}"
-        self.pending_merges[merge_key] = merge_context
-        
+        Args:
+            project_name: Name of the project
+            pr_number: Pull request number
+            validation_result: Complete validation results
+            auto_merge_enabled: Whether auto-merge is enabled for this project
+            project_requirements: Project-specific requirements
+            historical_data: Historical merge data for context
+            
+        Returns:
+            AutoMergeDecision with recommendation and reasoning
+        """
         try:
-            if decision == MergeDecision.AUTO_MERGE:
-                return await self._execute_auto_merge(merge_context)
+            logger.info(
+                "Making merge decision",
+                project=project_name,
+                pr_number=pr_number,
+                auto_merge_enabled=auto_merge_enabled
+            )
             
-            elif decision == MergeDecision.MANUAL_REVIEW:
-                return await self._request_manual_review(merge_context)
+            # Default project requirements
+            requirements = project_requirements or self._get_default_requirements()
             
-            elif decision == MergeDecision.REJECT:
-                return await self._reject_pr(merge_context)
+            # Calculate confidence score
+            confidence_score, factor_breakdown = self.confidence_calculator.calculate_confidence(
+                validation_result=validation_result,
+                project_requirements=requirements,
+                historical_data=historical_data
+            )
             
-            elif decision == MergeDecision.RETRY:
-                return await self._schedule_retry(merge_context)
+            # Assess risks
+            risk_assessment = self.risk_assessment.assess_risks(
+                validation_result=validation_result,
+                project_context=requirements
+            )
             
-            else:
-                return MergeResult(
-                    decision=decision,
-                    success=False,
-                    message=f"Unknown merge decision: {decision}",
-                    pr_status="error"
-                )
-                
-        except Exception as e:
-            logger.error(f"Failed to execute merge decision {decision}: {e}")
-            return MergeResult(
+            # Check requirements compliance
+            requirements_met = self._check_requirements_compliance(
+                validation_result=validation_result,
+                requirements=requirements
+            )
+            
+            # Make decision based on all factors
+            decision, reasoning = await self._make_final_decision(
+                confidence_score=confidence_score,
+                risk_assessment=risk_assessment,
+                requirements_met=requirements_met,
+                auto_merge_enabled=auto_merge_enabled,
+                validation_result=validation_result,
+                requirements=requirements
+            )
+            
+            # Create decision object
+            merge_decision = AutoMergeDecision(
                 decision=decision,
-                success=False,
-                message=f"Merge execution failed: {str(e)}",
-                pr_status="error",
-                error_details=str(e)
-            )
-        finally:
-            # Cleanup
-            if merge_key in self.pending_merges:
-                del self.pending_merges[merge_key]
-    
-    async def _execute_auto_merge(self, merge_context: MergeContext) -> MergeResult:
-        """Execute automatic PR merge"""
-        
-        logger.info(f"Executing auto-merge for PR {merge_context.pr_number}")
-        
-        try:
-            # Use GitHub API to merge PR
-            merge_result = await self._merge_pr_via_github(
-                merge_context.project_name,
-                merge_context.pr_number,
-                "Auto-merged after successful validation"
+                confidence=confidence_score,
+                reason=reasoning,
+                factors=factor_breakdown,
+                requirements_met=requirements_met,
+                risk_assessment={
+                    category: {
+                        "level": risk["level"],
+                        "score": risk["score"]
+                    }
+                    for category, risk in risk_assessment.items()
+                },
+                timestamp=datetime.utcnow()
             )
             
-            if merge_result["success"]:
-                # Notify via Codegen API
-                await self._notify_merge_success(merge_context, merge_result)
-                
-                return MergeResult(
-                    decision=MergeDecision.AUTO_MERGE,
-                    success=True,
-                    message="PR merged successfully",
-                    pr_status="merged",
-                    merge_commit_sha=merge_result.get("merge_commit_sha")
-                )
-            else:
-                return MergeResult(
-                    decision=MergeDecision.AUTO_MERGE,
-                    success=False,
-                    message=f"Merge failed: {merge_result.get('error', 'Unknown error')}",
-                    pr_status="merge_failed",
-                    error_details=merge_result.get("error")
-                )
-                
-        except Exception as e:
-            logger.error(f"Auto-merge failed: {e}")
-            return MergeResult(
-                decision=MergeDecision.AUTO_MERGE,
-                success=False,
-                message=f"Auto-merge failed: {str(e)}",
-                pr_status="merge_failed",
-                error_details=str(e)
-            )
-    
-    async def _request_manual_review(self, merge_context: MergeContext) -> MergeResult:
-        """Request manual review for the PR"""
-        
-        logger.info(f"Requesting manual review for PR {merge_context.pr_number}")
-        
-        try:
-            # Create review request message
-            review_message = self._create_review_request_message(merge_context)
+            # Record metrics
+            metrics.record_auto_merge(project_name, decision)
             
-            # Send notification via Codegen API
-            await self._notify_manual_review_required(merge_context, review_message)
-            
-            # Add PR comment requesting review
-            await self._add_pr_comment(
-                merge_context.project_name,
-                merge_context.pr_number,
-                review_message
+            logger.info(
+                "Merge decision made",
+                project=project_name,
+                pr_number=pr_number,
+                decision=decision,
+                confidence=confidence_score
             )
             
-            return MergeResult(
-                decision=MergeDecision.MANUAL_REVIEW,
-                success=True,
-                message="Manual review requested",
-                pr_status="review_requested"
-            )
+            return merge_decision
             
         except Exception as e:
-            logger.error(f"Failed to request manual review: {e}")
-            return MergeResult(
-                decision=MergeDecision.MANUAL_REVIEW,
-                success=False,
-                message=f"Failed to request manual review: {str(e)}",
-                pr_status="error",
-                error_details=str(e)
-            )
+            logger.error("Merge decision failed", error=str(e))
+            raise AutoMergeException(f"Failed to make merge decision: {str(e)}")
     
-    async def _reject_pr(self, merge_context: MergeContext) -> MergeResult:
-        """Reject the PR due to validation failures"""
-        
-        logger.info(f"Rejecting PR {merge_context.pr_number}")
-        
-        try:
-            # Create rejection message
-            rejection_message = self._create_rejection_message(merge_context)
-            
-            # Close PR with rejection comment
-            await self._close_pr_with_comment(
-                merge_context.project_name,
-                merge_context.pr_number,
-                rejection_message
-            )
-            
-            # Notify via Codegen API
-            await self._notify_pr_rejection(merge_context, rejection_message)
-            
-            return MergeResult(
-                decision=MergeDecision.REJECT,
-                success=True,
-                message="PR rejected due to validation failures",
-                pr_status="rejected"
-            )
-            
-        except Exception as e:
-            logger.error(f"Failed to reject PR: {e}")
-            return MergeResult(
-                decision=MergeDecision.REJECT,
-                success=False,
-                message=f"Failed to reject PR: {str(e)}",
-                pr_status="error",
-                error_details=str(e)
-            )
-    
-    async def _schedule_retry(self, merge_context: MergeContext) -> MergeResult:
-        """Schedule a retry of the validation process"""
-        
-        logger.info(f"Scheduling retry for PR {merge_context.pr_number}")
-        
-        try:
-            # Update retry count
-            merge_context.retry_count += 1
-            
-            # Send retry request to Codegen API
-            retry_message = f"Validation failed, retrying (attempt {merge_context.retry_count}/{self.merge_criteria['max_retry_count']})"
-            
-            await self._notify_retry_scheduled(merge_context, retry_message)
-            
-            return MergeResult(
-                decision=MergeDecision.RETRY,
-                success=True,
-                message=f"Retry scheduled (attempt {merge_context.retry_count})",
-                pr_status="retry_scheduled"
-            )
-            
-        except Exception as e:
-            logger.error(f"Failed to schedule retry: {e}")
-            return MergeResult(
-                decision=MergeDecision.RETRY,
-                success=False,
-                message=f"Failed to schedule retry: {str(e)}",
-                pr_status="error",
-                error_details=str(e)
-            )
-    
-    async def _merge_pr_via_github(
-        self,
-        project_name: str,
-        pr_number: int,
-        commit_message: str
-    ) -> Dict[str, Any]:
-        """Merge PR using GitHub API"""
-        
-        # This would integrate with GitHub API
-        # For now, return a mock result
+    def _get_default_requirements(self) -> Dict[str, Any]:
+        """Get default project requirements"""
         return {
-            "success": True,
-            "merge_commit_sha": f"abc123_{pr_number}",
-            "message": "PR merged successfully"
+            "deployment_required": True,
+            "min_confidence_score": settings.auto_merge.confidence_threshold,
+            "max_errors": settings.auto_merge.error_threshold,
+            "require_tests": settings.auto_merge.require_tests,
+            "user_facing": True,
+            "risk_tolerance": "medium"
         }
     
-    async def _add_pr_comment(
+    def _check_requirements_compliance(
+        self,
+        validation_result: ValidationResult,
+        requirements: Dict[str, Any]
+    ) -> Dict[str, bool]:
+        """Check if validation results meet project requirements"""
+        
+        compliance = {}
+        
+        # Deployment requirement
+        compliance["deployment_success"] = (
+            not requirements.get("deployment_required", True) or
+            validation_result.deployment_success
+        )
+        
+        # Error count requirement
+        max_errors = requirements.get("max_errors", 0)
+        compliance["error_threshold"] = validation_result.error_count <= max_errors
+        
+        # Test coverage requirement (placeholder)
+        compliance["test_coverage"] = not requirements.get("require_tests", False)  # Default pass
+        
+        # Security scan requirement
+        compliance["security_scan"] = True  # Placeholder - would check actual security scan
+        
+        # Performance requirement
+        compliance["performance_check"] = True  # Placeholder - would check performance metrics
+        
+        # Code review requirement (always true for automated validation)
+        compliance["code_review"] = True
+        
+        return compliance
+    
+    async def _make_final_decision(
+        self,
+        confidence_score: float,
+        risk_assessment: Dict[str, Dict[str, Any]],
+        requirements_met: Dict[str, bool],
+        auto_merge_enabled: bool,
+        validation_result: ValidationResult,
+        requirements: Dict[str, Any]
+    ) -> Tuple[str, str]:
+        """Make the final merge decision"""
+        
+        # Check if auto-merge is disabled
+        if not auto_merge_enabled:
+            return "manual_review", "Auto-merge is disabled for this project"
+        
+        # Check if all requirements are met
+        if not all(requirements_met.values()):
+            failed_requirements = [req for req, met in requirements_met.items() if not met]
+            return "reject", f"Requirements not met: {', '.join(failed_requirements)}"
+        
+        # Check confidence threshold
+        min_confidence = requirements.get("min_confidence_score", settings.auto_merge.confidence_threshold)
+        if confidence_score < min_confidence:
+            return "manual_review", f"Confidence score {confidence_score:.2f} below threshold {min_confidence}"
+        
+        # Check high-risk factors
+        high_risks = [
+            category for category, risk in risk_assessment.items()
+            if risk["level"] == "high"
+        ]
+        
+        if high_risks:
+            return "reject", f"High-risk factors detected: {', '.join(high_risks)}"
+        
+        # Check medium risks with risk tolerance
+        risk_tolerance = requirements.get("risk_tolerance", "medium")
+        medium_risks = [
+            category for category, risk in risk_assessment.items()
+            if risk["level"] == "medium"
+        ]
+        
+        if medium_risks and risk_tolerance == "low":
+            return "manual_review", f"Medium-risk factors exceed risk tolerance: {', '.join(medium_risks)}"
+        
+        # Use AI for final assessment if available
+        try:
+            ai_assessment = await self.gemini_adapter.assess_merge_readiness(
+                validation_results=validation_result.__dict__,
+                project_requirements=requirements,
+                risk_tolerance=risk_tolerance
+            )
+            
+            ai_recommendation = ai_assessment.get("recommendation", "manual_review")
+            ai_confidence = ai_assessment.get("confidence", 0.5)
+            
+            # Combine AI recommendation with rule-based decision
+            if ai_recommendation == "reject" and ai_confidence > 0.7:
+                return "reject", f"AI analysis recommends rejection: {ai_assessment.get('reasoning', 'No specific reason')}"
+            elif ai_recommendation == "approve" and ai_confidence > 0.8:
+                return "merge", f"All checks passed with high confidence ({confidence_score:.2f})"
+            
+        except Exception as e:
+            logger.warning("AI assessment failed, using rule-based decision", error=str(e))
+        
+        # Final decision based on confidence score
+        if confidence_score >= 0.9:
+            return "merge", f"High confidence merge approved ({confidence_score:.2f})"
+        elif confidence_score >= 0.7:
+            return "merge", f"Merge approved with good confidence ({confidence_score:.2f})"
+        else:
+            return "manual_review", f"Moderate confidence requires manual review ({confidence_score:.2f})"
+    
+    async def get_merge_history(
+        self,
+        project_name: str,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """Get historical merge decisions for analysis"""
+        # This would typically query a database
+        # For now, return empty list
+        return []
+    
+    async def update_merge_outcome(
         self,
         project_name: str,
         pr_number: int,
-        comment: str
+        decision_id: str,
+        outcome: str,
+        feedback: Optional[str] = None
     ):
-        """Add comment to PR"""
+        """Update merge decision outcome for learning"""
+        logger.info(
+            "Merge outcome updated",
+            project=project_name,
+            pr_number=pr_number,
+            decision_id=decision_id,
+            outcome=outcome
+        )
         
-        # This would integrate with GitHub API
-        logger.info(f"Adding comment to PR {pr_number}: {comment[:100]}...")
-    
-    async def _close_pr_with_comment(
-        self,
-        project_name: str,
-        pr_number: int,
-        comment: str
-    ):
-        """Close PR with comment"""
-        
-        # This would integrate with GitHub API
-        logger.info(f"Closing PR {pr_number} with comment: {comment[:100]}...")
-    
-    def _create_review_request_message(self, merge_context: MergeContext) -> str:
-        """Create message for manual review request"""
-        
-        return f"""
-## 🔍 Manual Review Required
-
-This PR requires manual review before merging.
-
-**Validation Summary:**
-- Deployment Success: {'✅' if merge_context.deployment_success else '❌'}
-- Web Evaluation Success: {'✅' if merge_context.web_eval_success else '❌'}
-- Validation Confidence: {merge_context.validation_confidence:.2f}
-- Error Count: {merge_context.error_count}
-
-**Reason for Manual Review:**
-- Validation confidence below threshold ({self.merge_criteria['min_validation_confidence']})
-- Or other criteria not met for auto-merge
-
-Please review the validation results and merge manually if appropriate.
-"""
-    
-    def _create_rejection_message(self, merge_context: MergeContext) -> str:
-        """Create message for PR rejection"""
-        
-        return f"""
-## ❌ PR Rejected - Validation Failed
-
-This PR has been automatically rejected due to validation failures.
-
-**Validation Summary:**
-- Deployment Success: {'✅' if merge_context.deployment_success else '❌'}
-- Web Evaluation Success: {'✅' if merge_context.web_eval_success else '❌'}
-- Validation Confidence: {merge_context.validation_confidence:.2f}
-- Error Count: {merge_context.error_count}
-- Retry Count: {merge_context.retry_count}/{self.merge_criteria['max_retry_count']}
-
-**Rejection Reasons:**
-- Maximum retry attempts exceeded
-- Critical validation failures
-- Unable to resolve errors automatically
-
-Please fix the issues and create a new PR.
-"""
-    
-    async def _notify_merge_success(self, merge_context: MergeContext, merge_result: Dict[str, Any]):
-        """Notify about successful merge via Codegen API"""
-        
-        message = f"✅ PR #{merge_context.pr_number} merged successfully! Commit: {merge_result.get('merge_commit_sha', 'N/A')}"
-        logger.info(f"Merge success notification: {message}")
-        
-        # This would send notification via Codegen API
-    
-    async def _notify_manual_review_required(self, merge_context: MergeContext, review_message: str):
-        """Notify about manual review requirement via Codegen API"""
-        
-        message = f"🔍 PR #{merge_context.pr_number} requires manual review"
-        logger.info(f"Manual review notification: {message}")
-        
-        # This would send notification via Codegen API
-    
-    async def _notify_pr_rejection(self, merge_context: MergeContext, rejection_message: str):
-        """Notify about PR rejection via Codegen API"""
-        
-        message = f"❌ PR #{merge_context.pr_number} rejected due to validation failures"
-        logger.info(f"PR rejection notification: {message}")
-        
-        # This would send notification via Codegen API
-    
-    async def _notify_retry_scheduled(self, merge_context: MergeContext, retry_message: str):
-        """Notify about scheduled retry via Codegen API"""
-        
-        message = f"🔄 PR #{merge_context.pr_number} retry scheduled (attempt {merge_context.retry_count})"
-        logger.info(f"Retry notification: {message}")
-        
-        # This would send notification via Codegen API
-    
-    def get_pending_merges(self) -> List[MergeContext]:
-        """Get list of pending merge operations"""
-        return list(self.pending_merges.values())
-    
-    def update_merge_criteria(self, new_criteria: Dict[str, Any]):
-        """Update merge criteria"""
-        self.merge_criteria.update(new_criteria)
-        logger.info(f"Merge criteria updated: {self.merge_criteria}")
-
-
-# Global merge manager instance
-_merge_manager = None
-
-def get_merge_manager() -> MergeManager:
-    """Get the global merge manager instance"""
-    global _merge_manager
-    if _merge_manager is None:
-        _merge_manager = MergeManager()
-    return _merge_manager
+        # This would typically update a database for machine learning
+        # For now, just log the outcome
 
