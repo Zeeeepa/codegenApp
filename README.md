@@ -60,20 +60,20 @@ PR Creation → Snapshot Creation → Code Deployment → Validation Testing →
 
 ```bash
 # Codegen Agent API
-CODEGEN_ORG_ID=323
-CODEGEN_API_TOKEN=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
+CODEGEN_ORG_ID=your_org_id
+CODEGEN_API_TOKEN=your_codegen_api_token
 
 # GitHub Integration
-GITHUB_TOKEN=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
+GITHUB_TOKEN=your_github_token
 
 # Gemini API
-GEMINI_API_KEY=AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0
+GEMINI_API_KEY=your_gemini_api_key
 
 # Cloudflare Workers
-CLOUDFLARE_API_KEY=eae82cf159577a8838cc83612104c09c5a0d6
-CLOUDFLARE_ACCOUNT_ID=2b2a1d3effa7f7fe4fe2a8c4e48681e3
+CLOUDFLARE_API_KEY=your_cloudflare_api_key
+CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
 CLOUDFLARE_WORKER_NAME=webhook-gateway
-CLOUDFLARE_WORKER_URL=https://webhook-gateway.pixeliumperfecto.workers.dev
+CLOUDFLARE_WORKER_URL=https://your-webhook-gateway.workers.dev
 ```
 
 ## Quick Start
@@ -196,4 +196,3 @@ cd frontend && npm test
 ```
 
 This system provides a complete AI-powered CI/CD flow management solution with automated validation, intelligent error resolution, and seamless GitHub integration.
-
