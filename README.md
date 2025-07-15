@@ -65,6 +65,8 @@ CodegenApp is a full-stack platform that orchestrates multiple AI-powered tools 
 
 ## 🛠️ Technology Stack
 
+### 🌐 Cloudflare Edge Computing\n\n- **Purpose**: Global webhook processing and edge computing\n- **Technology**: Cloudflare Workers + JavaScript\n- **Features**: \n  - GitHub webhook processing at the edge\n  - HMAC signature verification\n  - Grainchain validation triggering\n  - Global CDN with zero cold start\n  - Automatic scaling and DDoS protection\n- **Deployment**: `https://webhook-gateway.your-subdomain.workers.dev`\n- **Configuration**: Environment variables and secrets management\n- **Integration**: Seamless integration with GitHub and backend services\n
+
 ### Frontend Layer
 - **Framework**: React 18 with TypeScript
 - **State Management**: React Context + Custom Hooks

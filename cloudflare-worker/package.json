@@ -1,0 +1,26 @@
+{
+  "name": "webhook-gateway",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker for GitHub webhook processing",
+  "main": "webhook-gateway.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:production": "wrangler deploy --env production",
+    "tail": "wrangler tail",
+    "tail:production": "wrangler tail --env production"
+  },
+  "keywords": [
+    "cloudflare",
+    "worker",
+    "webhook",
+    "github",
+    "grainchain"
+  ],
+  "author": "CodegenApp Team",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
+
