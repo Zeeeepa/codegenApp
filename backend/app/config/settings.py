@@ -24,6 +24,32 @@ class Settings(BaseSettings):
         description="Codegen API base URL"
     )
     
+    # GitHub API configuration
+    github_token: Optional[str] = Field(
+        default=None,
+        description="GitHub API token for repository access"
+    )
+    
+    # AI Services configuration
+    gemini_api_key: Optional[str] = Field(
+        default=None,
+        description="Google Gemini API key for AI analysis"
+    )
+    
+    # Cloudflare configuration
+    cloudflare_api_key: Optional[str] = Field(
+        default=None,
+        description="Cloudflare API key"
+    )
+    cloudflare_account_id: Optional[str] = Field(
+        default=None,
+        description="Cloudflare account ID"
+    )
+    cloudflare_worker_url: Optional[str] = Field(
+        default=None,
+        description="Cloudflare worker URL for webhooks"
+    )
+    
     # Database configuration (for workflow persistence)
     database_url: Optional[str] = Field(
         default=None, 

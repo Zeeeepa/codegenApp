@@ -10,3 +10,21 @@ pydantic-settings
 
 # Development tools
 python-dotenv
+
+# AI and ML dependencies
+google-generativeai
+
+# Web automation and testing
+playwright
+
+# Code analysis
+tree-sitter
+tree-sitter-python
+tree-sitter-javascript
+tree-sitter-typescript
+tree-sitter-go
+tree-sitter-rust
+
+# Additional utilities
+aiofiles
+psutil

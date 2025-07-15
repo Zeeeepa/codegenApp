@@ -22,6 +22,7 @@ from app.core.integration.integration_manager import (
 # Import API routes
 from app.api.v1.routes.integration import router as integration_router
 from app.api.v1.routes.webhook import router as webhook_router
+from app.api.v1.routes.validation import router as validation_router
 
 # Configure logging
 logging.basicConfig(
@@ -114,6 +115,7 @@ async def root():
 # Include API routers
 app.include_router(integration_router, prefix="/api/v1")
 app.include_router(webhook_router, prefix="/api/v1")
+app.include_router(validation_router, prefix="/api/v1")
 
 
 # Global exception handler
@@ -146,4 +148,3 @@ if __name__ == "__main__":
         reload=debug,
         log_level="info"
     )
-
