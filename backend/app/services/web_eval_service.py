@@ -1,599 +1,610 @@
 """
-Web Evaluation Service
-
-Integrates with Web-Eval-Agent for comprehensive web application testing.
+CodegenApp Web-Eval Service
+Comprehensive web application testing and evaluation using Playwright and AI analysis
 """
 
 import asyncio
 import json
-import subprocess
 import tempfile
-from pathlib import Path
-from typing import Dict, Any, List, Optional, Callable
-import logging
 import time
-from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Any, AsyncGenerator
+import base64
 
-from app.core.validation.snapshot_manager import ValidationSnapshot
+from playwright.async_api import async_playwright, Browser, Page, BrowserContext
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+
 from app.config.settings import get_settings
+from app.core.logging import get_logger
+from app.models.validation import WebEvalResult
+from app.utils.exceptions import WebEvalException
+from app.services.adapters.gemini_adapter import GeminiAdapter
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+settings = get_settings()
 
 
-@dataclass
-class WebEvalResult:
-    """Result of web evaluation testing"""
-    success: bool
-    test_count: int
-    passed_tests: int
-    failed_tests: int
-    duration: float
-    screenshots: List[str]
-    test_results: List[Dict[str, Any]]
-    error_logs: List[str]
-    performance_metrics: Dict[str, Any]
+class WebTestRunner:
+    """
+    Individual web test execution
+    
+    Handles single test case execution with screenshot capture,
+    performance monitoring, and error handling.
+    """
+    
+    def __init__(self, browser: Browser, test_config: Dict[str, Any]):
+        self.browser = browser
+        self.test_config = test_config
+        self.screenshots: List[str] = []
+        self.performance_metrics: Dict[str, float] = {}
+        self.errors: List[str] = []
+    
+    async def run_test(self, test_case: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Run individual test case
+        
+        Args:
+            test_case: Test case configuration
+            
+        Returns:
+            Test result dictionary
+        """
+        test_name = test_case.get("name", "unnamed_test")
+        test_url = test_case.get("url", "")
+        test_actions = test_case.get("actions", [])
+        
+        logger.info("Running web test", test_name=test_name, url=test_url)
+        
+        context = None
+        page = None
+        
+        try:
+            # Create browser context
+            context = await self.browser.new_context(
+                viewport={"width": 1920, "height": 1080},
+                user_agent="CodegenApp-WebEval/1.0"
+            )
+            
+            # Create page
+            page = await context.new_page()
+            
+            # Enable performance monitoring
+            await self._setup_performance_monitoring(page)
+            
+            # Navigate to URL
+            start_time = time.time()
+            await page.goto(test_url, wait_until="networkidle", timeout=30000)
+            load_time = time.time() - start_time
+            
+            self.performance_metrics[f"{test_name}_load_time"] = load_time
+            
+            # Take initial screenshot
+            screenshot_path = await self._take_screenshot(page, f"{test_name}_initial")
+            
+            # Execute test actions
+            action_results = []
+            for i, action in enumerate(test_actions):
+                try:
+                    action_result = await self._execute_action(page, action, f"{test_name}_action_{i}")
+                    action_results.append(action_result)
+                except Exception as e:
+                    error_msg = f"Action {i} failed: {str(e)}"
+                    self.errors.append(error_msg)
+                    action_results.append({"success": False, "error": error_msg})
+            
+            # Take final screenshot
+            await self._take_screenshot(page, f"{test_name}_final")
+            
+            # Collect performance metrics
+            await self._collect_performance_metrics(page, test_name)
+            
+            # Run accessibility checks
+            accessibility_score = await self._check_accessibility(page)
+            
+            return {
+                "name": test_name,
+                "success": all(result.get("success", False) for result in action_results),
+                "load_time": load_time,
+                "action_results": action_results,
+                "accessibility_score": accessibility_score,
+                "screenshots": self.screenshots,
+                "errors": self.errors
+            }
+            
+        except Exception as e:
+            error_msg = f"Test {test_name} failed: {str(e)}"
+            logger.error("Web test failed", test_name=test_name, error=str(e))
+            self.errors.append(error_msg)
+            
+            return {
+                "name": test_name,
+                "success": False,
+                "error": error_msg,
+                "screenshots": self.screenshots,
+                "errors": self.errors
+            }
+            
+        finally:
+            if page:
+                await page.close()
+            if context:
+                await context.close()
+    
+    async def _setup_performance_monitoring(self, page: Page):
+        """Setup performance monitoring on page"""
+        await page.add_init_script("""
+            window.performanceMetrics = {
+                navigationStart: performance.timing.navigationStart,
+                loadEventEnd: 0,
+                domContentLoaded: 0,
+                firstPaint: 0,
+                firstContentfulPaint: 0
+            };
+            
+            window.addEventListener('load', () => {
+                window.performanceMetrics.loadEventEnd = performance.timing.loadEventEnd;
+            });
+            
+            document.addEventListener('DOMContentLoaded', () => {
+                window.performanceMetrics.domContentLoaded = performance.timing.domContentLoadedEventEnd;
+            });
+            
+            // Capture paint metrics
+            if ('PerformanceObserver' in window) {
+                const observer = new PerformanceObserver((list) => {
+                    for (const entry of list.getEntries()) {
+                        if (entry.name === 'first-paint') {
+                            window.performanceMetrics.firstPaint = entry.startTime;
+                        }
+                        if (entry.name === 'first-contentful-paint') {
+                            window.performanceMetrics.firstContentfulPaint = entry.startTime;
+                        }
+                    }
+                });
+                observer.observe({entryTypes: ['paint']});
+            }
+        """)
+    
+    async def _execute_action(self, page: Page, action: Dict[str, Any], screenshot_name: str) -> Dict[str, Any]:
+        """Execute individual test action"""
+        action_type = action.get("type", "")
+        
+        try:
+            if action_type == "click":
+                selector = action.get("selector", "")
+                await page.click(selector, timeout=10000)
+                
+            elif action_type == "fill":
+                selector = action.get("selector", "")
+                value = action.get("value", "")
+                await page.fill(selector, value, timeout=10000)
+                
+            elif action_type == "wait":
+                selector = action.get("selector")
+                timeout = action.get("timeout", 5000)
+                if selector:
+                    await page.wait_for_selector(selector, timeout=timeout)
+                else:
+                    await page.wait_for_timeout(timeout)
+                    
+            elif action_type == "assert_text":
+                selector = action.get("selector", "")
+                expected_text = action.get("text", "")
+                element = await page.wait_for_selector(selector, timeout=10000)
+                actual_text = await element.text_content()
+                
+                if expected_text not in actual_text:
+                    raise AssertionError(f"Expected '{expected_text}' not found in '{actual_text}'")
+                    
+            elif action_type == "assert_visible":
+                selector = action.get("selector", "")
+                await page.wait_for_selector(selector, state="visible", timeout=10000)
+                
+            elif action_type == "screenshot":
+                await self._take_screenshot(page, screenshot_name)
+                
+            else:
+                raise ValueError(f"Unknown action type: {action_type}")
+            
+            # Take screenshot after action
+            await self._take_screenshot(page, screenshot_name)
+            
+            return {"success": True, "action": action}
+            
+        except Exception as e:
+            await self._take_screenshot(page, f"{screenshot_name}_error")
+            return {"success": False, "action": action, "error": str(e)}
+    
+    async def _take_screenshot(self, page: Page, name: str) -> str:
+        """Take and save screenshot"""
+        try:
+            screenshot_dir = Path(tempfile.gettempdir()) / "codegenapp_screenshots"
+            screenshot_dir.mkdir(exist_ok=True)
+            
+            timestamp = int(time.time())
+            screenshot_path = screenshot_dir / f"{name}_{timestamp}.png"
+            
+            await page.screenshot(path=str(screenshot_path), full_page=True)
+            
+            # Convert to base64 for storage
+            with open(screenshot_path, "rb") as f:
+                screenshot_data = base64.b64encode(f.read()).decode()
+            
+            screenshot_info = {
+                "name": name,
+                "path": str(screenshot_path),
+                "data": screenshot_data,
+                "timestamp": timestamp
+            }
+            
+            self.screenshots.append(screenshot_info)
+            return str(screenshot_path)
+            
+        except Exception as e:
+            logger.error("Failed to take screenshot", name=name, error=str(e))
+            return ""
+    
+    async def _collect_performance_metrics(self, page: Page, test_name: str):
+        """Collect performance metrics from page"""
+        try:
+            metrics = await page.evaluate("window.performanceMetrics")
+            
+            if metrics:
+                self.performance_metrics.update({
+                    f"{test_name}_dom_content_loaded": metrics.get("domContentLoaded", 0),
+                    f"{test_name}_first_paint": metrics.get("firstPaint", 0),
+                    f"{test_name}_first_contentful_paint": metrics.get("firstContentfulPaint", 0)
+                })
+                
+        except Exception as e:
+            logger.warning("Failed to collect performance metrics", error=str(e))
+    
+    async def _check_accessibility(self, page: Page) -> float:
+        """Run basic accessibility checks"""
+        try:
+            # Inject axe-core for accessibility testing
+            await page.add_script_tag(url="https://unpkg.com/axe-core@4.7.0/axe.min.js")
+            
+            # Run accessibility scan
+            results = await page.evaluate("""
+                new Promise((resolve) => {
+                    axe.run((err, results) => {
+                        if (err) {
+                            resolve({violations: [], passes: []});
+                        } else {
+                            resolve(results);
+                        }
+                    });
+                });
+            """)
+            
+            violations = results.get("violations", [])
+            passes = results.get("passes", [])
+            
+            # Calculate accessibility score
+            total_checks = len(violations) + len(passes)
+            if total_checks > 0:
+                score = len(passes) / total_checks
+            else:
+                score = 1.0
+            
+            return score
+            
+        except Exception as e:
+            logger.warning("Accessibility check failed", error=str(e))
+            return 0.5  # Default score when check fails
 
 
 class WebEvalService:
-    """Service for running Web-Eval-Agent tests"""
+    """
+    Web evaluation service with comprehensive testing capabilities
+    
+    Provides automated web application testing using Playwright with
+    AI-powered analysis and comprehensive reporting.
+    """
     
     def __init__(self):
-        self.settings = get_settings()
-        self.active_evaluations: Dict[str, bool] = {}
+        self.gemini_adapter = GeminiAdapter()
+        logger.info("WebEvalService initialized")
     
-    async def run_web_evaluation(
+    async def run_comprehensive_tests(
         self,
-        snapshot: ValidationSnapshot,
-        target_url: str,
-        test_scenarios: List[Dict[str, Any]] = None,
-        progress_callback: Optional[Callable[[str, str], None]] = None
+        project_name: str,
+        deployment_url: Optional[str],
+        test_config: Dict[str, Any]
     ) -> WebEvalResult:
-        """Run comprehensive web evaluation testing"""
+        """
+        Run comprehensive web application tests
         
-        eval_id = f"eval_{snapshot.snapshot_id}"
-        self.active_evaluations[eval_id] = True
-        
-        snapshot.add_log("Starting web evaluation...")
-        
-        try:
-            if progress_callback:
-                progress_callback("starting", "Initializing web evaluation")
+        Args:
+            project_name: Name of the project being tested
+            deployment_url: URL of deployed application
+            test_config: Test configuration and scenarios
             
-            # Prepare test configuration
-            test_config = await self._prepare_test_config(
-                snapshot, 
-                target_url, 
-                test_scenarios or self._get_default_test_scenarios()
-            )
-            
-            # Run web evaluation
-            result = await self._execute_web_eval_agent(
-                snapshot,
-                test_config,
-                progress_callback
-            )
-            
-            snapshot.add_log(f"Web evaluation completed. Success: {result.success}")
-            return result
-            
-        except Exception as e:
-            snapshot.add_log(f"Web evaluation failed: {str(e)}")
-            logger.error(f"Web evaluation failed for {eval_id}: {e}")
-            
-            if progress_callback:
-                progress_callback("error", f"Web evaluation error: {str(e)}")
-            
-            # Return failed result
+        Returns:
+            WebEvalResult with comprehensive test results
+        """
+        if not deployment_url:
             return WebEvalResult(
                 success=False,
-                test_count=0,
-                passed_tests=0,
-                failed_tests=1,
-                duration=0.0,
-                screenshots=[],
-                test_results=[],
-                error_logs=[str(e)],
-                performance_metrics={}
+                tests_passed=0,
+                tests_failed=1,
+                total_tests=1,
+                ui_issues=[{"severity": "high", "description": "No deployment URL provided"}]
             )
-        finally:
-            if eval_id in self.active_evaluations:
-                del self.active_evaluations[eval_id]
+        
+        logger.info(
+            "Starting comprehensive web evaluation",
+            project=project_name,
+            url=deployment_url
+        )
+        
+        async with async_playwright() as playwright:
+            # Launch browser
+            browser = await playwright.chromium.launch(
+                headless=settings.web_eval.headless,
+                args=["--no-sandbox", "--disable-dev-shm-usage"]
+            )
+            
+            try:
+                # Create test runner
+                test_runner = WebTestRunner(browser, test_config)
+                
+                # Get test scenarios
+                test_scenarios = self._get_test_scenarios(deployment_url, test_config)
+                
+                # Run all tests
+                test_results = []
+                for scenario in test_scenarios:
+                    result = await test_runner.run_test(scenario)
+                    test_results.append(result)
+                
+                # Analyze results
+                analysis_result = await self._analyze_test_results(
+                    test_results,
+                    test_runner.performance_metrics,
+                    test_runner.screenshots
+                )
+                
+                # Calculate summary metrics
+                total_tests = len(test_results)
+                passed_tests = sum(1 for result in test_results if result.get("success", False))
+                failed_tests = total_tests - passed_tests
+                
+                # Calculate coverage percentage
+                coverage_percentage = (passed_tests / total_tests * 100) if total_tests > 0 else 0
+                
+                # Extract performance metrics
+                avg_load_time = sum(
+                    result.get("load_time", 0) for result in test_results
+                ) / len(test_results) if test_results else 0
+                
+                performance_metrics = {
+                    "average_load_time": avg_load_time,
+                    "total_requests": len(test_results),
+                    **test_runner.performance_metrics
+                }
+                
+                # Calculate accessibility score
+                accessibility_scores = [
+                    result.get("accessibility_score", 0) for result in test_results
+                ]
+                avg_accessibility_score = sum(accessibility_scores) / len(accessibility_scores) if accessibility_scores else 0
+                
+                # Collect UI issues
+                ui_issues = []
+                for result in test_results:
+                    for error in result.get("errors", []):
+                        ui_issues.append({
+                            "severity": "medium",
+                            "description": error,
+                            "test_name": result.get("name", "unknown")
+                        })
+                
+                # Create final result
+                web_eval_result = WebEvalResult(
+                    success=failed_tests == 0,
+                    tests_passed=passed_tests,
+                    tests_failed=failed_tests,
+                    total_tests=total_tests,
+                    coverage_percentage=coverage_percentage,
+                    performance_metrics=performance_metrics,
+                    accessibility_score=avg_accessibility_score,
+                    ui_issues=ui_issues,
+                    screenshots=[screenshot["name"] for screenshot in test_runner.screenshots],
+                    test_reports=test_results,
+                    metadata={
+                        "deployment_url": deployment_url,
+                        "test_duration": sum(result.get("load_time", 0) for result in test_results),
+                        "browser_used": "chromium",
+                        "ai_analysis": analysis_result
+                    }
+                )
+                
+                logger.info(
+                    "Web evaluation completed",
+                    project=project_name,
+                    success=web_eval_result.success,
+                    tests_passed=passed_tests,
+                    tests_failed=failed_tests
+                )
+                
+                return web_eval_result
+                
+            finally:
+                await browser.close()
     
-    async def _prepare_test_config(
-        self,
-        snapshot: ValidationSnapshot,
-        target_url: str,
-        test_scenarios: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        """Prepare test configuration for Web-Eval-Agent"""
+    def _get_test_scenarios(self, deployment_url: str, test_config: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate test scenarios based on configuration"""
         
-        config = {
-            "target_url": target_url,
-            "project_name": snapshot.project_name,
-            "pr_number": snapshot.pr_number,
-            "snapshot_id": snapshot.snapshot_id,
-            "browser_config": {
-                "headless": True,
-                "viewport": {"width": 1920, "height": 1080},
-                "timeout": 30000
-            },
-            "test_scenarios": test_scenarios,
-            "output_config": {
-                "screenshots": True,
-                "performance_metrics": True,
-                "detailed_logs": True,
-                "save_path": str(snapshot.workspace_path / "web_eval_results")
-            },
-            "gemini_config": {
-                "model": "gemini-pro",
-                "api_key": getattr(self.settings, 'gemini_api_key', ''),
-                "analysis_enabled": True
-            }
-        }
-        
-        return config
-    
-    def _get_default_test_scenarios(self) -> List[Dict[str, Any]]:
-        """Get default test scenarios for web evaluation"""
-        
-        return [
+        # Default test scenarios
+        default_scenarios = [
             {
-                "name": "Homepage Load Test",
-                "type": "navigation",
-                "description": "Test homepage loading and basic functionality",
-                "steps": [
-                    {"action": "navigate", "url": "/"},
-                    {"action": "wait_for_load"},
-                    {"action": "screenshot", "name": "homepage"},
-                    {"action": "check_title"},
-                    {"action": "check_no_errors"}
+                "name": "homepage_load",
+                "url": deployment_url,
+                "actions": [
+                    {"type": "wait", "timeout": 3000},
+                    {"type": "screenshot"},
+                    {"type": "assert_visible", "selector": "body"}
                 ]
             },
             {
-                "name": "Navigation Test",
-                "type": "interaction",
-                "description": "Test main navigation functionality",
-                "steps": [
-                    {"action": "navigate", "url": "/"},
-                    {"action": "find_navigation_links"},
-                    {"action": "test_navigation_clicks"},
-                    {"action": "screenshot", "name": "navigation"}
-                ]
-            },
-            {
-                "name": "Form Interaction Test",
-                "type": "interaction",
-                "description": "Test form inputs and submissions",
-                "steps": [
-                    {"action": "find_forms"},
-                    {"action": "test_form_inputs"},
-                    {"action": "test_form_validation"},
-                    {"action": "screenshot", "name": "forms"}
-                ]
-            },
-            {
-                "name": "Responsive Design Test",
-                "type": "responsive",
-                "description": "Test responsive design across different viewports",
-                "steps": [
-                    {"action": "test_mobile_viewport"},
-                    {"action": "test_tablet_viewport"},
-                    {"action": "test_desktop_viewport"},
-                    {"action": "screenshot", "name": "responsive"}
-                ]
-            },
-            {
-                "name": "Performance Test",
-                "type": "performance",
-                "description": "Test page performance and Core Web Vitals",
-                "steps": [
-                    {"action": "measure_load_time"},
-                    {"action": "measure_core_web_vitals"},
-                    {"action": "check_resource_loading"},
-                    {"action": "analyze_performance"}
-                ]
-            },
-            {
-                "name": "Accessibility Test",
-                "type": "accessibility",
-                "description": "Test accessibility compliance",
-                "steps": [
-                    {"action": "check_aria_labels"},
-                    {"action": "check_keyboard_navigation"},
-                    {"action": "check_color_contrast"},
-                    {"action": "run_accessibility_audit"}
+                "name": "navigation_test",
+                "url": deployment_url,
+                "actions": [
+                    {"type": "wait", "timeout": 2000},
+                    {"type": "screenshot"},
+                    # Add more navigation tests based on common patterns
                 ]
             }
         ]
+        
+        # Merge with custom test scenarios from config
+        custom_scenarios = test_config.get("test_scenarios", [])
+        
+        # Ensure all scenarios have the base URL
+        for scenario in custom_scenarios:
+            if not scenario.get("url"):
+                scenario["url"] = deployment_url
+        
+        return default_scenarios + custom_scenarios
     
-    async def _execute_web_eval_agent(
+    async def _analyze_test_results(
         self,
-        snapshot: ValidationSnapshot,
-        test_config: Dict[str, Any],
-        progress_callback: Optional[Callable[[str, str], None]] = None
-    ) -> WebEvalResult:
-        """Execute Web-Eval-Agent with the test configuration"""
-        
-        start_time = time.time()
-        
-        # Create results directory
-        results_dir = Path(test_config["output_config"]["save_path"])
-        results_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Write test configuration
-        config_file = results_dir / "test_config.json"
-        with open(config_file, "w") as f:
-            json.dump(test_config, f, indent=2)
-        
-        # Create Web-Eval-Agent script
-        script_content = self._create_web_eval_script(test_config)
-        script_file = results_dir / "run_tests.py"
-        with open(script_file, "w") as f:
-            f.write(script_content)
+        test_results: List[Dict[str, Any]],
+        performance_metrics: Dict[str, float],
+        screenshots: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Analyze test results using AI"""
         
         try:
-            # Execute Web-Eval-Agent
-            if progress_callback:
-                progress_callback("running", "Executing web evaluation tests")
-            
-            result = await self._run_web_eval_script(
-                script_file,
-                snapshot,
-                progress_callback
+            # Use Gemini to analyze test results
+            analysis = await self.gemini_adapter.analyze_web_evaluation(
+                test_results=test_results,
+                performance_metrics=performance_metrics,
+                screenshots=[s["name"] for s in screenshots]
             )
             
-            # Parse results
-            web_eval_result = await self._parse_web_eval_results(
-                results_dir,
-                time.time() - start_time
-            )
-            
-            return web_eval_result
+            return {
+                "ai_analysis": analysis.analysis,
+                "recommendations": analysis.recommendations,
+                "confidence_score": analysis.confidence_score
+            }
             
         except Exception as e:
-            snapshot.add_log(f"Web-Eval-Agent execution failed: {str(e)}")
-            raise
+            logger.error("AI analysis of test results failed", error=str(e))
+            return {
+                "ai_analysis": "AI analysis unavailable",
+                "recommendations": [],
+                "confidence_score": 0.5
+            }
     
-    def _create_web_eval_script(self, test_config: Dict[str, Any]) -> str:
-        """Create Python script for Web-Eval-Agent execution"""
+    async def run_performance_tests(
+        self,
+        deployment_url: str,
+        performance_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Run focused performance tests"""
         
-        script = f'''
-import asyncio
-import json
-import sys
-from pathlib import Path
-from playwright.async_api import async_playwright
-import google.generativeai as genai
-import time
-import traceback
-
-# Configuration
-CONFIG = {json.dumps(test_config, indent=2)}
-
-class WebEvaluator:
-    def __init__(self, config):
-        self.config = config
-        self.results = []
-        self.screenshots = []
-        self.error_logs = []
-        self.performance_metrics = {{}}
-        
-        # Initialize Gemini if configured
-        if config.get("gemini_config", {{}}).get("api_key"):
-            genai.configure(api_key=config["gemini_config"]["api_key"])
-            self.gemini_model = genai.GenerativeModel('gemini-pro')
-        else:
-            self.gemini_model = None
-    
-    async def run_evaluation(self):
-        """Run all test scenarios"""
-        
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(
-                headless=self.config["browser_config"]["headless"]
-            )
-            
-            context = await browser.new_context(
-                viewport=self.config["browser_config"]["viewport"]
-            )
-            
-            page = await context.new_page()
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
             
             try:
-                for scenario in self.config["test_scenarios"]:
-                    print(f"Running scenario: {{scenario['name']}}")
-                    result = await self.run_scenario(page, scenario)
-                    self.results.append(result)
-                    
-            except Exception as e:
-                self.error_logs.append(f"Evaluation failed: {{str(e)}}")
-                print(f"Error: {{e}}")
-                traceback.print_exc()
-            finally:
-                await browser.close()
-        
-        # Save results
-        await self.save_results()
-    
-    async def run_scenario(self, page, scenario):
-        """Run a single test scenario"""
-        
-        start_time = time.time()
-        result = {{
-            "name": scenario["name"],
-            "type": scenario["type"],
-            "success": True,
-            "duration": 0,
-            "steps": [],
-            "errors": []
-        }}
-        
-        try:
-            for step in scenario["steps"]:
-                step_result = await self.execute_step(page, step)
-                result["steps"].append(step_result)
+                context = await browser.new_context()
+                page = await context.new_page()
                 
-                if not step_result["success"]:
-                    result["success"] = False
-                    result["errors"].append(step_result.get("error", "Step failed"))
-                    
-        except Exception as e:
-            result["success"] = False
-            result["errors"].append(str(e))
-            
-        result["duration"] = time.time() - start_time
-        return result
-    
-    async def execute_step(self, page, step):
-        """Execute a single test step"""
-        
-        action = step["action"]
-        step_result = {{"action": action, "success": True}}
-        
-        try:
-            if action == "navigate":
-                url = step.get("url", "/")
-                full_url = self.config["target_url"].rstrip("/") + url
-                await page.goto(full_url, timeout=30000)
+                # Enable performance monitoring
+                await page.route("**/*", self._track_network_requests)
                 
-            elif action == "wait_for_load":
-                await page.wait_for_load_state("networkidle", timeout=30000)
+                # Load page and measure performance
+                start_time = time.time()
+                await page.goto(deployment_url, wait_until="networkidle")
+                load_time = time.time() - start_time
                 
-            elif action == "screenshot":
-                name = step.get("name", "screenshot")
-                screenshot_path = Path(self.config["output_config"]["save_path"]) / f"{{name}}.png"
-                await page.screenshot(path=screenshot_path)
-                self.screenshots.append(str(screenshot_path))
-                
-            elif action == "check_title":
-                title = await page.title()
-                step_result["title"] = title
-                if not title or title.lower() == "untitled":
-                    step_result["success"] = False
-                    step_result["error"] = "Page title is missing or invalid"
-                    
-            elif action == "check_no_errors":
-                # Check for JavaScript errors
-                errors = await page.evaluate("""
-                    () => {{
-                        const errors = [];
-                        const originalError = console.error;
-                        console.error = (...args) => {{
-                            errors.push(args.join(' '));
-                            originalError.apply(console, args);
-                        }};
-                        return errors;
-                    }}
+                # Collect performance metrics
+                metrics = await page.evaluate("""
+                    JSON.stringify({
+                        timing: performance.timing,
+                        navigation: performance.navigation,
+                        memory: performance.memory || {}
+                    })
                 """)
                 
-                if errors:
-                    step_result["success"] = False
-                    step_result["error"] = f"JavaScript errors found: {{errors}}"
-                    
-            elif action == "find_navigation_links":
-                links = await page.query_selector_all("nav a, header a, .nav a")
-                step_result["link_count"] = len(links)
+                performance_data = json.loads(metrics)
                 
-            elif action == "test_navigation_clicks":
-                links = await page.query_selector_all("nav a, header a, .nav a")
-                for i, link in enumerate(links[:5]):  # Test first 5 links
-                    try:
-                        href = await link.get_attribute("href")
-                        if href and not href.startswith("#"):
-                            await link.click()
-                            await page.wait_for_load_state("networkidle", timeout=10000)
-                            await page.go_back()
-                    except Exception as e:
-                        step_result["navigation_errors"] = step_result.get("navigation_errors", [])
-                        step_result["navigation_errors"].append(f"Link {{i}}: {{str(e)}}")
-                        
-            elif action == "find_forms":
-                forms = await page.query_selector_all("form")
-                step_result["form_count"] = len(forms)
+                return {
+                    "load_time": load_time,
+                    "performance_timing": performance_data["timing"],
+                    "memory_usage": performance_data["memory"],
+                    "navigation_type": performance_data["navigation"]["type"]
+                }
                 
-            elif action == "measure_load_time":
-                start = time.time()
-                await page.reload()
-                await page.wait_for_load_state("networkidle")
-                load_time = time.time() - start
-                step_result["load_time"] = load_time
-                self.performance_metrics["load_time"] = load_time
-                
-            else:
-                # Default: just mark as successful for unknown actions
-                step_result["note"] = f"Action '{{action}}' not implemented"
-                
-        except Exception as e:
-            step_result["success"] = False
-            step_result["error"] = str(e)
-            
-        return step_result
+            finally:
+                await browser.close()
     
-    async def save_results(self):
-        """Save evaluation results"""
-        
-        results_summary = {{
-            "success": all(r["success"] for r in self.results),
-            "test_count": len(self.results),
-            "passed_tests": sum(1 for r in self.results if r["success"]),
-            "failed_tests": sum(1 for r in self.results if not r["success"]),
-            "screenshots": self.screenshots,
-            "test_results": self.results,
-            "error_logs": self.error_logs,
-            "performance_metrics": self.performance_metrics
-        }}
-        
-        # Save to JSON file
-        results_file = Path(self.config["output_config"]["save_path"]) / "results.json"
-        with open(results_file, "w") as f:
-            json.dump(results_summary, f, indent=2)
-        
-        print(f"Results saved to {{results_file}}")
-        print(f"Success: {{results_summary['success']}}")
-        print(f"Tests: {{results_summary['passed_tests']}}/{{results_summary['test_count']}} passed")
-
-async def main():
-    evaluator = WebEvaluator(CONFIG)
-    await evaluator.run_evaluation()
-
-if __name__ == "__main__":
-    asyncio.run(main())
-'''
-        
-        return script
-    
-    async def _run_web_eval_script(
-        self,
-        script_file: Path,
-        snapshot: ValidationSnapshot,
-        progress_callback: Optional[Callable[[str, str], None]] = None
-    ) -> subprocess.CompletedProcess:
-        """Run the Web-Eval-Agent script"""
-        
-        # Prepare environment
-        env = snapshot.environment_vars.copy()
-        
-        # Run script
-        cmd = f"cd {script_file.parent} && python {script_file.name}"
-        
-        process = await asyncio.create_subprocess_shell(
-            cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env=env
+    async def _track_network_requests(self, route):
+        """Track network requests for performance analysis"""
+        # Log request details
+        request = route.request
+        logger.debug(
+            "Network request",
+            url=request.url,
+            method=request.method,
+            resource_type=request.resource_type
         )
         
-        # Monitor output
-        stdout_lines = []
-        stderr_lines = []
+        # Continue with the request
+        await route.continue_()
+    
+    async def run_accessibility_audit(self, deployment_url: str) -> Dict[str, Any]:
+        """Run comprehensive accessibility audit"""
         
-        async def read_stdout():
-            while True:
-                line = await process.stdout.readline()
-                if not line:
-                    break
-                line_str = line.decode().strip()
-                stdout_lines.append(line_str)
-                snapshot.add_log(f"WEB-EVAL: {line_str}")
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True)
+            
+            try:
+                context = await browser.new_context()
+                page = await context.new_page()
                 
-                if progress_callback and "Running scenario:" in line_str:
-                    scenario_name = line_str.split("Running scenario:")[-1].strip()
-                    progress_callback("testing", f"Running: {scenario_name}")
-        
-        async def read_stderr():
-            while True:
-                line = await process.stderr.readline()
-                if not line:
-                    break
-                line_str = line.decode().strip()
-                stderr_lines.append(line_str)
-                snapshot.add_log(f"WEB-EVAL ERROR: {line_str}")
-        
-        # Start reading both streams
-        await asyncio.gather(read_stdout(), read_stderr())
-        
-        # Wait for completion
-        exit_code = await process.wait()
-        
-        return subprocess.CompletedProcess(
-            args=cmd,
-            returncode=exit_code,
-            stdout="\n".join(stdout_lines),
-            stderr="\n".join(stderr_lines)
-        )
+                await page.goto(deployment_url)
+                
+                # Inject axe-core
+                await page.add_script_tag(url="https://unpkg.com/axe-core@4.7.0/axe.min.js")
+                
+                # Run comprehensive accessibility scan
+                results = await page.evaluate("""
+                    new Promise((resolve) => {
+                        axe.run({
+                            tags: ['wcag2a', 'wcag2aa', 'wcag21aa']
+                        }, (err, results) => {
+                            if (err) {
+                                resolve({violations: [], passes: [], incomplete: []});
+                            } else {
+                                resolve(results);
+                            }
+                        });
+                    });
+                """)
+                
+                return {
+                    "violations": results.get("violations", []),
+                    "passes": results.get("passes", []),
+                    "incomplete": results.get("incomplete", []),
+                    "score": self._calculate_accessibility_score(results)
+                }
+                
+            finally:
+                await browser.close()
     
-    async def _parse_web_eval_results(
-        self,
-        results_dir: Path,
-        duration: float
-    ) -> WebEvalResult:
-        """Parse Web-Eval-Agent results"""
+    def _calculate_accessibility_score(self, axe_results: Dict[str, Any]) -> float:
+        """Calculate accessibility score from axe results"""
+        violations = len(axe_results.get("violations", []))
+        passes = len(axe_results.get("passes", []))
         
-        results_file = results_dir / "results.json"
+        total = violations + passes
+        if total == 0:
+            return 1.0
         
-        if not results_file.exists():
-            return WebEvalResult(
-                success=False,
-                test_count=0,
-                passed_tests=0,
-                failed_tests=1,
-                duration=duration,
-                screenshots=[],
-                test_results=[],
-                error_logs=["Results file not found"],
-                performance_metrics={}
-            )
-        
-        try:
-            with open(results_file, "r") as f:
-                data = json.load(f)
-            
-            return WebEvalResult(
-                success=data.get("success", False),
-                test_count=data.get("test_count", 0),
-                passed_tests=data.get("passed_tests", 0),
-                failed_tests=data.get("failed_tests", 0),
-                duration=duration,
-                screenshots=data.get("screenshots", []),
-                test_results=data.get("test_results", []),
-                error_logs=data.get("error_logs", []),
-                performance_metrics=data.get("performance_metrics", {})
-            )
-            
-        except Exception as e:
-            logger.error(f"Failed to parse web eval results: {e}")
-            return WebEvalResult(
-                success=False,
-                test_count=0,
-                passed_tests=0,
-                failed_tests=1,
-                duration=duration,
-                screenshots=[],
-                test_results=[],
-                error_logs=[f"Failed to parse results: {str(e)}"],
-                performance_metrics={}
-            )
-    
-    def cancel_evaluation(self, snapshot_id: str):
-        """Cancel an active web evaluation"""
-        eval_id = f"eval_{snapshot_id}"
-        if eval_id in self.active_evaluations:
-            self.active_evaluations[eval_id] = False
-            logger.info(f"Web evaluation {eval_id} cancelled")
-    
-    def is_evaluation_active(self, snapshot_id: str) -> bool:
-        """Check if web evaluation is active for a snapshot"""
-        eval_id = f"eval_{snapshot_id}"
-        return self.active_evaluations.get(eval_id, False)
-
-
-# Global web eval service instance
-_web_eval_service = None
-
-def get_web_eval_service() -> WebEvalService:
-    """Get the global web eval service instance"""
-    global _web_eval_service
-    if _web_eval_service is None:
-        _web_eval_service = WebEvalService()
-    return _web_eval_service
+        return passes / total
 

@@ -1,323 +1,492 @@
 """
-Deployment Executor for CI/CD Flow Management
-
-Executes deployment commands in validation environments with real-time monitoring.
+CodegenApp Deployment Executor
+Executes deployment commands with real-time monitoring and SWE-bench integration
 """
 
 import asyncio
 import os
-import subprocess
-from pathlib import Path
-from typing import Dict, Any, List, Optional, Callable
-import logging
+import signal
 import time
-from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import List, Dict, Optional, Any, AsyncGenerator
+import subprocess
 
-from app.core.validation.snapshot_manager import ValidationSnapshot
+from app.config.settings import get_settings
+from app.core.logging import get_logger
+from app.models.validation import DeploymentResult
+from app.utils.exceptions import DeploymentException, DeploymentTimeoutException
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+settings = get_settings()
 
 
-@dataclass
-class DeploymentResult:
-    """Result of a deployment execution"""
-    success: bool
-    exit_code: int
-    stdout: str
-    stderr: str
-    duration: float
-    command: str
-    timestamp: float
+class CommandExecutor:
+    """
+    Individual command execution with monitoring
+    
+    Handles single command execution with real-time output capture,
+    timeout management, and resource monitoring.
+    """
+    
+    def __init__(self, command: str, working_directory: str, environment: Dict[str, str]):
+        self.command = command
+        self.working_directory = working_directory
+        self.environment = environment
+        self.process: Optional[asyncio.subprocess.Process] = None
+        self.start_time: Optional[datetime] = None
+        self.stdout_lines: List[str] = []
+        self.stderr_lines: List[str] = []
+    
+    async def execute(self, timeout: int = 600) -> DeploymentResult:
+        """
+        Execute command with timeout and monitoring
+        
+        Args:
+            timeout: Command timeout in seconds
+            
+        Returns:
+            DeploymentResult with execution details
+        """
+        self.start_time = datetime.utcnow()
+        
+        try:
+            logger.info(
+                "Executing deployment command",
+                command=self.command,
+                working_directory=self.working_directory,
+                timeout=timeout
+            )
+            
+            # Create subprocess
+            self.process = await asyncio.create_subprocess_shell(
+                self.command,
+                cwd=self.working_directory,
+                env={**os.environ, **self.environment},
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                preexec_fn=os.setsid if os.name != 'nt' else None
+            )
+            
+            # Monitor execution with timeout
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    self.process.communicate(),
+                    timeout=timeout
+                )
+                
+                duration = (datetime.utcnow() - self.start_time).total_seconds()
+                
+                result = DeploymentResult(
+                    success=self.process.returncode == 0,
+                    exit_code=self.process.returncode,
+                    stdout=stdout.decode('utf-8', errors='replace'),
+                    stderr=stderr.decode('utf-8', errors='replace'),
+                    duration=duration,
+                    command=self.command,
+                    environment=self.environment,
+                    working_directory=self.working_directory,
+                    timestamp=self.start_time
+                )
+                
+                if result.success:
+                    logger.info(
+                        "Command executed successfully",
+                        command=self.command,
+                        duration=duration,
+                        exit_code=result.exit_code
+                    )
+                else:
+                    logger.error(
+                        "Command execution failed",
+                        command=self.command,
+                        exit_code=result.exit_code,
+                        stderr=result.stderr[:500]  # Log first 500 chars of stderr
+                    )
+                
+                return result
+                
+            except asyncio.TimeoutError:
+                # Kill process group on timeout
+                if self.process and self.process.returncode is None:
+                    try:
+                        if os.name != 'nt':
+                            os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+                        else:
+                            self.process.terminate()
+                        
+                        # Wait a bit for graceful termination
+                        await asyncio.sleep(5)
+                        
+                        # Force kill if still running
+                        if self.process.returncode is None:
+                            if os.name != 'nt':
+                                os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+                            else:
+                                self.process.kill()
+                            
+                    except ProcessLookupError:
+                        pass  # Process already terminated
+                
+                duration = (datetime.utcnow() - self.start_time).total_seconds()
+                
+                logger.error(
+                    "Command execution timed out",
+                    command=self.command,
+                    timeout=timeout,
+                    duration=duration
+                )
+                
+                raise DeploymentTimeoutException(
+                    timeout=timeout,
+                    details={
+                        "command": self.command,
+                        "duration": duration,
+                        "working_directory": self.working_directory
+                    }
+                )
+                
+        except DeploymentTimeoutException:
+            raise
+        except Exception as e:
+            duration = (datetime.utcnow() - self.start_time).total_seconds() if self.start_time else 0
+            
+            logger.error(
+                "Command execution failed with exception",
+                command=self.command,
+                error=str(e),
+                duration=duration
+            )
+            
+            raise DeploymentException(
+                f"Command execution failed: {str(e)}",
+                details={
+                    "command": self.command,
+                    "error": str(e),
+                    "duration": duration,
+                    "working_directory": self.working_directory
+                }
+            )
+    
+    async def stream_output(self) -> AsyncGenerator[str, None]:
+        """
+        Stream real-time output from command execution
+        
+        Yields output lines as they become available
+        """
+        if not self.process:
+            return
+        
+        async def read_stream(stream, lines_list):
+            while True:
+                line = await stream.readline()
+                if not line:
+                    break
+                
+                line_str = line.decode('utf-8', errors='replace').rstrip()
+                lines_list.append(line_str)
+                yield line_str
+        
+        # Stream both stdout and stderr
+        if self.process.stdout:
+            async for line in read_stream(self.process.stdout, self.stdout_lines):
+                yield f"STDOUT: {line}"
+        
+        if self.process.stderr:
+            async for line in read_stream(self.process.stderr, self.stderr_lines):
+                yield f"STDERR: {line}"
 
 
 class DeploymentExecutor:
-    """Executes deployment commands with monitoring and logging"""
+    """
+    Deployment command executor with SWE-bench integration patterns
+    
+    Executes deployment commands in sequence with proper error handling,
+    logging, and resource management. Integrates patterns from SWE-bench
+    for robust command execution and validation.
+    """
     
     def __init__(self):
-        self.active_deployments: Dict[str, bool] = {}
+        self.active_executions: Dict[str, CommandExecutor] = {}
+        logger.info("DeploymentExecutor initialized")
     
-    async def execute_deployment(
+    async def execute_commands(
         self,
-        snapshot: ValidationSnapshot,
-        deployment_commands: List[str],
-        progress_callback: Optional[Callable[[str, str], None]] = None
-    ) -> List[DeploymentResult]:
-        """Execute deployment commands in the snapshot environment"""
+        commands: List[str],
+        workspace_path: str,
+        timeout: int = 600,
+        environment: Optional[Dict[str, str]] = None,
+        stop_on_failure: bool = True
+    ) -> DeploymentResult:
+        """
+        Execute a sequence of deployment commands
         
-        deployment_id = f"deploy_{snapshot.snapshot_id}"
-        self.active_deployments[deployment_id] = True
-        
-        snapshot.add_log("Starting deployment execution...")
-        results = []
-        
-        try:
-            # Change to code directory
-            code_dir = snapshot.workspace_path / "code"
-            if not code_dir.exists():
-                raise Exception("Code directory not found. Ensure PR code is cloned first.")
+        Args:
+            commands: List of commands to execute
+            workspace_path: Working directory for execution
+            timeout: Timeout per command in seconds
+            environment: Additional environment variables
+            stop_on_failure: Stop execution on first failure
             
-            # Execute each command
-            for i, command in enumerate(deployment_commands):
-                if not self.active_deployments.get(deployment_id, False):
-                    snapshot.add_log("Deployment cancelled")
-                    break
-                
-                snapshot.add_log(f"Executing command {i+1}/{len(deployment_commands)}: {command}")
-                
-                if progress_callback:
-                    progress_callback("executing", f"Running: {command}")
-                
-                result = await self._execute_command(
-                    command, 
-                    code_dir, 
-                    snapshot.environment_vars,
-                    snapshot
+        Returns:
+            Combined DeploymentResult for all commands
+        """
+        if not commands:
+            raise DeploymentException("No commands provided for execution")
+        
+        workspace_path_obj = Path(workspace_path)
+        if not workspace_path_obj.exists():
+            raise DeploymentException(f"Workspace path does not exist: {workspace_path}")
+        
+        # Prepare environment
+        exec_environment = {
+            "PATH": os.environ.get("PATH", ""),
+            "HOME": os.environ.get("HOME", ""),
+            "USER": os.environ.get("USER", ""),
+            "PYTHONPATH": str(workspace_path_obj),
+            "NODE_PATH": str(workspace_path_obj / "node_modules"),
+        }
+        
+        if environment:
+            exec_environment.update(environment)
+        
+        # Execute commands in sequence
+        all_results = []
+        combined_stdout = []
+        combined_stderr = []
+        total_duration = 0.0
+        overall_success = True
+        final_exit_code = 0
+        
+        start_time = datetime.utcnow()
+        
+        logger.info(
+            "Starting deployment command execution",
+            commands=commands,
+            workspace_path=workspace_path,
+            timeout=timeout
+        )
+        
+        for i, command in enumerate(commands):
+            try:
+                # Create command executor
+                executor = CommandExecutor(
+                    command=command,
+                    working_directory=workspace_path,
+                    environment=exec_environment
                 )
                 
-                results.append(result)
+                # Store for potential cancellation
+                execution_id = f"cmd_{i}_{int(time.time())}"
+                self.active_executions[execution_id] = executor
+                
+                try:
+                    # Execute command
+                    result = await executor.execute(timeout=timeout)
+                    all_results.append(result)
+                    
+                    # Accumulate outputs
+                    combined_stdout.append(f"=== Command {i+1}: {command} ===")
+                    combined_stdout.append(result.stdout)
+                    combined_stderr.append(result.stderr)
+                    
+                    total_duration += result.duration
+                    
+                    # Check for failure
+                    if not result.success:
+                        overall_success = False
+                        final_exit_code = result.exit_code
+                        
+                        if stop_on_failure:
+                            logger.error(
+                                "Command failed, stopping execution",
+                                command=command,
+                                exit_code=result.exit_code
+                            )
+                            break
+                    
+                finally:
+                    # Clean up active execution
+                    if execution_id in self.active_executions:
+                        del self.active_executions[execution_id]
+                
+            except Exception as e:
+                overall_success = False
+                final_exit_code = 1
+                
+                error_msg = f"Command failed with exception: {str(e)}"
+                combined_stderr.append(f"=== Command {i+1} Error: {command} ===")
+                combined_stderr.append(error_msg)
+                
+                logger.error(
+                    "Command execution failed",
+                    command=command,
+                    error=str(e)
+                )
+                
+                if stop_on_failure:
+                    break
+        
+        # Create combined result
+        final_result = DeploymentResult(
+            success=overall_success,
+            exit_code=final_exit_code,
+            stdout="\n".join(combined_stdout),
+            stderr="\n".join(combined_stderr),
+            duration=total_duration,
+            command="; ".join(commands),
+            environment=exec_environment,
+            working_directory=workspace_path,
+            timestamp=start_time
+        )
+        
+        logger.info(
+            "Deployment command execution completed",
+            success=overall_success,
+            total_duration=total_duration,
+            commands_executed=len(all_results)
+        )
+        
+        return final_result
+    
+    async def execute_with_streaming(
+        self,
+        commands: List[str],
+        workspace_path: str,
+        timeout: int = 600,
+        environment: Optional[Dict[str, str]] = None
+    ) -> AsyncGenerator[str, None]:
+        """
+        Execute commands with real-time output streaming
+        
+        Yields output lines as they become available during execution
+        """
+        for i, command in enumerate(commands):
+            yield f"=== Starting Command {i+1}: {command} ==="
+            
+            try:
+                executor = CommandExecutor(
+                    command=command,
+                    working_directory=workspace_path,
+                    environment=environment or {}
+                )
+                
+                # Start execution
+                execution_task = asyncio.create_task(executor.execute(timeout))
+                
+                # Stream output while execution is running
+                async for output_line in executor.stream_output():
+                    yield output_line
+                
+                # Wait for completion
+                result = await execution_task
+                
+                yield f"=== Command {i+1} completed with exit code {result.exit_code} ==="
                 
                 if not result.success:
-                    snapshot.add_log(f"Command failed with exit code {result.exit_code}")
-                    snapshot.add_log(f"Error output: {result.stderr}")
-                    
-                    if progress_callback:
-                        progress_callback("failed", f"Command failed: {command}")
-                    
-                    # Stop execution on first failure
+                    yield f"=== Command {i+1} failed, stopping execution ==="
                     break
-                else:
-                    snapshot.add_log(f"Command completed successfully in {result.duration:.2f}s")
                     
-                    if progress_callback:
-                        progress_callback("success", f"Completed: {command}")
-            
-            # Check overall success
-            overall_success = all(result.success for result in results)
-            
-            if overall_success:
-                snapshot.add_log("Deployment completed successfully")
-                if progress_callback:
-                    progress_callback("completed", "Deployment successful")
-            else:
-                snapshot.add_log("Deployment failed")
-                if progress_callback:
-                    progress_callback("failed", "Deployment failed")
-            
-            return results
-            
-        except Exception as e:
-            snapshot.add_log(f"Deployment execution failed: {str(e)}")
-            logger.error(f"Deployment execution failed for {deployment_id}: {e}")
-            
-            if progress_callback:
-                progress_callback("error", f"Deployment error: {str(e)}")
-            
-            raise
-        finally:
-            # Cleanup
-            if deployment_id in self.active_deployments:
-                del self.active_deployments[deployment_id]
+            except Exception as e:
+                yield f"=== Command {i+1} failed with exception: {str(e)} ==="
+                break
     
-    async def _execute_command(
-        self,
-        command: str,
-        cwd: Path,
-        env_vars: Dict[str, str],
-        snapshot: ValidationSnapshot
-    ) -> DeploymentResult:
-        """Execute a single command with monitoring"""
+    async def validate_deployment_environment(self, workspace_path: str) -> Dict[str, Any]:
+        """
+        Validate deployment environment and dependencies
         
-        start_time = time.time()
-        
-        try:
-            # Merge environment variables
-            env = os.environ.copy()
-            env.update(env_vars)
-            
-            # Create subprocess
-            process = await asyncio.create_subprocess_shell(
-                command,
-                cwd=cwd,
-                env=env,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            # Wait for completion with real-time output capture
-            stdout_data = []
-            stderr_data = []
-            
-            async def read_stream(stream, data_list, log_prefix):
-                while True:
-                    line = await stream.readline()
-                    if not line:
-                        break
-                    
-                    line_str = line.decode().strip()
-                    data_list.append(line_str)
-                    snapshot.add_log(f"{log_prefix}: {line_str}")
-            
-            # Start reading both streams
-            await asyncio.gather(
-                read_stream(process.stdout, stdout_data, "STDOUT"),
-                read_stream(process.stderr, stderr_data, "STDERR")
-            )
-            
-            # Wait for process completion
-            exit_code = await process.wait()
-            
-            duration = time.time() - start_time
-            
-            return DeploymentResult(
-                success=(exit_code == 0),
-                exit_code=exit_code,
-                stdout="\n".join(stdout_data),
-                stderr="\n".join(stderr_data),
-                duration=duration,
-                command=command,
-                timestamp=start_time
-            )
-            
-        except Exception as e:
-            duration = time.time() - start_time
-            error_msg = str(e)
-            
-            return DeploymentResult(
-                success=False,
-                exit_code=-1,
-                stdout="",
-                stderr=error_msg,
-                duration=duration,
-                command=command,
-                timestamp=start_time
-            )
-    
-    def cancel_deployment(self, snapshot_id: str):
-        """Cancel an active deployment"""
-        deployment_id = f"deploy_{snapshot_id}"
-        if deployment_id in self.active_deployments:
-            self.active_deployments[deployment_id] = False
-            logger.info(f"Deployment {deployment_id} cancelled")
-    
-    def is_deployment_active(self, snapshot_id: str) -> bool:
-        """Check if deployment is active for a snapshot"""
-        deployment_id = f"deploy_{snapshot_id}"
-        return self.active_deployments.get(deployment_id, False)
-    
-    async def validate_deployment_success(
-        self,
-        snapshot: ValidationSnapshot,
-        deployment_results: List[DeploymentResult]
-    ) -> Dict[str, Any]:
-        """Validate deployment success and gather context"""
-        
-        snapshot.add_log("Validating deployment success...")
-        
-        # Check if all commands succeeded
-        all_success = all(result.success for result in deployment_results)
-        
-        # Gather deployment context
-        context = {
-            "overall_success": all_success,
-            "total_commands": len(deployment_results),
-            "successful_commands": sum(1 for r in deployment_results if r.success),
-            "failed_commands": sum(1 for r in deployment_results if not r.success),
-            "total_duration": sum(r.duration for r in deployment_results),
-            "commands": []
-        }
-        
-        # Add command details
-        for result in deployment_results:
-            context["commands"].append({
-                "command": result.command,
-                "success": result.success,
-                "exit_code": result.exit_code,
-                "duration": result.duration,
-                "stdout_lines": len(result.stdout.split("\n")) if result.stdout else 0,
-                "stderr_lines": len(result.stderr.split("\n")) if result.stderr else 0
-            })
-        
-        # Check for common deployment artifacts
-        code_dir = snapshot.workspace_path / "code"
-        artifacts = await self._check_deployment_artifacts(code_dir)
-        context["artifacts"] = artifacts
-        
-        # Check for running processes/services
-        services = await self._check_running_services(snapshot)
-        context["services"] = services
-        
-        snapshot.add_log(f"Deployment validation completed. Success: {all_success}")
-        
-        return context
-    
-    async def _check_deployment_artifacts(self, code_dir: Path) -> Dict[str, bool]:
-        """Check for common deployment artifacts"""
-        
-        artifacts = {}
-        
-        # Common build artifacts
-        artifact_paths = [
-            "build/",
-            "dist/",
-            "public/",
-            "node_modules/",
-            "package-lock.json",
-            "yarn.lock",
-            ".next/",
-            "__pycache__/",
-            "venv/",
-            ".env"
-        ]
-        
-        for artifact in artifact_paths:
-            artifact_path = code_dir / artifact
-            artifacts[artifact] = artifact_path.exists()
-        
-        return artifacts
-    
-    async def _check_running_services(self, snapshot: ValidationSnapshot) -> Dict[str, Any]:
-        """Check for running services in the deployment"""
-        
-        services = {
-            "processes": [],
-            "ports": [],
-            "health_checks": []
+        Checks for required tools, dependencies, and environment setup
+        """
+        workspace_path_obj = Path(workspace_path)
+        validation_results = {
+            "workspace_exists": workspace_path_obj.exists(),
+            "workspace_writable": False,
+            "git_available": False,
+            "node_available": False,
+            "python_available": False,
+            "docker_available": False,
+            "dependencies": {}
         }
         
         try:
-            # Check for common development server processes
-            process_check_commands = [
-                "ps aux | grep -E '(npm|node|python|uvicorn|gunicorn)' | grep -v grep",
-                "netstat -tlnp 2>/dev/null | grep LISTEN || ss -tlnp | grep LISTEN"
-            ]
-            
-            for cmd in process_check_commands:
-                result = await self._execute_command(
-                    cmd,
-                    snapshot.workspace_path,
-                    snapshot.environment_vars,
-                    snapshot
+            # Check workspace writability
+            test_file = workspace_path_obj / ".deployment_test"
+            test_file.write_text("test")
+            test_file.unlink()
+            validation_results["workspace_writable"] = True
+        except Exception:
+            pass
+        
+        # Check tool availability
+        tools_to_check = {
+            "git": "git --version",
+            "node": "node --version",
+            "python": "python3 --version",
+            "docker": "docker --version"
+        }
+        
+        for tool, check_command in tools_to_check.items():
+            try:
+                result = await asyncio.create_subprocess_shell(
+                    check_command,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
                 )
+                stdout, stderr = await result.communicate()
                 
-                if result.success and result.stdout:
-                    if "ps aux" in cmd:
-                        services["processes"] = result.stdout.split("\n")[:10]  # Limit output
-                    elif "netstat" in cmd or "ss" in cmd:
-                        services["ports"] = result.stdout.split("\n")[:10]  # Limit output
+                if result.returncode == 0:
+                    validation_results[f"{tool}_available"] = True
+                    validation_results["dependencies"][tool] = stdout.decode().strip()
+                    
+            except Exception:
+                pass
         
-        except Exception as e:
-            snapshot.add_log(f"Service check failed: {str(e)}")
+        # Check for common dependency files
+        dependency_files = {
+            "package.json": workspace_path_obj / "package.json",
+            "requirements.txt": workspace_path_obj / "requirements.txt",
+            "Dockerfile": workspace_path_obj / "Dockerfile",
+            "docker-compose.yml": workspace_path_obj / "docker-compose.yml"
+        }
         
-        return services
-
-
-# Global deployment executor instance
-_deployment_executor = None
-
-def get_deployment_executor() -> DeploymentExecutor:
-    """Get the global deployment executor instance"""
-    global _deployment_executor
-    if _deployment_executor is None:
-        _deployment_executor = DeploymentExecutor()
-    return _deployment_executor
+        for dep_name, dep_path in dependency_files.items():
+            validation_results["dependencies"][dep_name] = dep_path.exists()
+        
+        logger.info("Deployment environment validated", results=validation_results)
+        return validation_results
+    
+    async def cancel_execution(self, execution_id: str) -> bool:
+        """
+        Cancel a running command execution
+        
+        Args:
+            execution_id: ID of execution to cancel
+            
+        Returns:
+            True if cancellation was successful
+        """
+        if execution_id not in self.active_executions:
+            return False
+        
+        executor = self.active_executions[execution_id]
+        
+        if executor.process and executor.process.returncode is None:
+            try:
+                if os.name != 'nt':
+                    os.killpg(os.getpgid(executor.process.pid), signal.SIGTERM)
+                else:
+                    executor.process.terminate()
+                
+                logger.info("Command execution cancelled", execution_id=execution_id)
+                return True
+                
+            except Exception as e:
+                logger.error("Failed to cancel execution", execution_id=execution_id, error=str(e))
+                return False
+        
+        return False
+    
+    def get_active_executions(self) -> List[str]:
+        """Get list of active execution IDs"""
+        return list(self.active_executions.keys())
 

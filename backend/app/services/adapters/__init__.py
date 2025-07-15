@@ -1,1 +1,5 @@
-# Service adapters package
+"""
+CodegenApp Service Adapters
+External service integration adapters
+"""
+

@@ -1,464 +1,458 @@
 """
-Gemini Adapter for AI-Powered Validation Analysis
-
-Provides AI-powered analysis of deployment logs, error context, and validation results.
+CodegenApp Gemini AI Adapter
+Integration with Google Gemini API for AI-powered validation and analysis
 """
 
 import asyncio
 import json
-from typing import Dict, Any, List, Optional, Tuple
-import logging
+from typing import Dict, List, Optional, Any
+from datetime import datetime
+
 import google.generativeai as genai
-from dataclasses import dataclass
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 from app.config.settings import get_settings
-from app.core.workflow.deployment_executor import DeploymentResult
+from app.core.logging import get_logger
+from app.models.validation import GeminiValidationResult
+from app.utils.exceptions import GeminiAPIException, RateLimitException
+from app.utils.prompt_templates import PromptTemplates
 
-logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ValidationAnalysis:
-    """Result of AI validation analysis"""
-    success: bool
-    confidence: float
-    summary: str
-    issues: List[Dict[str, Any]]
-    recommendations: List[str]
-    error_context: Optional[str] = None
-    suggested_fixes: List[str] = None
+logger = get_logger(__name__)
+settings = get_settings()
 
 
 class GeminiAdapter:
-    """Adapter for Gemini AI validation analysis"""
+    """
+    Gemini AI integration adapter
+    
+    Provides AI-powered validation, analysis, and decision-making capabilities
+    using Google's Gemini API. Includes intelligent prompt engineering and
+    response parsing for deployment validation and code analysis.
+    """
     
     def __init__(self):
-        self.settings = get_settings()
-        self._initialize_gemini()
+        # Configure Gemini API
+        genai.configure(api_key=settings.gemini.api_key)
         
-    def _initialize_gemini(self):
-        """Initialize Gemini AI client"""
-        try:
-            api_key = getattr(self.settings, 'gemini_api_key', None)
-            if not api_key:
-                logger.warning("Gemini API key not configured")
-                self.client = None
-                return
-            
-            genai.configure(api_key=api_key)
-            self.client = genai.GenerativeModel('gemini-pro')
-            logger.info("Gemini AI client initialized successfully")
-            
-        except Exception as e:
-            logger.error(f"Failed to initialize Gemini AI client: {e}")
-            self.client = None
-    
-    async def analyze_deployment_results(
-        self,
-        deployment_results: List[DeploymentResult],
-        deployment_context: Dict[str, Any],
-        project_name: str
-    ) -> ValidationAnalysis:
-        """Analyze deployment results using Gemini AI"""
-        
-        if not self.client:
-            return self._create_fallback_analysis(deployment_results, "Gemini AI not available")
-        
-        try:
-            # Prepare analysis prompt
-            prompt = self._create_deployment_analysis_prompt(
-                deployment_results, 
-                deployment_context, 
-                project_name
-            )
-            
-            # Generate analysis
-            response = await self._generate_response(prompt)
-            
-            # Parse response
-            analysis = self._parse_deployment_analysis(response, deployment_results)
-            
-            logger.info(f"Deployment analysis completed for {project_name}")
-            return analysis
-            
-        except Exception as e:
-            logger.error(f"Deployment analysis failed: {e}")
-            return self._create_fallback_analysis(deployment_results, str(e))
-    
-    async def analyze_error_context(
-        self,
-        error_logs: str,
-        deployment_context: Dict[str, Any],
-        project_name: str,
-        previous_attempts: List[str] = None
-    ) -> ValidationAnalysis:
-        """Analyze error context and suggest fixes"""
-        
-        if not self.client:
-            return self._create_fallback_analysis([], "Gemini AI not available")
-        
-        try:
-            # Prepare error analysis prompt
-            prompt = self._create_error_analysis_prompt(
-                error_logs,
-                deployment_context,
-                project_name,
-                previous_attempts or []
-            )
-            
-            # Generate analysis
-            response = await self._generate_response(prompt)
-            
-            # Parse response
-            analysis = self._parse_error_analysis(response, error_logs)
-            
-            logger.info(f"Error analysis completed for {project_name}")
-            return analysis
-            
-        except Exception as e:
-            logger.error(f"Error analysis failed: {e}")
-            return self._create_fallback_analysis([], str(e))
-    
-    async def analyze_web_eval_results(
-        self,
-        web_eval_results: Dict[str, Any],
-        project_name: str
-    ) -> ValidationAnalysis:
-        """Analyze web evaluation results"""
-        
-        if not self.client:
-            return self._create_fallback_analysis([], "Gemini AI not available")
-        
-        try:
-            # Prepare web eval analysis prompt
-            prompt = self._create_web_eval_analysis_prompt(web_eval_results, project_name)
-            
-            # Generate analysis
-            response = await self._generate_response(prompt)
-            
-            # Parse response
-            analysis = self._parse_web_eval_analysis(response, web_eval_results)
-            
-            logger.info(f"Web evaluation analysis completed for {project_name}")
-            return analysis
-            
-        except Exception as e:
-            logger.error(f"Web evaluation analysis failed: {e}")
-            return self._create_fallback_analysis([], str(e))
-    
-    def _create_deployment_analysis_prompt(
-        self,
-        deployment_results: List[DeploymentResult],
-        deployment_context: Dict[str, Any],
-        project_name: str
-    ) -> str:
-        """Create prompt for deployment analysis"""
-        
-        prompt = f"""
-Analyze the deployment results for project '{project_name}' and provide a comprehensive assessment.
-
-DEPLOYMENT CONTEXT:
-- Overall Success: {deployment_context.get('overall_success', False)}
-- Total Commands: {deployment_context.get('total_commands', 0)}
-- Successful Commands: {deployment_context.get('successful_commands', 0)}
-- Failed Commands: {deployment_context.get('failed_commands', 0)}
-- Total Duration: {deployment_context.get('total_duration', 0):.2f}s
-
-COMMAND RESULTS:
-"""
-        
-        for i, result in enumerate(deployment_results):
-            prompt += f"""
-Command {i+1}: {result.command}
-- Success: {result.success}
-- Exit Code: {result.exit_code}
-- Duration: {result.duration:.2f}s
-- STDOUT: {result.stdout[:500]}{'...' if len(result.stdout) > 500 else ''}
-- STDERR: {result.stderr[:500]}{'...' if len(result.stderr) > 500 else ''}
-"""
-        
-        prompt += f"""
-DEPLOYMENT ARTIFACTS:
-{json.dumps(deployment_context.get('artifacts', {}), indent=2)}
-
-RUNNING SERVICES:
-{json.dumps(deployment_context.get('services', {}), indent=2)}
-
-Please provide a JSON response with the following structure:
-{{
-    "success": boolean,
-    "confidence": float (0.0-1.0),
-    "summary": "Brief summary of deployment status",
-    "issues": [
-        {{
-            "type": "error|warning|info",
-            "command": "command that caused issue",
-            "description": "detailed description",
-            "severity": "high|medium|low"
-        }}
-    ],
-    "recommendations": [
-        "specific actionable recommendations"
-    ]
-}}
-
-Focus on:
-1. Whether the deployment was truly successful
-2. Any potential issues or warnings
-3. Performance concerns
-4. Missing artifacts or services
-5. Specific recommendations for improvement
-"""
-        
-        return prompt
-    
-    def _create_error_analysis_prompt(
-        self,
-        error_logs: str,
-        deployment_context: Dict[str, Any],
-        project_name: str,
-        previous_attempts: List[str]
-    ) -> str:
-        """Create prompt for error analysis"""
-        
-        prompt = f"""
-Analyze the deployment errors for project '{project_name}' and provide specific fixes.
-
-ERROR LOGS:
-{error_logs[:2000]}{'...' if len(error_logs) > 2000 else ''}
-
-DEPLOYMENT CONTEXT:
-{json.dumps(deployment_context, indent=2)}
-
-PREVIOUS ATTEMPTS:
-{json.dumps(previous_attempts, indent=2) if previous_attempts else 'None'}
-
-Please provide a JSON response with the following structure:
-{{
-    "success": false,
-    "confidence": float (0.0-1.0),
-    "summary": "Brief summary of the error",
-    "error_context": "Detailed explanation of what went wrong",
-    "issues": [
-        {{
-            "type": "error",
-            "description": "specific error description",
-            "severity": "high|medium|low",
-            "location": "file/command where error occurred"
-        }}
-    ],
-    "suggested_fixes": [
-        "specific code changes or commands to fix the issue"
-    ],
-    "recommendations": [
-        "general recommendations to prevent similar issues"
-    ]
-}}
-
-Focus on:
-1. Root cause analysis of the error
-2. Specific code changes needed
-3. Command-line fixes
-4. Configuration adjustments
-5. Dependency issues
-6. Environment setup problems
-"""
-        
-        return prompt
-    
-    def _create_web_eval_analysis_prompt(
-        self,
-        web_eval_results: Dict[str, Any],
-        project_name: str
-    ) -> str:
-        """Create prompt for web evaluation analysis"""
-        
-        prompt = f"""
-Analyze the web evaluation results for project '{project_name}' and assess functionality.
-
-WEB EVALUATION RESULTS:
-{json.dumps(web_eval_results, indent=2)}
-
-Please provide a JSON response with the following structure:
-{{
-    "success": boolean,
-    "confidence": float (0.0-1.0),
-    "summary": "Brief summary of web evaluation",
-    "issues": [
-        {{
-            "type": "error|warning|info",
-            "component": "UI component or flow affected",
-            "description": "detailed description",
-            "severity": "high|medium|low"
-        }}
-    ],
-    "recommendations": [
-        "specific recommendations for UI/UX improvements"
-    ]
-}}
-
-Focus on:
-1. Functionality validation
-2. UI/UX issues
-3. Performance problems
-4. Accessibility concerns
-5. Cross-browser compatibility
-6. User flow completeness
-"""
-        
-        return prompt
-    
-    async def _generate_response(self, prompt: str) -> str:
-        """Generate response from Gemini AI"""
-        
-        try:
-            # Use asyncio to run the synchronous generate_content method
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.client.generate_content(prompt)
-            )
-            
-            return response.text
-            
-        except Exception as e:
-            logger.error(f"Failed to generate Gemini response: {e}")
-            raise
-    
-    def _parse_deployment_analysis(
-        self,
-        response: str,
-        deployment_results: List[DeploymentResult]
-    ) -> ValidationAnalysis:
-        """Parse deployment analysis response"""
-        
-        try:
-            # Try to extract JSON from response
-            json_start = response.find('{')
-            json_end = response.rfind('}') + 1
-            
-            if json_start >= 0 and json_end > json_start:
-                json_str = response[json_start:json_end]
-                data = json.loads(json_str)
-                
-                return ValidationAnalysis(
-                    success=data.get('success', False),
-                    confidence=data.get('confidence', 0.5),
-                    summary=data.get('summary', 'Analysis completed'),
-                    issues=data.get('issues', []),
-                    recommendations=data.get('recommendations', [])
-                )
-            else:
-                # Fallback parsing
-                return self._create_fallback_analysis(deployment_results, "Failed to parse JSON response")
-                
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse deployment analysis JSON: {e}")
-            return self._create_fallback_analysis(deployment_results, "JSON parsing error")
-    
-    def _parse_error_analysis(self, response: str, error_logs: str) -> ValidationAnalysis:
-        """Parse error analysis response"""
-        
-        try:
-            # Try to extract JSON from response
-            json_start = response.find('{')
-            json_end = response.rfind('}') + 1
-            
-            if json_start >= 0 and json_end > json_start:
-                json_str = response[json_start:json_end]
-                data = json.loads(json_str)
-                
-                return ValidationAnalysis(
-                    success=False,
-                    confidence=data.get('confidence', 0.5),
-                    summary=data.get('summary', 'Error analysis completed'),
-                    issues=data.get('issues', []),
-                    recommendations=data.get('recommendations', []),
-                    error_context=data.get('error_context'),
-                    suggested_fixes=data.get('suggested_fixes', [])
-                )
-            else:
-                # Fallback parsing
-                return self._create_fallback_analysis([], "Failed to parse error analysis JSON")
-                
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse error analysis JSON: {e}")
-            return self._create_fallback_analysis([], "JSON parsing error")
-    
-    def _parse_web_eval_analysis(
-        self,
-        response: str,
-        web_eval_results: Dict[str, Any]
-    ) -> ValidationAnalysis:
-        """Parse web evaluation analysis response"""
-        
-        try:
-            # Try to extract JSON from response
-            json_start = response.find('{')
-            json_end = response.rfind('}') + 1
-            
-            if json_start >= 0 and json_end > json_start:
-                json_str = response[json_start:json_end]
-                data = json.loads(json_str)
-                
-                return ValidationAnalysis(
-                    success=data.get('success', False),
-                    confidence=data.get('confidence', 0.5),
-                    summary=data.get('summary', 'Web evaluation analysis completed'),
-                    issues=data.get('issues', []),
-                    recommendations=data.get('recommendations', [])
-                )
-            else:
-                # Fallback parsing
-                return self._create_fallback_analysis([], "Failed to parse web eval analysis JSON")
-                
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse web eval analysis JSON: {e}")
-            return self._create_fallback_analysis([], "JSON parsing error")
-    
-    def _create_fallback_analysis(
-        self,
-        deployment_results: List[DeploymentResult],
-        error_message: str
-    ) -> ValidationAnalysis:
-        """Create fallback analysis when AI analysis fails"""
-        
-        # Basic rule-based analysis
-        if deployment_results:
-            success = all(result.success for result in deployment_results)
-            failed_commands = [r for r in deployment_results if not r.success]
-            
-            issues = []
-            for result in failed_commands:
-                issues.append({
-                    "type": "error",
-                    "command": result.command,
-                    "description": f"Command failed with exit code {result.exit_code}",
-                    "severity": "high"
-                })
-            
-            summary = f"Deployment {'succeeded' if success else 'failed'} ({len(failed_commands)} failures)"
-        else:
-            success = False
-            issues = [{"type": "error", "description": error_message, "severity": "high"}]
-            summary = "Analysis failed"
-        
-        return ValidationAnalysis(
-            success=success,
-            confidence=0.3,  # Low confidence for fallback
-            summary=summary,
-            issues=issues,
-            recommendations=["Check logs for detailed error information", "Verify environment configuration"]
+        # Initialize model
+        self.model = genai.GenerativeModel(
+            model_name=settings.gemini.model,
+            generation_config=genai.types.GenerationConfig(
+                temperature=settings.gemini.temperature,
+                max_output_tokens=settings.gemini.max_tokens,
+                top_p=0.8,
+                top_k=40
+            ),
+            safety_settings={
+                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            }
         )
-
-
-# Global Gemini adapter instance
-_gemini_adapter = None
-
-def get_gemini_adapter() -> GeminiAdapter:
-    """Get the global Gemini adapter instance"""
-    global _gemini_adapter
-    if _gemini_adapter is None:
-        _gemini_adapter = GeminiAdapter()
-    return _gemini_adapter
+        
+        self.prompt_templates = PromptTemplates()
+        
+        logger.info("GeminiAdapter initialized", model=settings.gemini.model)
+    
+    async def validate_deployment(
+        self,
+        project_name: str,
+        pr_url: str,
+        deployment_output: str,
+        deployment_success: bool,
+        additional_context: Optional[Dict[str, Any]] = None
+    ) -> GeminiValidationResult:
+        """
+        Validate deployment using AI analysis
+        
+        Analyzes deployment output, success status, and context to provide
+        intelligent validation results and recommendations.
+        """
+        try:
+            logger.info(
+                "Starting Gemini deployment validation",
+                project=project_name,
+                pr_url=pr_url,
+                deployment_success=deployment_success
+            )
+            
+            # Prepare validation prompt
+            prompt = self.prompt_templates.get_deployment_validation_prompt(
+                project_name=project_name,
+                pr_url=pr_url,
+                deployment_output=deployment_output,
+                deployment_success=deployment_success,
+                additional_context=additional_context or {}
+            )
+            
+            # Generate AI response
+            response = await self._generate_response(prompt)
+            
+            # Parse response
+            result = self._parse_validation_response(response)
+            
+            logger.info(
+                "Gemini deployment validation completed",
+                project=project_name,
+                confidence_score=result.confidence_score,
+                success=result.success
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error("Gemini deployment validation failed", error=str(e))
+            raise GeminiAPIException(f"Deployment validation failed: {str(e)}")
+    
+    async def analyze_code_quality(
+        self,
+        code_content: str,
+        file_path: str,
+        language: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> GeminiValidationResult:
+        """
+        Analyze code quality using AI
+        
+        Provides detailed code quality analysis including maintainability,
+        security, performance, and best practices assessment.
+        """
+        try:
+            logger.info(
+                "Starting Gemini code quality analysis",
+                file_path=file_path,
+                language=language,
+                code_length=len(code_content)
+            )
+            
+            # Prepare code analysis prompt
+            prompt = self.prompt_templates.get_code_quality_prompt(
+                code_content=code_content,
+                file_path=file_path,
+                language=language,
+                context=context or {}
+            )
+            
+            # Generate AI response
+            response = await self._generate_response(prompt)
+            
+            # Parse response
+            result = self._parse_code_analysis_response(response)
+            
+            logger.info(
+                "Gemini code quality analysis completed",
+                file_path=file_path,
+                code_quality_score=result.code_quality_score,
+                issues_found=len(result.issues_found)
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error("Gemini code quality analysis failed", error=str(e))
+            raise GeminiAPIException(f"Code quality analysis failed: {str(e)}")
+    
+    async def analyze_pr_changes(
+        self,
+        pr_diff: str,
+        pr_description: str,
+        project_context: Optional[Dict[str, Any]] = None
+    ) -> GeminiValidationResult:
+        """
+        Analyze PR changes for impact and quality
+        
+        Evaluates PR changes for potential issues, breaking changes,
+        and overall impact on the codebase.
+        """
+        try:
+            logger.info(
+                "Starting Gemini PR analysis",
+                diff_length=len(pr_diff),
+                description_length=len(pr_description)
+            )
+            
+            # Prepare PR analysis prompt
+            prompt = self.prompt_templates.get_pr_analysis_prompt(
+                pr_diff=pr_diff,
+                pr_description=pr_description,
+                project_context=project_context or {}
+            )
+            
+            # Generate AI response
+            response = await self._generate_response(prompt)
+            
+            # Parse response
+            result = self._parse_pr_analysis_response(response)
+            
+            logger.info(
+                "Gemini PR analysis completed",
+                confidence_score=result.confidence_score,
+                issues_found=len(result.issues_found)
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error("Gemini PR analysis failed", error=str(e))
+            raise GeminiAPIException(f"PR analysis failed: {str(e)}")
+    
+    async def generate_error_resolution(
+        self,
+        error_message: str,
+        error_context: Dict[str, Any],
+        previous_attempts: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate error resolution suggestions
+        
+        Analyzes errors and provides intelligent suggestions for resolution
+        based on context and previous attempts.
+        """
+        try:
+            logger.info(
+                "Generating error resolution",
+                error_type=error_context.get("error_type", "unknown")
+            )
+            
+            # Prepare error resolution prompt
+            prompt = self.prompt_templates.get_error_resolution_prompt(
+                error_message=error_message,
+                error_context=error_context,
+                previous_attempts=previous_attempts or []
+            )
+            
+            # Generate AI response
+            response = await self._generate_response(prompt)
+            
+            # Parse response
+            resolution = self._parse_error_resolution_response(response)
+            
+            logger.info("Error resolution generated", suggestions=len(resolution.get("suggestions", [])))
+            
+            return resolution
+            
+        except Exception as e:
+            logger.error("Error resolution generation failed", error=str(e))
+            raise GeminiAPIException(f"Error resolution failed: {str(e)}")
+    
+    async def assess_merge_readiness(
+        self,
+        validation_results: Dict[str, Any],
+        project_requirements: Dict[str, Any],
+        risk_tolerance: str = "medium"
+    ) -> Dict[str, Any]:
+        """
+        Assess PR merge readiness using AI
+        
+        Evaluates all validation results and provides intelligent merge
+        recommendations based on project requirements and risk tolerance.
+        """
+        try:
+            logger.info(
+                "Assessing merge readiness",
+                risk_tolerance=risk_tolerance,
+                validation_stages=len(validation_results)
+            )
+            
+            # Prepare merge assessment prompt
+            prompt = self.prompt_templates.get_merge_assessment_prompt(
+                validation_results=validation_results,
+                project_requirements=project_requirements,
+                risk_tolerance=risk_tolerance
+            )
+            
+            # Generate AI response
+            response = await self._generate_response(prompt)
+            
+            # Parse response
+            assessment = self._parse_merge_assessment_response(response)
+            
+            logger.info(
+                "Merge readiness assessed",
+                recommendation=assessment.get("recommendation", "unknown"),
+                confidence=assessment.get("confidence", 0.0)
+            )
+            
+            return assessment
+            
+        except Exception as e:
+            logger.error("Merge readiness assessment failed", error=str(e))
+            raise GeminiAPIException(f"Merge assessment failed: {str(e)}")
+    
+    # Private helper methods
+    
+    async def _generate_response(self, prompt: str, max_retries: int = 3) -> str:
+        """
+        Generate response from Gemini API with retry logic
+        """
+        for attempt in range(max_retries):
+            try:
+                # Add delay between retries
+                if attempt > 0:
+                    await asyncio.sleep(2 ** attempt)
+                
+                # Generate response
+                response = await asyncio.to_thread(
+                    self.model.generate_content,
+                    prompt
+                )
+                
+                if response.text:
+                    return response.text
+                else:
+                    raise GeminiAPIException("Empty response from Gemini API")
+                    
+            except Exception as e:
+                error_str = str(e).lower()
+                
+                # Handle rate limiting
+                if "quota" in error_str or "rate" in error_str or "429" in error_str:
+                    if attempt < max_retries - 1:
+                        wait_time = min(60, 2 ** (attempt + 2))
+                        logger.warning(f"Rate limited, waiting {wait_time}s before retry")
+                        await asyncio.sleep(wait_time)
+                        continue
+                    else:
+                        raise RateLimitException("gemini", retry_after=60)
+                
+                # Handle other errors
+                if attempt == max_retries - 1:
+                    raise GeminiAPIException(f"Failed after {max_retries} attempts: {str(e)}")
+                
+                logger.warning(f"Attempt {attempt + 1} failed, retrying: {str(e)}")
+        
+        raise GeminiAPIException("Max retries exceeded")
+    
+    def _parse_validation_response(self, response: str) -> GeminiValidationResult:
+        """Parse deployment validation response"""
+        try:
+            # Try to parse as JSON first
+            if response.strip().startswith('{'):
+                data = json.loads(response)
+                return GeminiValidationResult(
+                    success=data.get("success", False),
+                    confidence_score=data.get("confidence_score", 0.0),
+                    analysis=data.get("analysis", response),
+                    recommendations=data.get("recommendations", []),
+                    issues_found=data.get("issues_found", []),
+                    code_quality_score=data.get("code_quality_score", 0.0),
+                    security_score=data.get("security_score", 0.0),
+                    performance_score=data.get("performance_score", 0.0),
+                    maintainability_score=data.get("maintainability_score", 0.0)
+                )
+            
+            # Fallback to text parsing
+            return self._parse_text_response(response)
+            
+        except json.JSONDecodeError:
+            return self._parse_text_response(response)
+    
+    def _parse_text_response(self, response: str) -> GeminiValidationResult:
+        """Parse text-based response"""
+        lines = response.split('\n')
+        
+        # Extract key information using simple text parsing
+        success = "success" in response.lower() and "fail" not in response.lower()
+        confidence_score = self._extract_score(response, "confidence")
+        
+        # Extract recommendations
+        recommendations = []
+        in_recommendations = False
+        for line in lines:
+            if "recommendation" in line.lower():
+                in_recommendations = True
+                continue
+            if in_recommendations and line.strip().startswith(('-', '*', '•')):
+                recommendations.append(line.strip()[1:].strip())
+        
+        return GeminiValidationResult(
+            success=success,
+            confidence_score=confidence_score,
+            analysis=response,
+            recommendations=recommendations,
+            code_quality_score=self._extract_score(response, "quality"),
+            security_score=self._extract_score(response, "security"),
+            performance_score=self._extract_score(response, "performance"),
+            maintainability_score=self._extract_score(response, "maintainability")
+        )
+    
+    def _extract_score(self, text: str, score_type: str) -> float:
+        """Extract numeric score from text"""
+        import re
+        
+        patterns = [
+            rf"{score_type}[:\s]+(\d+(?:\.\d+)?)",
+            rf"{score_type}[:\s]+(\d+(?:\.\d+)?)/10",
+            rf"{score_type}[:\s]+(\d+(?:\.\d+)?)%"
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                score = float(match.group(1))
+                # Normalize to 0-1 range
+                if score > 1:
+                    score = score / 10 if score <= 10 else score / 100
+                return min(1.0, max(0.0, score))
+        
+        return 0.0
+    
+    def _parse_code_analysis_response(self, response: str) -> GeminiValidationResult:
+        """Parse code analysis response"""
+        return self._parse_validation_response(response)
+    
+    def _parse_pr_analysis_response(self, response: str) -> GeminiValidationResult:
+        """Parse PR analysis response"""
+        return self._parse_validation_response(response)
+    
+    def _parse_error_resolution_response(self, response: str) -> Dict[str, Any]:
+        """Parse error resolution response"""
+        try:
+            if response.strip().startswith('{'):
+                return json.loads(response)
+            
+            # Fallback text parsing
+            return {
+                "suggestions": [line.strip() for line in response.split('\n') if line.strip()],
+                "confidence": 0.7,
+                "estimated_fix_time": "unknown"
+            }
+            
+        except json.JSONDecodeError:
+            return {
+                "suggestions": [response],
+                "confidence": 0.5,
+                "estimated_fix_time": "unknown"
+            }
+    
+    def _parse_merge_assessment_response(self, response: str) -> Dict[str, Any]:
+        """Parse merge assessment response"""
+        try:
+            if response.strip().startswith('{'):
+                return json.loads(response)
+            
+            # Fallback text parsing
+            recommendation = "manual_review"
+            if "approve" in response.lower() or "merge" in response.lower():
+                recommendation = "approve"
+            elif "reject" in response.lower() or "block" in response.lower():
+                recommendation = "reject"
+            
+            return {
+                "recommendation": recommendation,
+                "confidence": self._extract_score(response, "confidence"),
+                "reasoning": response,
+                "risk_factors": [],
+                "requirements_met": {}
+            }
+            
+        except json.JSONDecodeError:
+            return {
+                "recommendation": "manual_review",
+                "confidence": 0.5,
+                "reasoning": response,
+                "risk_factors": [],
+                "requirements_met": {}
+            }
 
