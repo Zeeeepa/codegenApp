@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False, description="Debug mode")
     
     # Codegen API configuration
+    codegen_org_id: str = Field(..., description="Codegen organization ID")
     codegen_api_token: str = Field(..., description="Codegen API token")
     codegen_api_base_url: str = Field(
         default="https://api.codegen.com", 
