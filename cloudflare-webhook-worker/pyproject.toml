@@ -1,0 +1,15 @@
+[project]
+name = "codegenapp-webhook-handler"
+version = "1.0.0"
+description = "Cloudflare Worker for GitHub PR webhook processing and Grainchain validation triggering"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "httpx",
+    "python-multipart",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

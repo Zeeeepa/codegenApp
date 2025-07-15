@@ -1,0 +1,22 @@
+name = "codegenapp-webhook-handler"
+main = "src/worker.py"
+compatibility_flags = ["python_workers"]
+compatibility_date = "2025-03-16"
+
+[observability.logs]
+enabled = true
+
+[[rules]]
+globs = ["vendor/**"]
+type = "Data"
+fallthrough = true
+
+[vars]
+# Environment variables (set via wrangler secret put)
+# GITHUB_WEBHOOK_SECRET = "your-webhook-secret"
+# CODEGENAPP_BASE_URL = "https://your-codegenapp-domain.com"
+
+# Optional: Custom domain configuration
+# [[routes]]
+# pattern = "webhooks.your-domain.com/*"
+# zone_name = "your-domain.com"

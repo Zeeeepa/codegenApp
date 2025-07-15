@@ -352,12 +352,23 @@ CodegenApp is a full-stack platform that orchestrates multiple AI-powered tools 
 - **Testing**: Jest + Supertest
 
 ### Backend Services Layer
-- **Framework**: FastAPI (Python 3.11+)
+- **Framework**: FastAPI (Python 3.12+)
 - **Architecture**: Clean Architecture with Domain-Driven Design
 - **API**: RESTful APIs with OpenAPI/Swagger documentation
 - **Validation**: Pydantic models with strict type checking
 - **Testing**: Pytest + AsyncIO testing
 - **Documentation**: Auto-generated API docs
+
+### Webhook & Edge Layer
+- **Platform**: Cloudflare Workers with Python support
+- **Runtime**: Pyodide (Python in WebAssembly)
+- **Package Manager**: uv for fast Python dependency management
+- **Features**: 
+  - Global edge deployment
+  - GitHub webhook processing
+  - Automatic PR validation triggering
+  - Real-time event routing
+  - Secure signature validation
 
 ### External Integrations
 
@@ -539,14 +550,16 @@ graph TD
 
 ### Prerequisites
 - **Node.js 18+** and npm
-- **Python 3.11+** with pip
+- **Python 3.12+** with pip and uv package manager
 - **Docker** (for local development)
 - **Git** for version control
+- **Cloudflare Account** (for webhook handling)
 
 ### Required API Keys
 - **Codegen API Token**: Get from [Codegen Dashboard](https://app.codegen.com/settings)
 - **Google Gemini API Key**: For web evaluation features
 - **GitHub Token**: For GitHub integration features
+- **Cloudflare API Token**: For webhook worker deployment
 - **Netlify/Vercel Token**: For deployment features (optional)
 
 ### Installation
@@ -643,6 +656,115 @@ npm start              # Frontend (port 3000)
 - **Proxy Server**: `http://localhost:3001`
 - **API Documentation**: `http://localhost:8000/docs`
 
+## 🔔 PR Notification System & Webhook Integration
+
+### Current PR Monitoring Architecture
+
+CodegenApp implements a **hybrid PR notification system** that combines manual synchronization with automated webhook processing:
+
+#### ✅ **Implemented Components**
+
+1. **Manual PR Sync System**
+   - `syncProjectWithGitHub()` function for on-demand PR data fetching
+   - `updateProjectPRCount()` for tracking PR counts per project
+   - GitHub API integration for comprehensive PR metadata
+   - Project cache system for PR data persistence
+
+2. **Event Bus Infrastructure** 
+   - Comprehensive event system in `backend/app/core/integration/event_bus.py`
+   - Event publishing, subscription, and routing capabilities
+   - Ready for webhook integration but not yet connected
+
+3. **Web-Eval-Agent Integration**
+   - PR testing capabilities via web-eval-agent
+   - Automated UI/UX validation for PR changes
+   - Performance testing and screenshot capture
+
+#### 🚧 **Webhook System Implementation**
+
+**Cloudflare Worker for GitHub Webhooks**
+
+The system includes a Cloudflare Worker (`cloudflare-webhook-worker/`) that:
+
+- **Receives GitHub webhook events** for PR actions (opened, synchronized, closed)
+- **Validates webhook signatures** for security
+- **Triggers Grainchain validation flow** automatically when PRs are created/updated
+- **Notifies dashboard** of PR status changes in real-time
+- **Handles multiple repositories** with configurable webhook targets
+
+**Key Features:**
+```python
+# Automatic PR validation triggering
+@app.post("/webhook/github")
+async def handle_github_webhook():
+    # Validates GitHub signature
+    # Triggers Grainchain validation for PR events
+    # Updates dashboard with real-time PR status
+```
+
+**Backend Webhook Endpoints**
+
+New webhook endpoints in `backend/app/api/v1/routes/webhooks.py`:
+
+- `POST /api/v1/webhooks/pr-validation` - Triggers validation workflow
+- `POST /api/v1/webhooks/pr-update` - Updates dashboard PR status
+- `GET /api/v1/webhooks/status` - System health check
+- `GET /api/v1/webhooks/events/recent` - Recent webhook events
+
+#### 🔧 **Project-Specific Webhook Configuration**
+
+When adding projects to the dashboard, each project can be configured with:
+
+1. **Webhook Target URL**: Specific domain URL for webhook delivery
+2. **Validation Settings**: Custom validation rules per project
+3. **Event Filtering**: Choose which PR events trigger validation
+4. **Security Configuration**: Project-specific webhook secrets
+
+**Implementation Flow:**
+```
+GitHub PR Event → Cloudflare Worker → CodegenApp Backend → Grainchain Validation → Dashboard Update
+```
+
+#### 📋 **Setup Instructions**
+
+1. **Deploy Cloudflare Worker**
+   ```bash
+   cd cloudflare-webhook-worker
+   ./build.sh
+   wrangler secret put GITHUB_WEBHOOK_SECRET
+   wrangler secret put CODEGENAPP_BASE_URL
+   npx wrangler deploy
+   ```
+
+2. **Configure GitHub Webhooks**
+   - Add webhook URL: `https://your-worker.workers.dev/webhook/github`
+   - Select events: `pull_request`, `push`
+   - Set webhook secret (same as Cloudflare Worker)
+
+3. **Update Project Configuration**
+   - Set `WEBHOOK_WORKER_URL` in environment
+   - Configure project-specific webhook targets
+   - Test webhook delivery with `/webhook/test` endpoint
+
+#### 🎯 **Value-Added Components Analysis**
+
+| Component | Value Rating | Integration Status | Benefits |
+|-----------|-------------|-------------------|----------|
+| **Event Bus System** | ⭐⭐⭐ | Ready for integration | Real-time updates, scalable architecture |
+| **GitHub API Client** | ⭐⭐⭐ | Fully implemented | Comprehensive PR data, reliable sync |
+| **Cloudflare Worker** | ⭐⭐⭐ | New implementation | Fast webhook processing, global edge |
+| **Grainchain Integration** | ⭐⭐⭐ | Ready for webhooks | Automated validation, sandbox testing |
+| **Web-Eval-Agent** | ⭐⭐ | Manual trigger only | UI testing, performance validation |
+| **Project Cache System** | ⭐⭐ | Basic implementation | Fast data access, offline capability |
+
+#### 🚀 **Future Enhancements**
+
+- **Real-time Dashboard Updates**: WebSocket integration for live PR status
+- **Advanced Filtering**: Custom rules for webhook event processing  
+- **Multi-Repository Management**: Bulk webhook configuration
+- **Analytics Dashboard**: Webhook delivery metrics and success rates
+- **Notification Channels**: Slack, email, and custom integrations
+
 ## 📚 API Documentation
 
 ### Core API Endpoints
@@ -681,6 +803,15 @@ POST   /api/v1/workflows                # Create workflow
 GET    /api/v1/workflows/{id}           # Get workflow details
 PUT    /api/v1/workflows/{id}           # Update workflow
 POST   /api/v1/workflows/{id}/execute   # Execute workflow
+```
+
+#### Webhook Management
+```http
+POST   /api/v1/webhooks/pr-validation  # Trigger PR validation workflow
+POST   /api/v1/webhooks/pr-update      # Update PR status in dashboard
+GET    /api/v1/webhooks/status         # Get webhook system status
+POST   /api/v1/webhooks/test           # Test webhook functionality
+GET    /api/v1/webhooks/events/recent  # Get recent webhook events
 ```
 
 ### Response Format
