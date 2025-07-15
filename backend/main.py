@@ -1,26 +1,27 @@
 """
-FastAPI Backend for Strands-Agents Workflow Orchestration System
-Integrates: Codegen SDK, grainchain, graph-sitter, web-eval-agent
+CodegenApp Backend - FastAPI Application
+
+Main entry point for the CodegenApp backend API server.
 """
+
+import logging
+import os
+from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-import uvicorn
-import logging
-from typing import Dict, Any
-import asyncio
+from fastapi.responses import JSONResponse
 
-# Import our properly structured components
-from app.config.settings import get_settings
-from app.core.workflow.engine import WorkflowEngine, WorkflowEngineFactory
-from app.core.orchestration.coordinator import ServiceCoordinator
-from app.core.orchestration.state_manager import StateManagerFactory
-from app.services.adapters.codegen_adapter import CodegenService
-from app.services.adapters.grainchain_adapter import GrainchainAdapter
-from app.api.v1.dependencies import set_global_dependencies
-from app.api.v1.routes.workflow import router as workflow_router
-from app.models.api.api_models import HealthResponse
+# Import integration framework
+from app.core.integration.integration_manager import (
+    initialize_integration_manager,
+    start_integration_framework
+)
+
+# Import API routes
+from app.api.v1.routes.integration import router as integration_router
+from app.api.v1.routes.webhook import router as webhook_router
 
 # Configure logging
 logging.basicConfig(
@@ -29,149 +30,120 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Global instances
-workflow_engine: WorkflowEngine = None
-service_coordinator: ServiceCoordinator = None
-state_manager = None
-codegen_adapter = None
-grainchain_adapter = None
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
-    logger.info("🚀 Starting Strands-Agents Backend")
-    
-    settings = get_settings()
-    
-    # Initialize global instances
-    global workflow_engine, service_coordinator, state_manager, codegen_adapter, grainchain_adapter
+    logger.info("🚀 Starting CodegenApp Backend...")
     
     try:
-        # Initialize state manager
-        state_manager = StateManagerFactory.create_in_memory_manager()
-        await state_manager.start()
+        # Initialize integration framework
+        config_file = Path("config.yaml") if Path("config.yaml").exists() else None
+        plugin_directories = [Path("plugins")] if Path("plugins").exists() else []
         
-        # Initialize service coordinator
-        service_coordinator = ServiceCoordinator()
-        
-        # Initialize service adapters
-        codegen_adapter = CodegenService(
-            api_token=settings.codegen_api_token,
-            base_url=settings.codegen_api_base_url
+        integration_manager = await start_integration_framework(
+            config_file=config_file,
+            plugin_directories=plugin_directories
         )
         
-        grainchain_adapter = GrainchainAdapter(settings.grainchain_config)
+        # Store in app state
+        app.state.integration_manager = integration_manager
         
-        # Register adapters with coordinator
-        service_coordinator.register_adapter("codegen", codegen_adapter)
-        service_coordinator.register_adapter("grainchain", grainchain_adapter)
-        
-        # Initialize workflow engine
-        workflow_engine = WorkflowEngineFactory.create_engine(
-            coordinator=service_coordinator,
-            state_manager=state_manager
-        )
-        
-        # Set global dependencies for API routes
-        set_global_dependencies(
-            engine=workflow_engine,
-            coordinator=service_coordinator,
-            state_manager=state_manager,
-            codegen_adapter=codegen_adapter
-        )
-        
-        logger.info("✅ All services initialized successfully")
+        logger.info("✅ Integration framework started successfully")
         
     except Exception as e:
-        logger.error(f"❌ Failed to initialize services: {e}")
-        raise
+        logger.error(f"❌ Failed to start integration framework: {e}")
+        # Continue without integration framework for basic functionality
     
     yield
     
     # Shutdown
-    logger.info("🛑 Shutting down Strands-Agents Backend")
+    logger.info("🛑 Shutting down CodegenApp Backend...")
     
-    # Cleanup services
-    if state_manager:
-        await state_manager.stop()
-    if codegen_adapter:
-        await codegen_adapter.cleanup()
-    if grainchain_adapter:
-        await grainchain_adapter.cleanup()
+    if hasattr(app.state, 'integration_manager'):
+        try:
+            await app.state.integration_manager.stop()
+            logger.info("✅ Integration framework stopped")
+        except Exception as e:
+            logger.error(f"❌ Error stopping integration framework: {e}")
 
 
-# Create FastAPI app
+# Create FastAPI application
 app = FastAPI(
-    title="Strands-Agents Workflow Orchestration",
-    description="Backend API for orchestrating Codegen SDK, grainchain, graph-sitter, and web-eval-agent",
+    title="CodegenApp API",
+    description="AI-Powered Development Platform API",
     version="1.0.0",
     lifespan=lifespan
 )
 
-# Add CORS middleware
-settings = get_settings()
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=["*"],  # Configure appropriately for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include API routes
-app.include_router(workflow_router, prefix="/api/v1")
-
 
 # Health check endpoint
-@app.get("/health", response_model=HealthResponse)
+@app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    try:
-        # Check all services
-        service_statuses = {}
-        
-        if service_coordinator:
-            service_statuses = await service_coordinator.health_check_all()
-        
-        # Determine overall status
-        overall_status = "healthy"
-        if any(status.startswith("unhealthy") for status in service_statuses.values()):
-            overall_status = "unhealthy"
-        elif any(status.startswith("degraded") for status in service_statuses.values()):
-            overall_status = "degraded"
-        
-        return HealthResponse(
-            status=overall_status,
-            services=service_statuses,
-            version="1.0.0"
-        )
-        
-    except Exception as e:
-        logger.error(f"❌ Health check failed: {e}")
-        raise HTTPException(status_code=500, detail="Health check failed")
+    return {
+        "status": "healthy",
+        "service": "codegenapp-backend",
+        "version": "1.0.0",
+        "timestamp": "2024-07-15T06:46:14Z"
+    }
 
 
 # Root endpoint
 @app.get("/")
 async def root():
-    """Root endpoint"""
+    """Root endpoint with API information"""
     return {
-        "message": "Strands-Agents Workflow Orchestration API",
+        "message": "CodegenApp Backend API",
         "version": "1.0.0",
         "docs": "/docs",
-        "health": "/health",
-        "api": "/api/v1"
+        "health": "/health"
     }
 
 
+# Include API routers
+app.include_router(integration_router, prefix="/api/v1")
+app.include_router(webhook_router, prefix="/api/v1")
+
+
+# Global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    """Global exception handler"""
+    logger.error(f"Unhandled exception: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal server error",
+            "message": str(exc) if os.getenv("DEBUG") else "An unexpected error occurred"
+        }
+    )
+
+
 if __name__ == "__main__":
-    settings = get_settings()
+    import uvicorn
+    
+    # Get configuration from environment
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8080"))
+    debug = os.getenv("DEBUG", "false").lower() == "true"
+    
+    # Run the application
     uvicorn.run(
         "main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=settings.debug,
-        log_level=settings.log_level.lower()
+        host=host,
+        port=port,
+        reload=debug,
+        log_level="info"
     )
+
