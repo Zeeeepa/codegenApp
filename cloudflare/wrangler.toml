@@ -1,0 +1,22 @@
+name = "webhook-gateway"
+main = "src/worker.py"
+compatibility_flags = ["python_workers"]
+compatibility_date = "2025-03-16"
+
+[observability.logs]
+enabled = true
+
+[[rules]]
+globs = ["vendor/**"]
+type = "Data"
+fallthrough = true
+
+[vars]
+# Environment variables will be set during deployment
+ENVIRONMENT = "production"
+
+# Secrets (set via wrangler secret put)
+# CLOUDFLARE_API_KEY
+# GITHUB_WEBHOOK_SECRET
+# GRAINCHAIN_API_URL
+

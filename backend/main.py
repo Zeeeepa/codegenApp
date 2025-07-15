@@ -18,8 +18,10 @@ from app.core.orchestration.coordinator import ServiceCoordinator
 from app.core.orchestration.state_manager import StateManagerFactory
 from app.services.adapters.codegen_adapter import CodegenService
 from app.services.adapters.grainchain_adapter import GrainchainAdapter
+from app.services.grainchain_webhook_service import GrainchainWebhookService
 from app.api.v1.dependencies import set_global_dependencies
 from app.api.v1.routes.workflow import router as workflow_router
+from app.api.v1.routes.webhook import router as webhook_router
 from app.models.api.api_models import HealthResponse
 
 # Configure logging
@@ -35,6 +37,7 @@ service_coordinator: ServiceCoordinator = None
 state_manager = None
 codegen_adapter = None
 grainchain_adapter = None
+grainchain_webhook_service = None
 
 
 @asynccontextmanager
@@ -46,7 +49,7 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     
     # Initialize global instances
-    global workflow_engine, service_coordinator, state_manager, codegen_adapter, grainchain_adapter
+    global workflow_engine, service_coordinator, state_manager, codegen_adapter, grainchain_adapter, grainchain_webhook_service
     
     try:
         # Initialize state manager
@@ -64,6 +67,12 @@ async def lifespan(app: FastAPI):
         
         grainchain_adapter = GrainchainAdapter(settings.grainchain_config)
         
+        # Initialize grainchain webhook service
+        grainchain_webhook_service = GrainchainWebhookService(
+            grainchain_adapter=grainchain_adapter,
+            config=settings.grainchain_config
+        )
+        
         # Register adapters with coordinator
         service_coordinator.register_adapter("codegen", codegen_adapter)
         service_coordinator.register_adapter("grainchain", grainchain_adapter)
@@ -79,7 +88,8 @@ async def lifespan(app: FastAPI):
             engine=workflow_engine,
             coordinator=service_coordinator,
             state_manager=state_manager,
-            codegen_adapter=codegen_adapter
+            codegen_adapter=codegen_adapter,
+            grainchain_webhook_service=grainchain_webhook_service
         )
         
         logger.info("✅ All services initialized successfully")
@@ -100,6 +110,8 @@ async def lifespan(app: FastAPI):
         await codegen_adapter.cleanup()
     if grainchain_adapter:
         await grainchain_adapter.cleanup()
+    if grainchain_webhook_service:
+        await grainchain_webhook_service.cleanup()
 
 
 # Create FastAPI app
@@ -122,6 +134,7 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(workflow_router, prefix="/api/v1")
+app.include_router(webhook_router, prefix="/api/v1")
 
 
 # Health check endpoint
