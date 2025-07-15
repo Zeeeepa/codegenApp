@@ -23,7 +23,11 @@ dist/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
 server/.env
+
+# API Keys (contains actual secrets)
+API_KEYS.md
 
 # Logs
 npm-debug.log*
