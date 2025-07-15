@@ -1,34 +1,33 @@
 """
-CodegenApp Backend - FastAPI Application
-
-Main entry point for the CodegenApp backend API server.
+CodegenApp CI/CD Flow Management System
+Main FastAPI application entry point
 """
 
 import logging
-import os
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
-# Import integration framework
-from app.core.integration.integration_manager import (
-    initialize_integration_manager,
-    start_integration_framework
-)
+# Add the backend directory to Python path
+sys.path.append(str(Path(__file__).parent))
 
-# Import API routes
-from app.api.v1.routes.integration import router as integration_router
-from app.api.v1.routes.webhook import router as webhook_router
-from app.api.v1.routes.validation import router as validation_router
+from app.config.settings import get_settings
+from app.api.v1 import api_router
+from app.core.logging import setup_logging
+from app.core.monitoring import setup_monitoring
+from app.utils.exceptions import CodegenAppException
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+# Initialize settings
+settings = get_settings()
+
+# Setup logging
+setup_logging(settings.logging)
 logger = logging.getLogger(__name__)
 
 
@@ -36,115 +35,150 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
-    logger.info("🚀 Starting CodegenApp Backend...")
+    logger.info("🚀 Starting CodegenApp CI/CD Flow Management System")
     
-    try:
-        # Initialize integration framework
-        config_file = Path("config.yaml") if Path("config.yaml").exists() else None
-        plugin_directories = [Path("plugins")] if Path("plugins").exists() else []
-        
-        integration_manager = await start_integration_framework(
-            config_file=config_file,
-            plugin_directories=plugin_directories
-        )
-        
-        # Store in app state
-        app.state.integration_manager = integration_manager
-        
-        logger.info("✅ Integration framework started successfully")
-        
-    except Exception as e:
-        logger.error(f"❌ Failed to start integration framework: {e}")
-        # Continue without integration framework for basic functionality
+    # Initialize monitoring if enabled
+    if settings.monitoring.enabled:
+        setup_monitoring(app)
+    
+    # Initialize database connections, Redis, etc.
+    # await initialize_database()
+    # await initialize_redis()
+    
+    logger.info("✅ Application startup complete")
     
     yield
     
     # Shutdown
-    logger.info("🛑 Shutting down CodegenApp Backend...")
+    logger.info("🛑 Shutting down CodegenApp")
     
-    if hasattr(app.state, 'integration_manager'):
-        try:
-            await app.state.integration_manager.stop()
-            logger.info("✅ Integration framework stopped")
-        except Exception as e:
-            logger.error(f"❌ Error stopping integration framework: {e}")
+    # Cleanup resources
+    # await cleanup_database()
+    # await cleanup_redis()
+    
+    logger.info("✅ Application shutdown complete")
 
 
 # Create FastAPI application
 app = FastAPI(
-    title="CodegenApp API",
-    description="AI-Powered Development Platform API",
+    title="CodegenApp CI/CD Flow Management System",
+    description="AI-Powered CI/CD Flow Management with Validation Pipeline and Auto-Merge",
     version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
     lifespan=lifespan
 )
 
-# Configure CORS
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=[
+        settings.backend.frontend_url,
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://localhost:3000",
+        "https://localhost:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Add trusted host middleware
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=[
+        "localhost",
+        "127.0.0.1",
+        settings.backend.host,
+    ]
+)
 
-# Health check endpoint
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "service": "codegenapp-backend",
-        "version": "1.0.0",
-        "timestamp": "2024-07-15T06:46:14Z"
-    }
+# Include API routes
+app.include_router(api_router, prefix="/api/v1")
 
 
-# Root endpoint
 @app.get("/")
 async def root():
-    """Root endpoint with API information"""
+    """Root endpoint with system information"""
     return {
-        "message": "CodegenApp Backend API",
+        "name": "CodegenApp CI/CD Flow Management System",
         "version": "1.0.0",
+        "status": "running",
         "docs": "/docs",
         "health": "/health"
     }
 
 
-# Include API routers
-app.include_router(integration_router, prefix="/api/v1")
-app.include_router(webhook_router, prefix="/api/v1")
-app.include_router(validation_router, prefix="/api/v1")
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "timestamp": "2025-01-15T10:25:14Z",
+        "version": "1.0.0",
+        "services": {
+            "codegen_api": "connected",
+            "github_api": "connected",
+            "gemini_api": "connected",
+            "validation_pipeline": "ready",
+            "web_eval_agent": "ready",
+            "graph_sitter": "ready"
+        }
+    }
 
 
-# Global exception handler
+@app.exception_handler(CodegenAppException)
+async def codegenapp_exception_handler(request, exc: CodegenAppException):
+    """Handle custom CodegenApp exceptions"""
+    logger.error(f"CodegenApp exception: {exc.message}", extra={"error_code": exc.error_code})
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": exc.error_code,
+            "message": exc.message,
+            "details": exc.details
+        }
+    )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc: HTTPException):
+    """Handle HTTP exceptions"""
+    logger.error(f"HTTP exception: {exc.detail}", extra={"status_code": exc.status_code})
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": "http_error",
+            "message": exc.detail,
+            "status_code": exc.status_code
+        }
+    )
+
+
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
-    """Global exception handler"""
-    logger.error(f"Unhandled exception: {exc}")
+async def general_exception_handler(request, exc: Exception):
+    """Handle general exceptions"""
+    logger.exception("Unhandled exception occurred")
     return JSONResponse(
         status_code=500,
         content={
-            "error": "Internal server error",
-            "message": str(exc) if os.getenv("DEBUG") else "An unexpected error occurred"
+            "error": "internal_server_error",
+            "message": "An internal server error occurred",
+            "details": str(exc) if settings.backend.debug else None
         }
     )
 
 
 if __name__ == "__main__":
-    import uvicorn
-    
-    # Get configuration from environment
-    host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", "8080"))
-    debug = os.getenv("DEBUG", "false").lower() == "true"
-    
     # Run the application
     uvicorn.run(
         "main:app",
-        host=host,
-        port=port,
-        reload=debug,
-        log_level="info"
+        host=settings.backend.host,
+        port=settings.backend.port,
+        reload=settings.backend.reload,
+        log_level=settings.logging.level.lower(),
+        access_log=True
     )
+

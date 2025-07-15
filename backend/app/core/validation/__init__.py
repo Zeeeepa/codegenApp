@@ -1,4 +1,5 @@
 """
-Validation module for CI/CD flow management system
+CodegenApp Validation Core
+Core validation pipeline components and orchestration
 """
 

@@ -1,208 +1,217 @@
 """
-Configuration settings for the Strands-Agents backend
+CodegenApp CI/CD Flow Management System Configuration
+Comprehensive settings management with environment variable support
 """
 
-from pydantic_settings import BaseSettings
-from pydantic import Field
-from typing import Optional, Dict, Any
 import os
+from typing import List, Optional
+from pydantic import BaseSettings, Field
+
+
+class CodegenAPISettings(BaseSettings):
+    """Codegen API configuration"""
+    api_token: str = Field(..., env="CODEGEN_API_TOKEN")
+    org_id: str = Field(..., env="CODEGEN_ORG_ID")
+    api_base: str = Field("https://api.codegen.com", env="CODEGEN_API_BASE")
+    timeout: int = Field(60, env="CODEGEN_TIMEOUT")
+    max_retries: int = Field(3, env="CODEGEN_MAX_RETRIES")
+
+
+class GitHubSettings(BaseSettings):
+    """GitHub API configuration"""
+    token: str = Field(..., env="GITHUB_TOKEN")
+    api_base: str = Field("https://api.github.com", env="GITHUB_API_BASE")
+    webhook_secret: str = Field(..., env="GITHUB_WEBHOOK_SECRET")
+    timeout: int = Field(30, env="GITHUB_TIMEOUT")
+
+
+class GeminiSettings(BaseSettings):
+    """Gemini AI API configuration"""
+    api_key: str = Field(..., env="GEMINI_API_KEY")
+    model: str = Field("gemini-1.5-pro-latest", env="GEMINI_MODEL")
+    temperature: float = Field(0.1, env="GEMINI_TEMPERATURE")
+    max_tokens: int = Field(8192, env="GEMINI_MAX_TOKENS")
+    timeout: int = Field(60, env="GEMINI_TIMEOUT")
+
+
+class CloudflareSettings(BaseSettings):
+    """Cloudflare Workers configuration"""
+    api_key: str = Field(..., env="CLOUDFLARE_API_KEY")
+    account_id: str = Field(..., env="CLOUDFLARE_ACCOUNT_ID")
+    zone_id: Optional[str] = Field(None, env="CLOUDFLARE_ZONE_ID")
+    worker_name: str = Field("webhook-gateway", env="CLOUDFLARE_WORKER_NAME")
+    worker_url: str = Field(..., env="CLOUDFLARE_WORKER_URL")
+
+
+class WebhookSettings(BaseSettings):
+    """Webhook configuration"""
+    base_url: str = Field(..., env="WEBHOOK_BASE_URL")
+    timeout: int = Field(30000, env="WEBHOOK_TIMEOUT")
+    max_retries: int = Field(3, env="WEBHOOK_MAX_RETRIES")
+    debug_mode: bool = Field(False, env="WEBHOOK_DEBUG_MODE")
+
+
+class WebEvalSettings(BaseSettings):
+    """Web-Eval-Agent configuration"""
+    mcp_path: str = Field("web-eval-agent", env="WEB_EVAL_MCP_PATH")
+    timeout: int = Field(300000, env="WEB_EVAL_TIMEOUT")
+    max_concurrent: int = Field(3, env="WEB_EVAL_MAX_CONCURRENT")
+    browser: str = Field("chromium", env="WEB_EVAL_BROWSER")
+    headless: bool = Field(True, env="WEB_EVAL_HEADLESS")
+
+
+class GraphSitterSettings(BaseSettings):
+    """Graph-Sitter configuration"""
+    cache_size: int = Field(1000, env="GRAPH_SITTER_CACHE_SIZE")
+    max_file_size: int = Field(1048576, env="GRAPH_SITTER_MAX_FILE_SIZE")
+    supported_languages: List[str] = Field(
+        ["python", "javascript", "typescript", "go", "rust", "java", "cpp", "c"],
+        env="GRAPH_SITTER_SUPPORTED_LANGUAGES"
+    )
+    timeout: int = Field(60000, env="GRAPH_SITTER_TIMEOUT")
+
+    class Config:
+        env_list_separator = ","
+
+
+class ValidationSettings(BaseSettings):
+    """Validation pipeline configuration"""
+    timeout: int = Field(1800, env="VALIDATION_TIMEOUT")
+    max_retries: int = Field(3, env="VALIDATION_MAX_RETRIES")
+    confidence_threshold: float = Field(0.8, env="VALIDATION_CONFIDENCE_THRESHOLD")
+    snapshot_ttl: int = Field(3600, env="VALIDATION_SNAPSHOT_TTL")
+    concurrent_limit: int = Field(5, env="VALIDATION_CONCURRENT_LIMIT")
+
+
+class DeploymentSettings(BaseSettings):
+    """Deployment configuration"""
+    timeout: int = Field(600, env="DEPLOYMENT_TIMEOUT")
+    max_retries: int = Field(2, env="DEPLOYMENT_MAX_RETRIES")
+    log_level: str = Field("INFO", env="DEPLOYMENT_LOG_LEVEL")
+    cleanup_timeout: int = Field(300, env="DEPLOYMENT_CLEANUP_TIMEOUT")
+
+
+class AutoMergeSettings(BaseSettings):
+    """Auto-merge configuration"""
+    enabled: bool = Field(True, env="AUTO_MERGE_ENABLED")
+    confidence_threshold: float = Field(0.9, env="AUTO_MERGE_CONFIDENCE_THRESHOLD")
+    error_threshold: int = Field(0, env="AUTO_MERGE_ERROR_THRESHOLD")
+    require_tests: bool = Field(True, env="AUTO_MERGE_REQUIRE_TESTS")
+
+
+class SandboxSettings(BaseSettings):
+    """Sandbox configuration"""
+    provider: str = Field("modal", env="SANDBOX_PROVIDER")
+    timeout: int = Field(3600, env="SANDBOX_TIMEOUT")
+    max_memory: int = Field(2048, env="SANDBOX_MAX_MEMORY")
+    max_cpu: int = Field(2, env="SANDBOX_MAX_CPU")
+    cleanup_delay: int = Field(300, env="SANDBOX_CLEANUP_DELAY")
+
+
+class SWEBenchSettings(BaseSettings):
+    """SWE-bench integration configuration"""
+    dataset: str = Field("lite", env="SWEBENCH_DATASET")
+    max_workers: int = Field(4, env="SWEBENCH_MAX_WORKERS")
+    timeout: int = Field(1800, env="SWEBENCH_TIMEOUT")
+    cache_level: str = Field("env", env="SWEBENCH_CACHE_LEVEL")
+
+
+class LoggingSettings(BaseSettings):
+    """Logging configuration"""
+    level: str = Field("INFO", env="LOG_LEVEL")
+    format: str = Field("json", env="LOG_FORMAT")
+    file_path: str = Field("logs/codegenapp.log", env="LOG_FILE_PATH")
+    max_size: str = Field("100MB", env="LOG_MAX_SIZE")
+    backup_count: int = Field(5, env="LOG_BACKUP_COUNT")
+
+
+class RedisSettings(BaseSettings):
+    """Redis configuration (optional)"""
+    url: Optional[str] = Field(None, env="REDIS_URL")
+    db: int = Field(0, env="REDIS_DB")
+    password: Optional[str] = Field(None, env="REDIS_PASSWORD")
+    timeout: int = Field(5, env="REDIS_TIMEOUT")
+
+
+class DatabaseSettings(BaseSettings):
+    """Database configuration (optional)"""
+    url: str = Field("sqlite:///./codegenapp.db", env="DATABASE_URL")
+    pool_size: int = Field(10, env="DATABASE_POOL_SIZE")
+    max_overflow: int = Field(20, env="DATABASE_MAX_OVERFLOW")
+
+
+class MonitoringSettings(BaseSettings):
+    """Monitoring configuration"""
+    enabled: bool = Field(True, env="METRICS_ENABLED")
+    port: int = Field(9090, env="METRICS_PORT")
+    health_check_interval: int = Field(30, env="HEALTH_CHECK_INTERVAL")
+    performance_monitoring: bool = Field(True, env="PERFORMANCE_MONITORING")
+
+
+class BackendSettings(BaseSettings):
+    """Backend server configuration"""
+    host: str = Field("0.0.0.0", env="BACKEND_HOST")
+    port: int = Field(8001, env="BACKEND_PORT")
+    frontend_url: str = Field("http://localhost:8000", env="FRONTEND_URL")
+    debug: bool = Field(False, env="DEBUG")
+    reload: bool = Field(False, env="RELOAD")
 
 
 class Settings(BaseSettings):
-    """Application settings"""
+    """Main application settings"""
     
-    # Server configuration
-    host: str = Field(default="0.0.0.0", description="Server host")
-    port: int = Field(default=8001, description="Server port")
-    debug: bool = Field(default=False, description="Debug mode")
+    # Core configurations
+    codegen: CodegenAPISettings = CodegenAPISettings()
+    github: GitHubSettings = GitHubSettings()
+    gemini: GeminiSettings = GeminiSettings()
+    cloudflare: CloudflareSettings = CloudflareSettings()
     
-    # Codegen API configuration
-    codegen_org_id: str = Field(..., description="Codegen organization ID")
-    codegen_api_token: str = Field(..., description="Codegen API token")
-    codegen_api_base_url: str = Field(
-        default="https://api.codegen.com", 
-        description="Codegen API base URL"
-    )
+    # Service configurations
+    webhook: WebhookSettings = WebhookSettings()
+    web_eval: WebEvalSettings = WebEvalSettings()
+    graph_sitter: GraphSitterSettings = GraphSitterSettings()
     
-    # GitHub API configuration
-    github_token: Optional[str] = Field(
-        default=None,
-        description="GitHub API token for repository access"
-    )
+    # Pipeline configurations
+    validation: ValidationSettings = ValidationSettings()
+    deployment: DeploymentSettings = DeploymentSettings()
+    auto_merge: AutoMergeSettings = AutoMergeSettings()
+    sandbox: SandboxSettings = SandboxSettings()
+    swebench: SWEBenchSettings = SWEBenchSettings()
     
-    # AI Services configuration
-    gemini_api_key: Optional[str] = Field(
-        default=None,
-        description="Google Gemini API key for AI analysis"
-    )
-    
-    # Cloudflare configuration
-    cloudflare_api_key: Optional[str] = Field(
-        default=None,
-        description="Cloudflare API key"
-    )
-    cloudflare_account_id: Optional[str] = Field(
-        default=None,
-        description="Cloudflare account ID"
-    )
-    cloudflare_worker_url: Optional[str] = Field(
-        default=None,
-        description="Cloudflare worker URL for webhooks"
-    )
-    
-    # Database configuration (for workflow persistence)
-    database_url: Optional[str] = Field(
-        default=None, 
-        description="Database URL for workflow persistence"
-    )
-    
-    # Redis configuration (for task queue and caching)
-    redis_url: str = Field(
-        default="redis://localhost:6379/0", 
-        description="Redis URL for task queue"
-    )
-    
-    # Grainchain configuration
-    grainchain_config: Dict[str, Any] = Field(
-        default_factory=lambda: {
-            "docker_host": "unix://var/run/docker.sock",
-            "registry_url": None,  # Docker registry for images
-            "default_timeout": 300,  # 5 minutes
-            "max_concurrent_sandboxes": 10,
-            "cleanup_interval": 3600,  # 1 hour
-        },
-        description="Grainchain service configuration"
-    )
-    
-    # Graph-sitter configuration
-    graph_sitter_config: Dict[str, Any] = Field(
-        default_factory=lambda: {
-            "supported_languages": [
-                "python", "javascript", "typescript", "go", 
-                "rust", "java", "cpp", "c"
-            ],
-            "cache_parsed_trees": True,
-            "max_file_size": 1024 * 1024,  # 1MB
-            "analysis_timeout": 30,  # 30 seconds
-        },
-        description="Graph-sitter service configuration"
-    )
-    
-    # Web-eval-agent configuration
-    web_eval_config: Dict[str, Any] = Field(
-        default_factory=lambda: {
-            "browser_type": "chromium",  # chromium, firefox, webkit
-            "headless": True,
-            "timeout": 60,  # 60 seconds
-            "max_concurrent_evaluations": 5,
-            "screenshot_on_failure": True,
-            "viewport": {"width": 1280, "height": 720},
-        },
-        description="Web-eval-agent service configuration"
-    )
-    
-    # Workflow orchestration configuration
-    workflow_config: Dict[str, Any] = Field(
-        default_factory=lambda: {
-            "max_concurrent_workflows": 20,
-            "default_timeout": 1800,  # 30 minutes
-            "retry_attempts": 3,
-            "retry_delay": 5,  # seconds
-            "enable_persistence": True,
-            "cleanup_completed_after": 86400,  # 24 hours
-        },
-        description="Workflow orchestration configuration"
-    )
-    
-    # Security configuration
-    secret_key: str = Field(
-        default="your-secret-key-change-in-production",
-        description="Secret key for JWT tokens"
-    )
-    access_token_expire_minutes: int = Field(
-        default=30, 
-        description="Access token expiration time in minutes"
-    )
-    
-    # Logging configuration
-    log_level: str = Field(default="INFO", description="Logging level")
-    log_format: str = Field(
-        default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        description="Log format"
-    )
-    
-    # CORS configuration
-    cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8000"],
-        description="Allowed CORS origins"
-    )
-    
-    # Monitoring configuration
-    enable_metrics: bool = Field(default=True, description="Enable Prometheus metrics")
-    metrics_port: int = Field(default=8002, description="Metrics server port")
+    # Infrastructure configurations
+    logging: LoggingSettings = LoggingSettings()
+    redis: RedisSettings = RedisSettings()
+    database: DatabaseSettings = DatabaseSettings()
+    monitoring: MonitoringSettings = MonitoringSettings()
+    backend: BackendSettings = BackendSettings()
     
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
-        
-        # Environment variable prefixes
-        env_prefix = ""
-        
-        # Allow extra fields for extensibility
-        extra = "allow"
 
 
 # Global settings instance
-_settings: Optional[Settings] = None
+settings = Settings()
 
 
 def get_settings() -> Settings:
-    """Get application settings (singleton pattern)"""
-    global _settings
-    if _settings is None:
-        _settings = Settings()
-    return _settings
-
-
-def reload_settings() -> Settings:
-    """Reload settings (useful for testing)"""
-    global _settings
-    _settings = None
-    return get_settings()
+    """Get application settings instance"""
+    return settings
 
 
 # Environment-specific configurations
-class DevelopmentSettings(Settings):
-    """Development environment settings"""
-    debug: bool = True
-    log_level: str = "DEBUG"
-    cors_origins: list[str] = ["*"]  # Allow all origins in development
+def is_development() -> bool:
+    """Check if running in development mode"""
+    return os.getenv("ENVIRONMENT", "development").lower() == "development"
 
 
-class ProductionSettings(Settings):
-    """Production environment settings"""
-    debug: bool = False
-    log_level: str = "INFO"
-    # CORS origins should be explicitly set in production
+def is_production() -> bool:
+    """Check if running in production mode"""
+    return os.getenv("ENVIRONMENT", "development").lower() == "production"
 
 
-class TestingSettings(Settings):
-    """Testing environment settings"""
-    debug: bool = True
-    log_level: str = "DEBUG"
-    database_url: str = "sqlite:///./test.db"
-    redis_url: str = "redis://localhost:6379/1"  # Use different Redis DB for tests
+def is_testing() -> bool:
+    """Check if running in testing mode"""
+    return os.getenv("ENVIRONMENT", "development").lower() == "testing"
 
-
-def get_settings_for_environment(env: str = None) -> Settings:
-    """Get settings for specific environment"""
-    if env is None:
-        env = os.getenv("ENVIRONMENT", "development").lower()
-    
-    if env == "production":
-        return ProductionSettings()
-    elif env == "testing":
-        return TestingSettings()
-    else:
-        return DevelopmentSettings()

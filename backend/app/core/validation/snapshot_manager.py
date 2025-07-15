@@ -1,325 +1,358 @@
 """
-Snapshot Manager for Validation Environments
-
-Creates isolated validation environments with pre-deployed tools for PR validation.
+CodegenApp Snapshot Manager
+Validation environment management with SWE-bench integration patterns
 """
 
 import asyncio
-import os
-import shutil
-import tempfile
-import uuid
-from pathlib import Path
-from typing import Dict, Any, Optional, List
-import logging
-import subprocess
 import json
+import uuid
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Dict, List, Optional, Any
+import tempfile
+import shutil
 
 from app.config.settings import get_settings
+from app.core.logging import get_logger
+from app.models.validation import SnapshotInfo
+from app.utils.exceptions import SnapshotException
+from app.services.git_service import GitService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+settings = get_settings()
 
 
 class ValidationSnapshot:
-    """Represents a validation environment snapshot"""
+    """
+    Individual validation snapshot
     
-    def __init__(self, snapshot_id: str, project_name: str, pr_number: int):
+    Represents an isolated environment for validation with pre-installed tools
+    and dependencies. Based on SWE-bench sandbox patterns.
+    """
+    
+    def __init__(
+        self,
+        snapshot_id: str,
+        project_name: str,
+        workspace_path: str,
+        tools_installed: List[str],
+        created_at: datetime
+    ):
         self.snapshot_id = snapshot_id
         self.project_name = project_name
-        self.pr_number = pr_number
-        self.workspace_path: Optional[Path] = None
-        self.status = "initializing"
-        self.created_at = None
-        self.logs: List[str] = []
-        self.environment_vars: Dict[str, str] = {}
+        self.workspace_path = workspace_path
+        self.tools_installed = tools_installed
+        self.created_at = created_at
+        self.last_used = created_at
+        self.status = "active"
+        self.metadata: Dict[str, Any] = {}
+    
+    def to_info(self) -> SnapshotInfo:
+        """Convert to SnapshotInfo model"""
+        workspace_size = self._calculate_size()
         
-    def add_log(self, message: str):
-        """Add log message to snapshot"""
-        self.logs.append(f"[{self.snapshot_id}] {message}")
-        logger.info(f"Snapshot {self.snapshot_id}: {message}")
+        return SnapshotInfo(
+            snapshot_id=self.snapshot_id,
+            project_name=self.project_name,
+            created_at=self.created_at,
+            last_used=self.last_used,
+            size_mb=workspace_size,
+            status=self.status,
+            tools_installed=self.tools_installed,
+            metadata=self.metadata
+        )
+    
+    def _calculate_size(self) -> float:
+        """Calculate workspace size in MB"""
+        try:
+            total_size = 0
+            for dirpath, dirnames, filenames in Path(self.workspace_path).walk():
+                for filename in filenames:
+                    filepath = dirpath / filename
+                    if filepath.exists():
+                        total_size += filepath.stat().st_size
+            return total_size / (1024 * 1024)  # Convert to MB
+        except Exception:
+            return 0.0
 
 
 class SnapshotManager:
-    """Manages validation environment snapshots"""
+    """
+    Validation snapshot management
+    
+    Manages creation, caching, and cleanup of validation environments.
+    Integrates SWE-bench patterns for robust sandbox management.
+    """
     
     def __init__(self):
-        self.settings = get_settings()
-        self.active_snapshots: Dict[str, ValidationSnapshot] = {}
-        self.base_temp_dir = Path(tempfile.gettempdir()) / "codegenapp_snapshots"
-        self.base_temp_dir.mkdir(exist_ok=True)
+        self.snapshots: Dict[str, ValidationSnapshot] = {}
+        self.git_service = GitService()
+        self.base_workspace_dir = Path(tempfile.gettempdir()) / "codegenapp_snapshots"
+        self.base_workspace_dir.mkdir(exist_ok=True)
         
+        logger.info("SnapshotManager initialized", workspace_dir=str(self.base_workspace_dir))
+    
     async def create_snapshot(
-        self, 
-        project_name: str, 
-        pr_number: int,
-        deployment_commands: List[str] = None
-    ) -> ValidationSnapshot:
-        """Create a new validation snapshot"""
+        self,
+        project_name: str,
+        tools_required: List[str],
+        environment_variables: Optional[Dict[str, str]] = None
+    ) -> str:
+        """
+        Create a new validation snapshot
         
-        snapshot_id = f"snap_{uuid.uuid4().hex[:8]}"
-        snapshot = ValidationSnapshot(snapshot_id, project_name, pr_number)
+        Creates an isolated environment with required tools and dependencies.
+        Based on SWE-bench environment setup patterns.
+        """
+        snapshot_id = str(uuid.uuid4())
+        workspace_path = self.base_workspace_dir / snapshot_id
         
         try:
-            snapshot.add_log("Creating validation snapshot...")
+            logger.info(
+                "Creating validation snapshot",
+                snapshot_id=snapshot_id,
+                project=project_name,
+                tools=tools_required
+            )
             
             # Create workspace directory
-            workspace_path = self.base_temp_dir / snapshot_id
-            workspace_path.mkdir(exist_ok=True)
-            snapshot.workspace_path = workspace_path
+            workspace_path.mkdir(parents=True, exist_ok=True)
             
-            # Set up environment variables
-            await self._setup_environment_variables(snapshot)
+            # Install required tools
+            await self._install_tools(workspace_path, tools_required)
             
-            # Pre-deploy Graph-Sitter
-            await self._setup_graph_sitter(snapshot)
+            # Setup environment variables
+            if environment_variables:
+                await self._setup_environment(workspace_path, environment_variables)
             
-            # Pre-deploy Web-Eval-Agent
-            await self._setup_web_eval_agent(snapshot)
+            # Create snapshot instance
+            snapshot = ValidationSnapshot(
+                snapshot_id=snapshot_id,
+                project_name=project_name,
+                workspace_path=str(workspace_path),
+                tools_installed=tools_required,
+                created_at=datetime.utcnow()
+            )
             
-            # Store deployment commands
-            if deployment_commands:
-                snapshot.deployment_commands = deployment_commands
-            else:
-                snapshot.deployment_commands = self._get_default_deployment_commands()
+            # Store snapshot
+            self.snapshots[snapshot_id] = snapshot
             
-            snapshot.status = "ready"
-            snapshot.add_log("Snapshot created successfully")
-            
-            self.active_snapshots[snapshot_id] = snapshot
-            return snapshot
-            
-        except Exception as e:
-            snapshot.status = "failed"
-            snapshot.add_log(f"Failed to create snapshot: {str(e)}")
-            logger.error(f"Failed to create snapshot {snapshot_id}: {e}")
-            raise
-    
-    async def _setup_environment_variables(self, snapshot: ValidationSnapshot):
-        """Set up environment variables for the snapshot"""
-        
-        snapshot.add_log("Setting up environment variables...")
-        
-        # Core environment variables
-        snapshot.environment_vars.update({
-            "CODEGEN_ORG_ID": self.settings.codegen_org_id,
-            "CODEGEN_API_TOKEN": self.settings.codegen_api_token,
-            "GITHUB_TOKEN": getattr(self.settings, 'github_token', ''),
-            "GEMINI_API_KEY": getattr(self.settings, 'gemini_api_key', ''),
-            "CLOUDFLARE_API_KEY": getattr(self.settings, 'cloudflare_api_key', ''),
-            "CLOUDFLARE_ACCOUNT_ID": getattr(self.settings, 'cloudflare_account_id', ''),
-            "CLOUDFLARE_WORKER_URL": getattr(self.settings, 'cloudflare_worker_url', ''),
-            
-            # Web-Eval-Agent configuration
-            "WEB_EVAL_MCP_PATH": "web-eval-agent",
-            "WEB_EVAL_TIMEOUT": "300000",
-            "WEB_EVAL_MAX_CONCURRENT": "3",
-            
-            # Graph-Sitter configuration
-            "GRAPH_SITTER_CACHE_SIZE": "1000",
-            "GRAPH_SITTER_MAX_FILE_SIZE": "1048576",
-            "GRAPH_SITTER_SUPPORTED_LANGUAGES": "python,javascript,typescript,go,rust",
-            
-            # Grainchain configuration
-            "GRAINCHAIN_API_URL": "http://localhost:8080",
-            "GRAINCHAIN_TIMEOUT": "60000",
-            "GRAINCHAIN_MAX_MEMORY": "512MB",
-            
-            # Snapshot-specific variables
-            "SNAPSHOT_ID": snapshot.snapshot_id,
-            "PROJECT_NAME": snapshot.project_name,
-            "PR_NUMBER": str(snapshot.pr_number),
-            "WORKSPACE_PATH": str(snapshot.workspace_path)
-        })
-        
-        # Write environment file
-        env_file = snapshot.workspace_path / ".env"
-        with open(env_file, "w") as f:
-            for key, value in snapshot.environment_vars.items():
-                f.write(f"{key}={value}\n")
-        
-        snapshot.add_log("Environment variables configured")
-    
-    async def _setup_graph_sitter(self, snapshot: ValidationSnapshot):
-        """Set up Graph-Sitter in the snapshot environment"""
-        
-        snapshot.add_log("Setting up Graph-Sitter...")
-        
-        try:
-            # Create graph-sitter directory
-            graph_sitter_dir = snapshot.workspace_path / "graph-sitter"
-            graph_sitter_dir.mkdir(exist_ok=True)
-            
-            # Install tree-sitter and language parsers
-            install_commands = [
-                "pip install tree-sitter",
-                "pip install tree-sitter-python",
-                "pip install tree-sitter-javascript", 
-                "pip install tree-sitter-typescript",
-                "pip install tree-sitter-go",
-                "pip install tree-sitter-rust"
-            ]
-            
-            for cmd in install_commands:
-                result = await self._run_command(cmd, snapshot.workspace_path, snapshot.environment_vars)
-                if result.returncode != 0:
-                    snapshot.add_log(f"Warning: Failed to install {cmd}: {result.stderr}")
-            
-            # Create graph-sitter configuration
-            config = {
-                "languages": ["python", "javascript", "typescript", "go", "rust"],
-                "cache_size": 1000,
-                "max_file_size": 1048576
-            }
-            
-            config_file = graph_sitter_dir / "config.json"
-            with open(config_file, "w") as f:
-                json.dump(config, f, indent=2)
-            
-            snapshot.add_log("Graph-Sitter setup completed")
+            logger.info("Validation snapshot created successfully", snapshot_id=snapshot_id)
+            return snapshot_id
             
         except Exception as e:
-            snapshot.add_log(f"Graph-Sitter setup failed: {str(e)}")
-            raise
+            # Cleanup on failure
+            if workspace_path.exists():
+                shutil.rmtree(workspace_path, ignore_errors=True)
+            
+            logger.error("Failed to create validation snapshot", error=str(e))
+            raise SnapshotException(f"Failed to create snapshot: {str(e)}")
     
-    async def _setup_web_eval_agent(self, snapshot: ValidationSnapshot):
-        """Set up Web-Eval-Agent in the snapshot environment"""
+    async def clone_pr_to_snapshot(
+        self,
+        snapshot_id: str,
+        pr_url: str,
+        base_branch: str = "main"
+    ) -> str:
+        """
+        Clone PR codebase into validation snapshot
         
-        snapshot.add_log("Setting up Web-Eval-Agent...")
+        Clones the PR branch and applies changes for validation.
+        Uses SWE-bench git handling patterns.
+        """
+        if snapshot_id not in self.snapshots:
+            raise SnapshotException(f"Snapshot {snapshot_id} not found")
+        
+        snapshot = self.snapshots[snapshot_id]
+        repo_path = Path(snapshot.workspace_path) / "repo"
         
         try:
-            # Create web-eval-agent directory
-            web_eval_dir = snapshot.workspace_path / "web-eval-agent"
-            web_eval_dir.mkdir(exist_ok=True)
+            logger.info(
+                "Cloning PR to snapshot",
+                snapshot_id=snapshot_id,
+                pr_url=pr_url,
+                base_branch=base_branch
+            )
             
-            # Install required packages
-            install_commands = [
-                "pip install playwright",
-                "pip install python-dotenv",
-                "pip install google-generativeai",
-                "playwright install chromium"
-            ]
-            
-            for cmd in install_commands:
-                result = await self._run_command(cmd, snapshot.workspace_path, snapshot.environment_vars)
-                if result.returncode != 0:
-                    snapshot.add_log(f"Warning: Failed to install {cmd}: {result.stderr}")
-            
-            # Create web-eval-agent configuration
-            config = {
-                "timeout": 300000,
-                "max_concurrent": 3,
-                "browser": "chromium",
-                "headless": True,
-                "gemini_model": "gemini-pro"
-            }
-            
-            config_file = web_eval_dir / "config.json"
-            with open(config_file, "w") as f:
-                json.dump(config, f, indent=2)
-            
-            snapshot.add_log("Web-Eval-Agent setup completed")
-            
-        except Exception as e:
-            snapshot.add_log(f"Web-Eval-Agent setup failed: {str(e)}")
-            raise
-    
-    def _get_default_deployment_commands(self) -> List[str]:
-        """Get default deployment commands"""
-        return [
-            "npm install",
-            "npm run build",
-            "npm run test",
-            "npm start"
-        ]
-    
-    async def _run_command(
-        self, 
-        command: str, 
-        cwd: Path, 
-        env_vars: Dict[str, str]
-    ) -> subprocess.CompletedProcess:
-        """Run a command in the snapshot environment"""
-        
-        # Merge environment variables
-        env = os.environ.copy()
-        env.update(env_vars)
-        
-        # Run command
-        process = await asyncio.create_subprocess_shell(
-            command,
-            cwd=cwd,
-            env=env,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        
-        stdout, stderr = await process.communicate()
-        
-        return subprocess.CompletedProcess(
-            args=command,
-            returncode=process.returncode,
-            stdout=stdout.decode() if stdout else "",
-            stderr=stderr.decode() if stderr else ""
-        )
-    
-    async def clone_pr_code(self, snapshot: ValidationSnapshot, repo_url: str, pr_branch: str) -> bool:
-        """Clone PR code into the snapshot environment"""
-        
-        snapshot.add_log(f"Cloning PR code from {repo_url}, branch: {pr_branch}")
-        
-        try:
-            # Create code directory
-            code_dir = snapshot.workspace_path / "code"
+            # Extract repository info from PR URL
+            repo_info = self._parse_pr_url(pr_url)
             
             # Clone repository
-            clone_cmd = f"git clone -b {pr_branch} {repo_url} {code_dir}"
-            result = await self._run_command(clone_cmd, snapshot.workspace_path, snapshot.environment_vars)
+            await self.git_service.clone_repository(
+                repo_url=repo_info["repo_url"],
+                target_path=str(repo_path),
+                branch=base_branch
+            )
             
-            if result.returncode != 0:
-                snapshot.add_log(f"Failed to clone repository: {result.stderr}")
-                return False
+            # Fetch PR branch
+            await self.git_service.fetch_pr_branch(
+                repo_path=str(repo_path),
+                pr_number=repo_info["pr_number"]
+            )
             
-            snapshot.add_log("PR code cloned successfully")
+            # Apply PR changes
+            await self.git_service.checkout_pr_branch(
+                repo_path=str(repo_path),
+                pr_number=repo_info["pr_number"]
+            )
+            
+            # Update snapshot metadata
+            snapshot.last_used = datetime.utcnow()
+            snapshot.metadata.update({
+                "pr_url": pr_url,
+                "pr_number": repo_info["pr_number"],
+                "base_branch": base_branch,
+                "repo_path": str(repo_path)
+            })
+            
+            logger.info("PR cloned to snapshot successfully", snapshot_id=snapshot_id)
+            return str(repo_path)
+            
+        except Exception as e:
+            logger.error("Failed to clone PR to snapshot", error=str(e))
+            raise SnapshotException(f"Failed to clone PR: {str(e)}")
+    
+    async def get_snapshot(self, snapshot_id: str) -> Optional[ValidationSnapshot]:
+        """Get snapshot by ID"""
+        return self.snapshots.get(snapshot_id)
+    
+    async def list_snapshots(self) -> List[ValidationSnapshot]:
+        """List all active snapshots"""
+        return list(self.snapshots.values())
+    
+    async def delete_snapshot(self, snapshot_id: str) -> bool:
+        """Delete a validation snapshot"""
+        if snapshot_id not in self.snapshots:
+            return False
+        
+        snapshot = self.snapshots[snapshot_id]
+        
+        try:
+            # Remove workspace directory
+            workspace_path = Path(snapshot.workspace_path)
+            if workspace_path.exists():
+                shutil.rmtree(workspace_path, ignore_errors=True)
+            
+            # Remove from memory
+            del self.snapshots[snapshot_id]
+            
+            logger.info("Snapshot deleted successfully", snapshot_id=snapshot_id)
             return True
             
         except Exception as e:
-            snapshot.add_log(f"Failed to clone PR code: {str(e)}")
+            logger.error("Failed to delete snapshot", snapshot_id=snapshot_id, error=str(e))
             return False
     
     async def cleanup_snapshot(self, snapshot_id: str):
-        """Clean up a validation snapshot"""
+        """Clean up snapshot resources after validation"""
+        if snapshot_id not in self.snapshots:
+            return
         
-        if snapshot_id in self.active_snapshots:
-            snapshot = self.active_snapshots[snapshot_id]
-            snapshot.add_log("Cleaning up snapshot...")
+        snapshot = self.snapshots[snapshot_id]
+        
+        try:
+            # Clean up temporary files
+            temp_dirs = ["tmp", "cache", "logs", ".git/objects/tmp*"]
+            workspace_path = Path(snapshot.workspace_path)
             
-            try:
-                if snapshot.workspace_path and snapshot.workspace_path.exists():
-                    shutil.rmtree(snapshot.workspace_path)
-                
-                del self.active_snapshots[snapshot_id]
-                snapshot.add_log("Snapshot cleaned up successfully")
-                
-            except Exception as e:
-                snapshot.add_log(f"Failed to cleanup snapshot: {str(e)}")
-                logger.error(f"Failed to cleanup snapshot {snapshot_id}: {e}")
+            for temp_pattern in temp_dirs:
+                for temp_path in workspace_path.glob(temp_pattern):
+                    if temp_path.exists():
+                        if temp_path.is_dir():
+                            shutil.rmtree(temp_path, ignore_errors=True)
+                        else:
+                            temp_path.unlink(missing_ok=True)
+            
+            # Update status
+            snapshot.status = "cleaned"
+            
+            logger.info("Snapshot cleaned up", snapshot_id=snapshot_id)
+            
+        except Exception as e:
+            logger.error("Failed to cleanup snapshot", snapshot_id=snapshot_id, error=str(e))
     
-    def get_snapshot(self, snapshot_id: str) -> Optional[ValidationSnapshot]:
-        """Get a validation snapshot by ID"""
-        return self.active_snapshots.get(snapshot_id)
+    async def cleanup_expired_snapshots(self):
+        """Clean up expired snapshots based on TTL"""
+        ttl_seconds = settings.validation.snapshot_ttl
+        cutoff_time = datetime.utcnow() - timedelta(seconds=ttl_seconds)
+        
+        expired_snapshots = [
+            snapshot_id for snapshot_id, snapshot in self.snapshots.items()
+            if snapshot.last_used < cutoff_time
+        ]
+        
+        for snapshot_id in expired_snapshots:
+            await self.delete_snapshot(snapshot_id)
+        
+        if expired_snapshots:
+            logger.info("Cleaned up expired snapshots", count=len(expired_snapshots))
     
-    def list_active_snapshots(self) -> List[ValidationSnapshot]:
-        """List all active snapshots"""
-        return list(self.active_snapshots.values())
-
-
-# Global snapshot manager instance
-_snapshot_manager = None
-
-def get_snapshot_manager() -> SnapshotManager:
-    """Get the global snapshot manager instance"""
-    global _snapshot_manager
-    if _snapshot_manager is None:
-        _snapshot_manager = SnapshotManager()
-    return _snapshot_manager
+    # Private helper methods
+    
+    async def _install_tools(self, workspace_path: Path, tools: List[str]):
+        """
+        Install required tools in the snapshot environment
+        
+        Based on SWE-bench tool installation patterns
+        """
+        install_script_path = workspace_path / "install_tools.sh"
+        
+        # Generate installation script
+        install_commands = []
+        
+        for tool in tools:
+            if tool == "git":
+                install_commands.append("apt-get update && apt-get install -y git")
+            elif tool == "docker":
+                install_commands.append("curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh")
+            elif tool == "node":
+                install_commands.append("curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs")
+            elif tool == "python":
+                install_commands.append("apt-get install -y python3 python3-pip python3-venv")
+            elif tool == "rust":
+                install_commands.append("curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y")
+            elif tool == "go":
+                install_commands.append("wget https://go.dev/dl/go1.21.0.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.21.0.linux-amd64.tar.gz")
+        
+        # Write installation script
+        script_content = "#!/bin/bash\nset -e\n\n" + "\n".join(install_commands)
+        install_script_path.write_text(script_content)
+        install_script_path.chmod(0o755)
+        
+        # Execute installation (in real implementation, this would run in container)
+        logger.info("Tools installation script prepared", tools=tools)
+    
+    async def _setup_environment(self, workspace_path: Path, env_vars: Dict[str, str]):
+        """Setup environment variables in snapshot"""
+        env_file_path = workspace_path / ".env"
+        
+        env_content = "\n".join([f"{key}={value}" for key, value in env_vars.items()])
+        env_file_path.write_text(env_content)
+        
+        logger.info("Environment variables configured", count=len(env_vars))
+    
+    def _parse_pr_url(self, pr_url: str) -> Dict[str, Any]:
+        """
+        Parse GitHub PR URL to extract repository and PR information
+        
+        Example: https://github.com/owner/repo/pull/123
+        """
+        try:
+            parts = pr_url.rstrip('/').split('/')
+            if len(parts) < 6 or parts[-2] != 'pull':
+                raise ValueError("Invalid PR URL format")
+            
+            owner = parts[-4]
+            repo = parts[-3]
+            pr_number = int(parts[-1])
+            
+            return {
+                "owner": owner,
+                "repo": repo,
+                "pr_number": pr_number,
+                "repo_url": f"https://github.com/{owner}/{repo}.git"
+            }
+            
+        except (ValueError, IndexError) as e:
+            raise SnapshotException(f"Invalid PR URL format: {pr_url}") from e
 
