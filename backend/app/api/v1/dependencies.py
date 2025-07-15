@@ -10,7 +10,8 @@ import logging
 from app.core.workflow.engine import WorkflowEngine
 from app.core.orchestration.coordinator import ServiceCoordinator
 from app.core.orchestration.state_manager import WorkflowStateManager
-from app.services.adapters.codegen_adapter import CodegenAdapter
+from app.services.adapters.codegen_adapter import CodegenService
+from app.services.grainchain_webhook_service import GrainchainWebhookService
 from app.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -22,21 +23,24 @@ security = HTTPBearer()
 _workflow_engine: WorkflowEngine = None
 _service_coordinator: ServiceCoordinator = None
 _state_manager: WorkflowStateManager = None
-_codegen_adapter: CodegenAdapter = None
+_codegen_adapter: CodegenService = None
+_grainchain_webhook_service: GrainchainWebhookService = None
 
 
 def set_global_dependencies(
     engine: WorkflowEngine,
     coordinator: ServiceCoordinator,
     state_manager: WorkflowStateManager,
-    codegen_adapter: CodegenAdapter
+    codegen_adapter: CodegenService,
+    grainchain_webhook_service: GrainchainWebhookService = None
 ):
     """Set global dependency instances (called from main.py)"""
-    global _workflow_engine, _service_coordinator, _state_manager, _codegen_adapter
+    global _workflow_engine, _service_coordinator, _state_manager, _codegen_adapter, _grainchain_webhook_service
     _workflow_engine = engine
     _service_coordinator = coordinator
     _state_manager = state_manager
     _codegen_adapter = codegen_adapter
+    _grainchain_webhook_service = grainchain_webhook_service
 
 
 async def get_current_user(
@@ -104,7 +108,7 @@ async def get_state_manager() -> WorkflowStateManager:
     return _state_manager
 
 
-async def get_codegen_adapter() -> CodegenAdapter:
+async def get_codegen_adapter() -> CodegenService:
     """Get Codegen adapter instance"""
     if not _codegen_adapter:
         raise HTTPException(
@@ -112,6 +116,16 @@ async def get_codegen_adapter() -> CodegenAdapter:
             detail="Codegen adapter not initialized"
         )
     return _codegen_adapter
+
+
+async def get_grainchain_webhook_service() -> GrainchainWebhookService:
+    """Get Grainchain webhook service instance"""
+    if not _grainchain_webhook_service:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Grainchain webhook service not initialized"
+        )
+    return _grainchain_webhook_service
 
 
 # Optional dependencies for specific use cases

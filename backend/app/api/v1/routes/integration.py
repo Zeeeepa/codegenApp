@@ -12,6 +12,10 @@ from app.core.integration.integration_manager import get_integration_manager
 from app.core.integration.config_manager import get_config_manager
 from app.core.integration.event_bus import get_event_bus, Event
 from app.core.integration.plugin_system import get_plugin_manager
+from app.api.v1.dependencies import get_current_user
+from app.workflows.templates.code_analysis_workflow import CodeAnalysisWorkflow
+from app.workflows.templates.testing_pipeline_workflow import TestingPipelineWorkflow
+from app.workflows.templates.deployment_validation_workflow import DeploymentValidationWorkflow
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +24,7 @@ router = APIRouter(prefix="/integration", tags=["integration"])
 
 # System Status Endpoints
 @router.get("/status")
-async def get_system_status():
+async def get_system_status(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get comprehensive system status"""
     try:
         integration_manager = get_integration_manager()
@@ -65,7 +69,10 @@ async def health_check():
 
 # Configuration Management Endpoints
 @router.get("/config")
-async def get_configuration(component: Optional[str] = None):
+async def get_configuration(
+    component: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
     """Get configuration for a component or global config"""
     try:
         config_manager = get_config_manager()
@@ -91,7 +98,7 @@ async def get_configuration(component: Optional[str] = None):
 
 
 @router.post("/config/reload")
-async def reload_configuration():
+async def reload_configuration(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Reload configuration from file"""
     try:
         integration_manager = get_integration_manager()
@@ -114,7 +121,7 @@ async def reload_configuration():
 
 # Event Bus Endpoints
 @router.get("/events/metrics")
-async def get_event_metrics():
+async def get_event_metrics(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get event bus metrics"""
     try:
         event_bus = get_event_bus()
@@ -139,7 +146,8 @@ async def get_event_metrics():
 async def get_event_history(
     event_type: Optional[str] = None,
     component: Optional[str] = None,
-    limit: int = 100
+    limit: int = 100,
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Get event history with optional filtering"""
     try:
@@ -182,7 +190,8 @@ async def publish_event(
     event_type: str,
     payload: Dict[str, Any],
     target_component: Optional[str] = None,
-    priority: int = 0
+    priority: int = 0,
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Publish an event to the event bus"""
     try:
@@ -219,7 +228,7 @@ async def publish_event(
 
 # Plugin Management Endpoints
 @router.get("/plugins")
-async def list_plugins():
+async def list_plugins(current_user: Dict[str, Any] = Depends(get_current_user)):
     """List all plugins and their status"""
     try:
         plugin_manager = get_plugin_manager()
@@ -241,7 +250,10 @@ async def list_plugins():
 
 
 @router.post("/plugins/{plugin_name}/enable")
-async def enable_plugin(plugin_name: str):
+async def enable_plugin(
+    plugin_name: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
     """Enable a plugin"""
     try:
         integration_manager = get_integration_manager()
@@ -270,7 +282,10 @@ async def enable_plugin(plugin_name: str):
 
 
 @router.post("/plugins/{plugin_name}/disable")
-async def disable_plugin(plugin_name: str):
+async def disable_plugin(
+    plugin_name: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
     """Disable a plugin"""
     try:
         integration_manager = get_integration_manager()
@@ -297,3 +312,103 @@ async def disable_plugin(plugin_name: str):
             detail=f"Failed to disable plugin: {str(e)}"
         )
 
+
+# Workflow Templates Endpoints
+@router.get("/workflow-templates")
+async def list_workflow_templates(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """List available workflow templates"""
+    try:
+        templates = [
+            CodeAnalysisWorkflow.get_workflow_template(),
+            TestingPipelineWorkflow.get_workflow_template(),
+            DeploymentValidationWorkflow.get_workflow_template()
+        ]
+        
+        return {"templates": templates}
+        
+    except Exception as e:
+        logger.error(f"Failed to list workflow templates: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to list workflow templates: {str(e)}"
+        )
+
+
+@router.get("/workflow-templates/{template_name}")
+async def get_workflow_template(
+    template_name: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get details for a specific workflow template"""
+    try:
+        template_map = {
+            "code_analysis": CodeAnalysisWorkflow.get_workflow_template(),
+            "testing_pipeline": TestingPipelineWorkflow.get_workflow_template(),
+            "deployment_validation": DeploymentValidationWorkflow.get_workflow_template()
+        }
+        
+        if template_name not in template_map:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow template '{template_name}' not found"
+            )
+        
+        return template_map[template_name]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get workflow template {template_name}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get workflow template: {str(e)}"
+        )
+
+
+@router.post("/workflow-templates/{template_name}/create")
+async def create_workflow_from_template(
+    template_name: str,
+    parameters: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Create a workflow from a template"""
+    try:
+        if template_name == "code_analysis":
+            from app.workflows.templates.code_analysis_workflow import CodeAnalysisWorkflowConfig
+            config = CodeAnalysisWorkflowConfig(**parameters)
+            workflow = CodeAnalysisWorkflow.create_workflow(config)
+        elif template_name == "testing_pipeline":
+            from app.workflows.templates.testing_pipeline_workflow import TestingPipelineConfig
+            config = TestingPipelineConfig(**parameters)
+            workflow = TestingPipelineWorkflow.create_workflow(config)
+        elif template_name == "deployment_validation":
+            from app.workflows.templates.deployment_validation_workflow import DeploymentValidationConfig
+            config = DeploymentValidationConfig(**parameters)
+            workflow = DeploymentValidationWorkflow.create_workflow(config)
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow template '{template_name}' not found"
+            )
+        
+        return {
+            "message": f"Workflow created from template '{template_name}'",
+            "workflow_id": workflow.id,
+            "workflow": {
+                "id": workflow.id,
+                "name": workflow.name,
+                "description": workflow.description,
+                "steps": len(workflow.steps),
+                "estimated_duration": workflow.timeout,
+                "tags": workflow.tags
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create workflow from template {template_name}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create workflow from template: {str(e)}"
+        )

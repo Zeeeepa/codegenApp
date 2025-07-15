@@ -12,6 +12,9 @@ from dataclasses import dataclass
 import httpx
 from pydantic import BaseModel, Field
 
+from app.services.adapters.grainchain_adapter import GrainchainAdapter
+from app.models.api.api_models import SandboxRequest, SandboxResponse
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,7 +50,8 @@ class ValidationResult(BaseModel):
 class GrainchainWebhookService:
     """Enhanced grainchain service with webhook validation support"""
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, grainchain_adapter: GrainchainAdapter, config: Dict[str, Any]):
+        self.adapter = grainchain_adapter
         self.config = config
         self.client = httpx.AsyncClient(timeout=httpx.Timeout(60.0))
         
@@ -342,4 +346,3 @@ class GrainchainWebhookService:
             completed_at=datetime.fromisoformat(validation_request.results.get("completed_at")) if validation_request.results and validation_request.results.get("completed_at") else None,
             sandbox_id=validation_request.sandbox_id
         )
-

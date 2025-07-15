@@ -5,6 +5,8 @@ uvicorn
 # HTTP client for external API calls
 httpx
 
+# Settings management
+pydantic-settings
+
 # Development tools
 python-dotenv
-

@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel, Field
 
 from app.services.grainchain_webhook_service import GrainchainWebhookService, ValidationResult
+from app.api.v1.dependencies import get_grainchain_webhook_service
 
 logger = logging.getLogger(__name__)
 
@@ -264,4 +265,3 @@ async def webhook_health_check(
             "error": str(e),
             "timestamp": "2024-07-15T06:46:14Z"
         }
-
