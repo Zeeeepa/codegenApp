@@ -1,452 +1,392 @@
-# CodegenApp - AI-Powered Development Platform
+# CodegenApp - AI-Powered CI/CD Flow Management System
 
-A comprehensive, enterprise-grade web application for managing AI-powered software development workflows with integrated code analysis, web evaluation, and automated CI/CD orchestration. This platform provides a unified interface for modern software development teams leveraging AI agents, automated testing, and intelligent code analysis.
+A comprehensive, enterprise-grade CI/CD orchestration platform that combines AI-powered development agents with automated testing, validation, and deployment workflows. This system provides a unified dashboard for managing complex software development lifecycles with intelligent automation and validation.
 
-## 🚀 Platform Overview
+## 🚀 System Overview
 
-CodegenApp is a full-stack platform that orchestrates multiple AI-powered tools and services to create a seamless development experience. It combines agent-based development, automated testing, code analysis, and deployment workflows into a single, cohesive platform.
+CodegenApp is a sophisticated CI/CD flow management system that orchestrates AI agents, automated testing, and deployment workflows through an intuitive dashboard interface. It bridges the gap between AI-powered development and production-ready deployments with comprehensive validation and quality assurance.
 
-### 🎯 Core Value Propositions
+### 🎯 Core Features
 
-- **AI-First Development**: Leverage Codegen AI agents for automated code generation and problem-solving
-- **Intelligent Testing**: Automated web evaluation with AI-powered browser testing
-- **Code Intelligence**: Deep code analysis and visualization using graph-sitter
-- **Workflow Orchestration**: Automated CI/CD pipelines with intelligent decision-making
-- **Multi-Service Integration**: Seamless integration with GitHub, deployment platforms, and development tools
+- **🎛️ Project Dashboard**: Centralized management of multiple projects with real-time status tracking
+- **🤖 AI Agent Integration**: Seamless integration with Codegen API for intelligent code generation and problem-solving
+- **🔄 Webhook Automation**: Cloudflare-powered webhook system for automated PR notifications and triggers
+- **✅ Validation Pipeline**: Comprehensive testing flow with snapshot creation and automated validation
+- **🚀 Auto-Deployment**: Intelligent deployment orchestration with rollback capabilities
+- **🔀 Auto-Merge**: Automated PR merging after successful validation and testing
+- **📊 Real-time Monitoring**: Live progress tracking and detailed logging for all operations
 
 ## 🏗️ System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                              CODEGENAPP PLATFORM                                   │
+│                           CODEGENAPP CI/CD PLATFORM                               │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │  ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────────────────┐ │
-│  │   Frontend      │    │   Proxy Server   │    │      Backend Services          │ │
-│  │   (React/TS)    │◄──►│   (Node.js)      │◄──►│      (FastAPI/Python)           │ │
+│  │   Dashboard UI  │    │   Webhook Gateway│    │    Orchestration Engine         │ │
+│  │   (React/TS)    │◄──►│   (Cloudflare)   │◄──►│    (FastAPI/Python)             │ │
 │  │                 │    │                  │    │                                 │ │
-│  │ • Agent UI      │    │ • API Gateway    │    │ • Workflow Engine               │ │
-│  │ • Web Eval      │    │ • Authentication │    │ • Service Orchestration         │ │
-│  │ • Code Viz      │    │ • Rate Limiting  │    │ • State Management              │ │
-│  │ • Project Mgmt  │    │ • Request Proxy  │    │ • Event Handling                │ │
+│  │ • Project Cards │    │ • PR Events      │    │ • Workflow Management           │ │
+│  │ • Run Controls  │    │ • Auto Triggers  │    │ • State Orchestration           │ │
+│  │ • Progress View │    │ • Event Routing  │    │ • Service Coordination          │ │
+│  │ • Validation UI │    │ • Security Layer │    │ • Error Handling                │ │
 │  └─────────────────┘    └──────────────────┘    └─────────────────────────────────┘ │
 │                                │                                │                   │
 │                                ▼                                ▼                   │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
-│                           EXTERNAL INTEGRATIONS                                    │
+│                              VALIDATION PIPELINE                                   │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │  Codegen API    │  │  Web-Eval-Agent │  │  Graph-Sitter   │  │  Grainchain     │ │
-│  │  (AI Agents)    │  │  (MCP Server)   │  │  (Code Analysis)│  │  (Sandboxing)   │ │
+│  │  Snapshot Mgmt  │  │  Code Analysis  │  │  Deployment     │  │  Web Evaluation │ │
+│  │  (Docker/K8s)   │  │  (Graph-Sitter) │  │  (Auto Deploy) │  │  (Web-Eval-Agent)│ │
 │  │                 │  │                 │  │                 │  │                 │ │
-│  │ • Agent Runs    │  │ • Browser Auto  │  │ • AST Analysis  │  │ • Isolated Exec │ │
-│  │ • Code Gen      │  │ • GitHub Integ  │  │ • Dependency    │  │ • Safe Testing  │ │
-│  │ • Problem Solve │  │ • AI Evaluation │  │ • Symbol Index  │  │ • Environment   │ │
-│  │ • Multi-Org     │  │ • Screenshots   │  │ • Visualization │  │ • Resource Mgmt │ │
+│  │ • Environment   │  │ • AST Analysis  │  │ • Build Process │  │ • Browser Tests │ │
+│  │ • Isolation     │  │ • Dependency    │  │ • Health Checks │  │ • Flow Testing  │ │
+│  │ • Resource Mgmt │  │ • Code Quality  │  │ • Rollback      │  │ • Component Val │ │
+│  │ • Cleanup       │  │ • Security Scan │  │ • Monitoring    │  │ • Performance   │ │
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
 │                                                                                     │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
-│                            DEPLOYMENT & INFRASTRUCTURE                             │
+│                              AI AGENT INTEGRATION                                  │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │  GitHub Actions │  │  Netlify/Vercel │  │  Docker/K8s     │  │  Monitoring     │ │
-│  │  (CI/CD)        │  │  (Hosting)      │  │  (Containers)   │  │  (Observability)│ │
+│  │  Codegen API    │  │  Response Types │  │  Continuation   │  │  Error Recovery │ │
+│  │  (AI Agents)    │  │  (Reg/Plan/PR)  │  │  (Resume Flow)  │  │  (Auto Retry)   │ │
 │  │                 │  │                 │  │                 │  │                 │ │
-│  │ • PR Testing    │  │ • Preview Deps  │  │ • Service Mesh  │  │ • Metrics       │ │
-│  │ • Deployment    │  │ • CDN           │  │ • Scaling       │  │ • Logging       │ │
-│  │ • Quality Gates │  │ • SSL/Security  │  │ • Health Checks │  │ • Alerting      │ │
-│  │ • Automation    │  │ • Performance   │  │ • Load Balancing│  │ • Dashboards    │ │
+│  │ • Agent Runs    │  │ • Regular Resp  │  │ • Context Mgmt  │  │ • Error Context │ │
+│  │ • Multi-Org     │  │ • Plan Confirm  │  │ • Session State │  │ • Retry Logic   │ │
+│  │ • Context Mgmt  │  │ • PR Creation   │  │ • User Input    │  │ • Failure Logs  │ │
+│  │ • Progress Log  │  │ • Auto Actions  │  │ • Flow Resume   │  │ • Recovery Flow │ │
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
 │                                                                                     │
 └─────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 🛠️ Technology Stack
+## 🔄 CI/CD Workflow Process
 
-### Frontend Layer
-- **Framework**: React 18 with TypeScript
-- **State Management**: React Context + Custom Hooks
-- **UI Components**: Tailwind CSS + Lucide Icons
-- **Build Tool**: Create React App with custom webpack config
-- **Testing**: Jest + React Testing Library
-- **Code Quality**: ESLint + Prettier + TypeScript strict mode
-
-### Proxy Server Layer
-- **Runtime**: Node.js 18+
-- **Framework**: Express.js with TypeScript
-- **Middleware**: CORS, Rate Limiting, Request Validation
-- **Authentication**: JWT + API Key validation
-- **Logging**: Winston with structured logging
-- **Testing**: Jest + Supertest
-
-### Backend Services Layer
-- **Framework**: FastAPI (Python 3.11+)
-- **Architecture**: Clean Architecture with Domain-Driven Design
-- **API**: RESTful APIs with OpenAPI/Swagger documentation
-- **Validation**: Pydantic models with strict type checking
-- **Testing**: Pytest + AsyncIO testing
-- **Documentation**: Auto-generated API docs
-
-### External Integrations
-
-#### 1. Codegen API Integration
-- **Purpose**: AI agent orchestration and code generation
-- **Technology**: Python SDK + REST API
-- **Features**:
-  - Multi-organization support
-  - Agent run management
-  - Real-time status tracking
-  - Credential management
-  - Usage analytics
-
-#### 2. Web-Eval-Agent (MCP Server)
-- **Purpose**: Automated web application testing
-- **Technology**: Python + Playwright + Gemini AI
-- **Features**:
-  - Browser automation
-  - GitHub PR testing
-  - AI-powered evaluation
-  - Screenshot capture
-  - Report generation
-
-#### 3. Graph-Sitter Integration
-- **Purpose**: Code analysis and visualization
-- **Technology**: Tree-sitter + Python bindings
-- **Features**:
-  - Multi-language AST parsing
-  - Symbol indexing
-  - Dependency graph generation
-  - Interactive visualization
-  - Performance optimization
-
-#### 4. Grainchain Sandboxing
-- **Purpose**: Secure code execution environment
-- **Technology**: Docker + Kubernetes + Python
-- **Features**:
-  - Isolated execution
-  - Resource management
-  - Security boundaries
-  - Environment provisioning
-  - Cleanup automation
-
-### Infrastructure & DevOps
-
-#### CI/CD Pipeline
-- **Platform**: GitHub Actions
-- **Stages**: Build → Test → Security Scan → Deploy
-- **Features**:
-  - Automated testing
-  - Security scanning (TruffleHog)
-  - Preview deployments
-  - Production deployment
-  - Rollback capabilities
-
-#### Hosting & Deployment
-- **Frontend**: Netlify/Vercel with CDN
-- **Backend**: Docker containers on cloud platforms
-- **Database**: PostgreSQL with connection pooling
-- **Caching**: Redis for session and API caching
-- **Monitoring**: Application and infrastructure monitoring
-
-## 🔄 CI/CD Workflow Structure
-
-### 1. Development Workflow
+### 1. Project Management Flow
 
 ```mermaid
 graph TD
-    A[Developer Push] --> B[GitHub Actions Trigger]
-    B --> C[Code Quality Checks]
-    C --> D[Unit Tests]
-    D --> E[Integration Tests]
-    E --> F[Security Scan]
-    F --> G[Build Application]
-    G --> H[Deploy Preview]
-    H --> I[Web-Eval-Agent Testing]
-    I --> J[Quality Gate Decision]
-    J -->|Pass| K[Merge to Main]
-    J -->|Fail| L[Block Merge]
-    K --> M[Production Deployment]
-    M --> N[Post-Deploy Validation]
+    A[Dashboard Load] --> B[Project Dropdown]
+    B --> C[Select Project]
+    C --> D[Project Card Display]
+    D --> E[Webhook URL Config]
+    E --> F[PR Notification Setup]
+    F --> G[Ready for Operations]
 ```
 
-### 2. Automated Testing Pipeline
+### 2. Agent Run Workflow
 
-#### Stage 1: Code Quality & Security
-```yaml
-# .github/workflows/quality-checks.yml
-- ESLint + Prettier (Frontend)
-- Pylint + Black (Backend)
-- TypeScript type checking
-- TruffleHog secret scanning
-- Dependency vulnerability scanning
+```mermaid
+graph TD
+    A[Click Run Button] --> B[Target Text Input]
+    B --> C[Confirm & Send Request]
+    C --> D[Codegen API Call]
+    D --> E[Progress Tracking]
+    E --> F{Response Type?}
+    F -->|Regular| G[Continue Button]
+    F -->|Plan| H[Confirm/Modify Options]
+    F -->|PR| I[PR Notification]
+    G --> J[Resume Endpoint]
+    H --> K{User Choice?}
+    K -->|Confirm| L[Proceed with Plan]
+    K -->|Modify| M[Text Input + Confirm]
+    I --> N[Validation Flow Trigger]
 ```
 
-#### Stage 2: Unit & Integration Testing
-```yaml
-# .github/workflows/testing.yml
-- Jest tests (Frontend components)
-- Pytest tests (Backend services)
-- API integration tests
-- Database migration tests
-- Mock service testing
+### 3. Validation Pipeline
+
+```mermaid
+graph TD
+    A[PR Created] --> B[Webhook Trigger]
+    B --> C[Create Snapshot Instance]
+    C --> D[Deploy Graph-Sitter + Web-Eval-Agent]
+    D --> E[Clone PR Codebase]
+    E --> F[Run Deployment Commands]
+    F --> G{Deployment Success?}
+    G -->|No| H[Send Error Context to Agent]
+    G -->|Yes| I[Run Web-Eval-Agent Tests]
+    H --> J[Auto-Continue with Error Context]
+    I --> K{Tests Pass?}
+    K -->|No| L[Send Test Errors to Agent]
+    K -->|Yes| M[Validation Complete]
+    L --> N[Update PR with Fixes]
+    N --> O[Re-trigger Deployment]
+    M --> P[Merge Notification]
+    P --> Q{Auto-Merge Enabled?}
+    Q -->|Yes| R[Auto-Merge to Main]
+    Q -->|No| S[Manual Merge Option]
 ```
 
-#### Stage 3: Web Evaluation Testing
-```yaml
-# .github/workflows/web-eval-pr.yml
-- Deploy preview environment
-- Run web-eval-agent tests
-- Generate evaluation reports
-- Screenshot comparison
-- Performance benchmarking
-```
+## 🛠️ Technology Stack
 
-#### Stage 4: Deployment & Validation
-```yaml
-# .github/workflows/deployment.yml
-- Build production artifacts
-- Deploy to staging environment
-- Run smoke tests
-- Deploy to production
-- Post-deployment validation
-```
+### Frontend Dashboard
+- **Framework**: React 18 with TypeScript
+- **UI Library**: Tailwind CSS + Lucide Icons
+- **State Management**: React Context + Custom Hooks
+- **Real-time Updates**: WebSocket integration
+- **Testing**: Jest + React Testing Library
 
-### 3. Quality Gates & Decision Points
+### Backend Orchestration
+- **Framework**: FastAPI (Python 3.11+)
+- **Architecture**: Event-driven microservices
+- **Database**: PostgreSQL with async ORM
+- **Queue System**: Redis for job processing
+- **WebSocket**: Real-time dashboard updates
 
-#### Automated Quality Gates
-1. **Code Quality**: ESLint/Pylint scores above threshold
-2. **Test Coverage**: Minimum 80% coverage required
-3. **Security**: No high/critical vulnerabilities
-4. **Performance**: Web-eval-agent performance benchmarks
-5. **Functionality**: All integration tests passing
+### Webhook Infrastructure
+- **Platform**: Cloudflare Workers
+- **Security**: JWT token validation
+- **Event Processing**: Async event handling
+- **Rate Limiting**: Built-in DDoS protection
+- **Monitoring**: Real-time webhook analytics
 
-#### Manual Review Gates
-1. **Architecture Review**: For significant changes
-2. **Security Review**: For authentication/authorization changes
-3. **Performance Review**: For database/API changes
-4. **UX Review**: For user interface changes
+### Validation Services
 
-## 📋 Key Features & Capabilities
-
-### 🤖 AI Agent Management
-- **Multi-Organization Support**: Manage agents across different organizations
-- **Real-time Monitoring**: Live status updates and progress tracking
-- **Credential Management**: Secure API token and authentication handling
-- **Usage Analytics**: Track agent performance and resource utilization
-- **Error Handling**: Comprehensive error reporting and recovery
-
-### 🌐 Web Evaluation System
-- **Automated UI Testing**: AI-powered browser automation for comprehensive testing
-- **GitHub Integration**: Automatic PR and branch deployment testing
-- **Multi-Environment Testing**: Support for development, staging, and production
-- **Visual Regression**: Screenshot comparison and visual diff detection
-- **Performance Monitoring**: Page load times, Core Web Vitals, and performance metrics
-
-### 🔍 Code Analysis & Visualization
-- **Multi-Language Support**: Python, JavaScript, TypeScript, Go, Rust, Java, C++, C
-- **Interactive Visualization**: AST trees, dependency graphs, call graphs
-- **Symbol Navigation**: Function, class, and variable cross-referencing
-- **Code Metrics**: Complexity analysis, maintainability scores
-- **Real-time Updates**: Live analysis as code changes
-
-### 🔧 Workflow Orchestration
-- **Template-Based Workflows**: Pre-built CI/CD, code review, and deployment workflows
-- **Custom Workflow Builder**: Visual workflow designer with drag-and-drop
-- **Event-Driven Automation**: Trigger workflows based on GitHub events
-- **State Management**: Persistent workflow state with recovery capabilities
-- **Parallel Execution**: Concurrent workflow steps for improved performance
-
-### 🛡️ Security & Compliance
-- **Secret Management**: Secure storage and rotation of API keys and tokens
-- **Access Control**: Role-based permissions and organization isolation
-- **Audit Logging**: Comprehensive activity logging and compliance reporting
-- **Security Scanning**: Automated vulnerability detection and remediation
-- **Data Privacy**: GDPR-compliant data handling and user privacy controls
-
-## 🚀 Getting Started
-
-### Prerequisites
-- **Node.js 18+** and npm
-- **Python 3.11+** with pip
-- **Docker** (for local development)
-- **Git** for version control
-
-### Required API Keys
-- **Codegen API Token**: Get from [Codegen Dashboard](https://app.codegen.com/settings)
-- **Google Gemini API Key**: For web evaluation features
-- **GitHub Token**: For GitHub integration features
-- **Netlify/Vercel Token**: For deployment features (optional)
-
-### Installation
-
-#### 1. Clone the Repository
-```bash
-git clone https://github.com/Zeeeepa/codegenApp.git
-cd codegenApp
-```
-
-#### 2. Install Dependencies
-```bash
-# Frontend dependencies
-npm install
-
-# Backend dependencies
-cd backend
-pip install -r requirements.txt
-cd ..
-
-# Proxy server dependencies
-cd server
-npm install
-cd ..
-```
-
-#### 3. Environment Configuration
-Create a `.env` file in the project root:
-
-```bash
-# Core Configuration
-REACT_APP_API_TOKEN=your_codegen_api_token_here
-REACT_APP_DEFAULT_ORGANIZATION=your_org_id_here
-REACT_APP_API_BASE_URL=https://api.codegen.com
-REACT_APP_USER_ID=your_user_id_here
-
-# Web-Eval-Agent Configuration
-GEMINI_API_KEY=your_gemini_api_key_here
-GITHUB_TOKEN=your_github_token_here
-WEB_EVAL_MCP_PATH=web-eval-agent
-WEB_EVAL_TIMEOUT=300000
-WEB_EVAL_MAX_CONCURRENT=3
-
-# Graph-Sitter Configuration
-GRAPH_SITTER_CACHE_SIZE=1000
-GRAPH_SITTER_MAX_FILE_SIZE=1048576
-GRAPH_SITTER_SUPPORTED_LANGUAGES=python,javascript,typescript,go,rust
-
-# Grainchain Configuration
-GRAINCHAIN_API_URL=http://localhost:8080
-GRAINCHAIN_TIMEOUT=60000
-GRAINCHAIN_MAX_MEMORY=512MB
-
-# Backend Configuration
-BACKEND_HOST=localhost
-BACKEND_PORT=8000
-DATABASE_URL=postgresql://user:pass@localhost/codegenapp
-REDIS_URL=redis://localhost:6379
-
-# Deployment Configuration (Optional)
-NETLIFY_AUTH_TOKEN=your_netlify_token_here
-NETLIFY_SITE_ID=your_netlify_site_id_here
-VERCEL_TOKEN=your_vercel_token_here
-```
-
-#### 4. Install External Dependencies
-```bash
-# Install web-eval-agent
-pip install playwright python-dotenv
-playwright install chromium
-
-# Install graph-sitter languages
-pip install tree-sitter tree-sitter-python tree-sitter-javascript tree-sitter-typescript
-
-# Clone external repositories (if needed)
-git clone https://github.com/Zeeeepa/web-eval-agent.git ../web-eval-agent
-git clone https://github.com/Zeeeepa/grainchain.git ../grainchain
-```
-
-#### 5. Start the Development Environment
-```bash
-# Start all services concurrently
-npm run dev:all
-
-# Or start individually:
-npm run backend:dev     # Backend API server (port 8000)
-npm run server:dev      # Proxy server (port 3001)
-npm start              # Frontend (port 3000)
-```
-
-### Application URLs
-- **Frontend**: `http://localhost:3000`
-- **Backend API**: `http://localhost:8000`
-- **Proxy Server**: `http://localhost:3001`
-- **API Documentation**: `http://localhost:8000/docs`
-
-## 📚 API Documentation
-
-### Core API Endpoints
-
-#### Agent Management
-```http
-GET    /api/v1/agents                    # List all agents
-POST   /api/v1/agents                    # Create new agent run
-GET    /api/v1/agents/{id}               # Get agent details
-PUT    /api/v1/agents/{id}               # Update agent
-DELETE /api/v1/agents/{id}               # Cancel agent run
-```
-
-#### Web Evaluation
-```http
-POST   /api/v1/evaluation/url           # Evaluate URL
-POST   /api/v1/evaluation/github-pr     # Test GitHub PR
-POST   /api/v1/evaluation/github-branch # Test GitHub branch
-GET    /api/v1/evaluation/{id}/status   # Get evaluation status
-GET    /api/v1/evaluation/{id}/results  # Get evaluation results
-```
+#### Snapshot Management
+- **Containerization**: Docker + Kubernetes
+- **Isolation**: Secure sandbox environments
+- **Resource Management**: Auto-scaling and cleanup
+- **Networking**: Private container networks
 
 #### Code Analysis
-```http
-POST   /api/v1/analysis/codebase        # Analyze repository
-POST   /api/v1/analysis/file            # Analyze single file
-GET    /api/v1/analysis/{id}/graph      # Get dependency graph
-GET    /api/v1/analysis/{id}/symbols    # Get symbol index
-GET    /api/v1/analysis/{id}/metrics    # Get code metrics
-```
+- **Parser**: Graph-Sitter multi-language support
+- **Analysis**: AST parsing and dependency graphs
+- **Quality Gates**: Automated code quality checks
+- **Security**: Vulnerability scanning
 
-#### Workflow Management
-```http
-GET    /api/v1/workflows                # List workflows
-POST   /api/v1/workflows                # Create workflow
-GET    /api/v1/workflows/{id}           # Get workflow details
-PUT    /api/v1/workflows/{id}           # Update workflow
-POST   /api/v1/workflows/{id}/execute   # Execute workflow
-```
+#### Web Evaluation
+- **Testing Framework**: Web-Eval-Agent with Playwright
+- **AI Evaluation**: Gemini API integration
+- **Browser Automation**: Headless Chrome testing
+- **Reporting**: Comprehensive test reports
 
-### Response Format
-All API endpoints return JSON responses with the following structure:
+## 📋 Project Configuration
+
+### Project Card Structure
+Each project in the dashboard contains:
 
 ```json
 {
-  "success": true,
-  "data": {
-    // Response data
+  "id": "project-uuid",
+  "name": "Project Name",
+  "description": "Project description",
+  "webhook_url": "https://webhook.domain.com/project-webhook",
+  "github_repo": "owner/repository",
+  "deployment_settings": {
+    "build_command": "npm run build",
+    "deploy_command": "npm run deploy",
+    "health_check_url": "https://app.domain.com/health",
+    "environment_variables": {
+      "NODE_ENV": "production"
+    }
   },
-  "metadata": {
-    "timestamp": "2024-07-14T16:09:17.000Z",
-    "request_id": "req_1234567890",
-    "version": "1.0.0"
+  "validation_settings": {
+    "auto_merge": true,
+    "required_checks": ["build", "test", "security"],
+    "timeout_minutes": 30
   },
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 100,
-    "has_next": true
-  }
+  "status": "active",
+  "last_run": "2024-07-16T10:30:00Z"
 }
+```
+
+### Webhook Configuration
+Cloudflare webhook endpoint configuration:
+
+```javascript
+// webhook-gateway.js (Cloudflare Worker)
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const projectId = url.pathname.split('/')[2];
+    
+    if (request.method === 'POST') {
+      const payload = await request.json();
+      
+      // Validate webhook signature
+      const isValid = await validateWebhookSignature(
+        payload, 
+        request.headers.get('X-Hub-Signature-256')
+      );
+      
+      if (isValid && payload.action === 'opened') {
+        // Trigger validation pipeline
+        await triggerValidationPipeline(projectId, payload.pull_request);
+      }
+      
+      return new Response('OK', { status: 200 });
+    }
+    
+    return new Response('Method not allowed', { status: 405 });
+  }
+};
+```
+
+## 🚀 Quick Start Guide
+
+### 1. Environment Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/Zeeeepa/codegenApp.git
+cd codegenApp
+
+# Install dependencies
+npm install
+cd server && npm install && cd ..
+pip install -r deploy-requirements.txt
+
+# Configure environment variables
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+### 2. Required Environment Variables
+
+```bash
+# Codegen API Configuration
+CODEGEN_API_KEY=your_codegen_api_key_here
+CODEGEN_API_URL=https://api.codegen.com
+CODEGEN_ORG_ID=your_organization_id_here
+CODEGEN_USER_ID=your_user_id_here
+
+# Cloudflare Webhook Configuration
+CLOUDFLARE_ACCOUNT_ID=2b2a1d3effa7f7fe4fe2a8c4e48681e3
+CLOUDFLARE_WORKER_NAME=webhook-gateway
+CLOUDFLARE_WORKER_URL=https://webhook-gateway.pixeliumperfecto.workers.dev
+CLOUDFLARE_API_KEY=your_cloudflare_api_key_here
+
+# GitHub Integration
+GITHUB_TOKEN=your_github_token_here
+GITHUB_APP_ID=1484403
+GITHUB_CLIENT_ID=Iv23li9PqHMExi84gaq1
+GITHUB_CLIENT_SECRET=d1fbd80a53d530773b3361f23efab3732c436a7b
+
+# Web-Eval-Agent Configuration
+GEMINI_API_KEY=your_gemini_api_key_here
+WEB_EVAL_TIMEOUT=300000
+WEB_EVAL_MAX_CONCURRENT=3
+
+# Database Configuration
+DATABASE_URL=postgresql://user:pass@localhost/codegenapp
+REDIS_URL=redis://localhost:6379
+
+# Deployment Configuration
+DOCKER_REGISTRY=your_registry_url
+KUBERNETES_NAMESPACE=codegenapp
+```
+
+### 3. Start the Development Environment
+
+```bash
+# Start all services
+npm run dev:all
+
+# Or start individually:
+npm run backend:dev     # Backend API (port 8000)
+npm run server:dev      # Proxy server (port 3001)  
+npm start              # Frontend dashboard (port 8000)
+```
+
+### 4. Access the Application
+
+- **Dashboard**: `http://localhost:8000`
+- **API Documentation**: `http://localhost:8000/docs`
+- **Webhook Endpoint**: `https://webhook-gateway.pixeliumperfecto.workers.dev`
+
+## 📊 Dashboard Usage Guide
+
+### Project Management
+
+1. **Select Project**: Use the dropdown to select your active project
+2. **Project Card**: View project status, last run, and configuration
+3. **Run Button**: Click to start a new agent run with target text/goal
+4. **Progress Tracking**: Monitor real-time progress and logs
+5. **Response Handling**: Interact with different response types (Regular/Plan/PR)
+
+### Response Types
+
+#### Regular Response
+- **Continue Button**: Add additional context and resume the agent run
+- **Session Management**: Maintains conversation context across interactions
+- **Error Handling**: Automatic retry with error context
+
+#### Plan Response  
+- **Confirm Button**: Proceed with the proposed plan (default: "Proceed")
+- **Modify Button**: Open text input to modify the plan before execution
+- **Plan Validation**: Review and approve changes before implementation
+
+#### PR Response
+- **GitHub Integration**: Automatic PR creation and linking
+- **Validation Trigger**: Initiates comprehensive testing pipeline
+- **Status Tracking**: Real-time validation progress and results
+- **Auto-Merge**: Optional automatic merging after successful validation
+
+### Validation Flow
+
+1. **Snapshot Creation**: Isolated environment with required dependencies
+2. **Codebase Cloning**: Fresh clone of PR branch for testing
+3. **Deployment Execution**: Run configured deployment commands
+4. **Health Validation**: Verify deployment success with AI analysis
+5. **Web Testing**: Comprehensive browser-based testing with web-eval-agent
+6. **Error Recovery**: Automatic retry with error context if issues found
+7. **Merge Decision**: Auto-merge or manual approval based on settings
+
+## 🔧 API Reference
+
+### Project Management Endpoints
+
+```http
+GET    /api/v1/projects                    # List all projects
+POST   /api/v1/projects                    # Create new project
+GET    /api/v1/projects/{id}               # Get project details
+PUT    /api/v1/projects/{id}               # Update project settings
+DELETE /api/v1/projects/{id}               # Delete project
+```
+
+### Agent Run Endpoints
+
+```http
+POST   /api/v1/projects/{id}/runs          # Start new agent run
+GET    /api/v1/projects/{id}/runs          # List project runs
+GET    /api/v1/runs/{id}                   # Get run details
+POST   /api/v1/runs/{id}/continue          # Continue existing run
+POST   /api/v1/runs/{id}/cancel            # Cancel running agent
+```
+
+### Validation Pipeline Endpoints
+
+```http
+POST   /api/v1/validation/trigger          # Trigger validation pipeline
+GET    /api/v1/validation/{id}/status      # Get validation status
+GET    /api/v1/validation/{id}/logs        # Get validation logs
+POST   /api/v1/validation/{id}/retry       # Retry failed validation
+```
+
+### Webhook Endpoints
+
+```http
+POST   /webhook/{project_id}               # GitHub webhook receiver
+GET    /webhook/{project_id}/status        # Webhook status check
+POST   /webhook/{project_id}/test          # Test webhook configuration
 ```
 
 ## 🧪 Testing Strategy
 
 ### Frontend Testing
 ```bash
-# Unit tests
+# Component tests
 npm test
 
-# Integration tests
+# Integration tests  
 npm run test:integration
 
-# E2E tests
+# E2E dashboard tests
 npm run test:e2e
 
 # Coverage report
@@ -455,63 +395,71 @@ npm run test:coverage
 
 ### Backend Testing
 ```bash
-# Unit tests
-cd backend && pytest tests/unit/
+# API tests
+cd backend && pytest tests/api/
 
 # Integration tests
 pytest tests/integration/
 
-# API tests
-pytest tests/api/
+# Validation pipeline tests
+pytest tests/validation/
 
 # Coverage report
 pytest --cov=app tests/
 ```
 
-### Web Evaluation Testing
+### Validation Testing
 ```bash
 # Web-eval-agent tests
 npm run test:web-eval
 
-# Browser automation tests
-npm run test:browser
+# Deployment tests
+npm run test:deployment
 
-# Performance tests
-npm run test:performance
+# End-to-end validation
+npm run test:validation-e2e
 ```
 
-## 🚀 Deployment
+## 🚀 Deployment Guide
 
 ### Production Deployment
 
-#### Frontend Deployment (Netlify)
+#### Frontend (Netlify/Vercel)
 ```bash
 # Build production bundle
 npm run build
 
 # Deploy to Netlify
 netlify deploy --prod --dir=build
+
+# Deploy to Vercel
+vercel --prod
 ```
 
-#### Backend Deployment (Docker)
+#### Backend (Docker + Kubernetes)
 ```bash
-# Build Docker image
+# Build Docker images
 docker build -t codegenapp-backend ./backend
+docker build -t codegenapp-frontend .
 
-# Run container
-docker run -p 8000:8000 codegenapp-backend
-```
-
-#### Full Stack Deployment (Docker Compose)
-```bash
-# Deploy entire stack
-docker-compose up -d
+# Deploy to Kubernetes
+kubectl apply -f k8s/
 
 # Scale services
-docker-compose up -d --scale backend=3
+kubectl scale deployment backend --replicas=3
 ```
 
-### Environment-Specific Configurations
+#### Cloudflare Worker Deployment
+```bash
+# Deploy webhook gateway
+wrangler deploy webhook-gateway.js
+
+# Configure environment variables
+wrangler secret put GITHUB_WEBHOOK_SECRET
+wrangler secret put CODEGEN_API_KEY
+```
+
+### Environment Configuration
 
 #### Development
 - Hot reloading enabled
@@ -519,7 +467,7 @@ docker-compose up -d --scale backend=3
 - Mock external services
 - Local database
 
-#### Staging
+#### Staging  
 - Production build
 - Integration testing
 - Real external services
@@ -531,86 +479,55 @@ docker-compose up -d --scale backend=3
 - Production services
 - Production database
 - CDN enabled
+- Auto-scaling
 
-## 📊 Monitoring & Observability
+## 📊 Monitoring & Analytics
 
-### Application Metrics
-- **Performance**: Response times, throughput, error rates
-- **Usage**: Active users, feature adoption, API usage
-- **Business**: Agent runs, evaluations completed, code analyzed
-- **Infrastructure**: CPU, memory, disk, network usage
-
-### Logging Strategy
-- **Structured Logging**: JSON format with consistent fields
-- **Log Levels**: DEBUG, INFO, WARN, ERROR, CRITICAL
-- **Correlation IDs**: Track requests across services
-- **Sensitive Data**: Automatic PII redaction
+### Key Metrics
+- **Agent Runs**: Success rate, duration, error types
+- **Validation Pipeline**: Pass rate, failure reasons, performance
+- **Deployment Success**: Build times, deployment frequency
+- **User Engagement**: Dashboard usage, feature adoption
 
 ### Alerting Rules
-- **High Error Rate**: >5% error rate for 5 minutes
-- **Slow Response**: >2s average response time
-- **Service Down**: Health check failures
+- **High Error Rate**: >5% agent run failures
+- **Validation Failures**: >3 consecutive validation failures
+- **Deployment Issues**: Failed deployments or health checks
 - **Resource Usage**: >80% CPU/memory usage
 
-## 🔧 Development Guidelines
-
-### Code Standards
-- **TypeScript**: Strict mode enabled, no `any` types
-- **Python**: Type hints required, PEP 8 compliance
-- **Testing**: Minimum 80% code coverage
-- **Documentation**: JSDoc/docstring for all public APIs
-
-### Git Workflow
-- **Branch Naming**: `feature/description`, `bugfix/description`
-- **Commit Messages**: Conventional commits format
-- **Pull Requests**: Required for all changes
-- **Code Review**: Minimum one approval required
-
-### Performance Guidelines
-- **Frontend**: Bundle size <500KB, First Paint <2s
-- **Backend**: API response <500ms, Database queries <100ms
-- **Testing**: Test execution <5 minutes
-- **Deployment**: Zero-downtime deployments
+### Logging Strategy
+- **Structured Logging**: JSON format with correlation IDs
+- **Log Levels**: DEBUG, INFO, WARN, ERROR, CRITICAL
+- **Sensitive Data**: Automatic PII redaction
+- **Retention**: 30 days for debug, 1 year for audit logs
 
 ## 🤝 Contributing
 
-### Getting Started
+### Development Workflow
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
+2. Create feature branch: `git checkout -b feature/description`
+3. Make changes with tests
+4. Run validation: `npm run validate`
+5. Submit pull request
+6. Automated validation pipeline runs
+7. Code review and merge
 
-### Development Setup
-```bash
-# Install development dependencies
-npm run install:dev
-
-# Set up pre-commit hooks
-npm run setup:hooks
-
-# Run development environment
-npm run dev:full
-```
-
-### Contribution Guidelines
-- Follow the established code style
-- Write comprehensive tests
-- Update documentation
-- Add changelog entries
-- Ensure CI/CD passes
+### Code Standards
+- **TypeScript**: Strict mode, no `any` types
+- **Python**: Type hints, PEP 8 compliance
+- **Testing**: Minimum 80% coverage
+- **Documentation**: Comprehensive API docs
 
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## 🆘 Support & Documentation
+## 🆘 Support
 
 ### Documentation
 - **API Docs**: `http://localhost:8000/docs`
-- **Architecture**: [backend/ARCHITECTURE.md](backend/ARCHITECTURE.md)
-- **Graph-Sitter**: [docs/graph_sitter_integration.md](docs/graph_sitter_integration.md)
+- **Architecture Guide**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- **Deployment Guide**: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ### Support Channels
 - **GitHub Issues**: Bug reports and feature requests
@@ -618,34 +535,14 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - **Documentation**: Comprehensive guides and examples
 
 ### Troubleshooting
-- **Common Issues**: Check the troubleshooting guide
+- **Common Issues**: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - **Logs**: Check application and service logs
 - **Health Checks**: Verify service status endpoints
 - **Configuration**: Validate environment variables
 
-## 🔄 Roadmap
-
-### Current Version (v1.0)
-- ✅ Core agent management
-- ✅ Web evaluation integration
-- ✅ Basic code analysis
-- ✅ CI/CD workflows
-
-### Next Release (v1.1)
-- 🔄 Advanced graph-sitter visualization
-- 🔄 Enhanced workflow templates
-- 🔄 Performance optimizations
-- 🔄 Mobile responsive design
-
-### Future Releases
-- 📋 Multi-tenant architecture
-- 📋 Advanced analytics dashboard
-- 📋 Plugin system
-- 📋 Enterprise features
-
 ---
 
-**Built with ❤️ by the CodegenApp team**
+**🚀 Built for modern CI/CD workflows with AI-powered intelligence**
 
 [🔗 Live Demo](https://codegenapp.netlify.app) • [📖 Documentation](https://docs.codegenapp.com) • [🐛 Report Issues](https://github.com/Zeeeepa/codegenApp/issues)
 
