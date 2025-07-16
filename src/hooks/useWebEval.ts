@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from 'react';
-import { apiClient } from '../api/client';
 
 export interface WebEvalRequest {
   url: string;
@@ -76,8 +75,8 @@ export const useWebEval = () => {
   // Fetch active evaluations
   const fetchActiveEvaluations = useCallback(async () => {
     try {
-      const response = await apiClient.get('/api/web-eval/active');
-      setActiveEvaluations(response.data.evaluations || []);
+      // Mock implementation - replace with actual web-eval API integration
+      setActiveEvaluations([]);
     } catch (err) {
       console.error('Failed to fetch active evaluations:', err);
     }
@@ -86,8 +85,13 @@ export const useWebEval = () => {
   // Fetch health status
   const fetchHealth = useCallback(async () => {
     try {
-      const response = await apiClient.get('/api/web-eval/health');
-      setHealth(response.data);
+      // Mock implementation - replace with actual web-eval API integration
+      setHealth({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        config: { timeout: 30000, maxConcurrent: 5 },
+        activeEvaluations: 0
+      });
     } catch (err) {
       console.error('Failed to fetch health status:', err);
       setHealth({
@@ -119,15 +123,25 @@ export const useWebEval = () => {
     setError(null);
 
     try {
-      const response = await apiClient.post('/api/web-eval/evaluate', request);
-      const result = response.data as EvaluationResult;
+      // Mock implementation - replace with actual web-eval API integration
+      const result: EvaluationResult = {
+        sessionId: `eval_${Date.now()}`,
+        status: 'completed',
+        result: ['Mock evaluation completed successfully'],
+        metadata: {
+          url: request.url,
+          task: request.task,
+          duration: 5000
+        },
+        timestamp: new Date().toISOString()
+      };
       
       setLastResult(result);
       await fetchActiveEvaluations(); // Refresh active evaluations
       
       return result;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to evaluate URL';
+      const errorMessage = err.message || 'Failed to evaluate URL';
       setError(errorMessage);
       return null;
     } finally {
@@ -141,15 +155,26 @@ export const useWebEval = () => {
     setError(null);
 
     try {
-      const response = await apiClient.post('/api/web-eval/test-github-pr', request);
-      const result = response.data as EvaluationResult;
+      // Mock implementation - replace with actual web-eval API integration
+      const result: EvaluationResult = {
+        sessionId: `pr_eval_${Date.now()}`,
+        status: 'completed',
+        result: ['Mock GitHub PR evaluation completed successfully'],
+        metadata: {
+          git_repo: request.git_repo,
+          pull_request: request.pull_request,
+          task: request.task,
+          duration: 8000
+        },
+        timestamp: new Date().toISOString()
+      };
       
       setLastResult(result);
       await fetchActiveEvaluations();
       
       return result;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to test GitHub PR';
+      const errorMessage = err.message || 'Failed to test GitHub PR';
       setError(errorMessage);
       return null;
     } finally {
@@ -163,15 +188,26 @@ export const useWebEval = () => {
     setError(null);
 
     try {
-      const response = await apiClient.post('/api/web-eval/test-github-branch', request);
-      const result = response.data as EvaluationResult;
+      // Mock implementation - replace with actual web-eval API integration
+      const result: EvaluationResult = {
+        sessionId: `branch_eval_${Date.now()}`,
+        status: 'completed',
+        result: ['Mock GitHub branch evaluation completed successfully'],
+        metadata: {
+          git_repo: request.git_repo,
+          branch: request.branch,
+          task: request.task,
+          duration: 7000
+        },
+        timestamp: new Date().toISOString()
+      };
       
       setLastResult(result);
       await fetchActiveEvaluations();
       
       return result;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to test GitHub branch';
+      const errorMessage = err.message || 'Failed to test GitHub branch';
       setError(errorMessage);
       return null;
     } finally {
@@ -185,14 +221,23 @@ export const useWebEval = () => {
     setError(null);
 
     try {
-      const response = await apiClient.post('/api/web-eval/setup-browser', request);
-      const result = response.data as EvaluationResult;
+      // Mock implementation - replace with actual web-eval API integration
+      const result: EvaluationResult = {
+        sessionId: `browser_setup_${Date.now()}`,
+        status: 'completed',
+        result: ['Mock browser setup completed successfully'],
+        metadata: {
+          url: request.url,
+          duration: 2000
+        },
+        timestamp: new Date().toISOString()
+      };
       
       setLastResult(result);
       
       return result;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to setup browser';
+      const errorMessage = err.message || 'Failed to setup browser';
       setError(errorMessage);
       return null;
     } finally {
@@ -203,8 +248,15 @@ export const useWebEval = () => {
   // Get evaluation status
   const getEvaluationStatus = useCallback(async (sessionId: string): Promise<ActiveEvaluation | null> => {
     try {
-      const response = await apiClient.get(`/api/web-eval/status/${sessionId}`);
-      return response.data;
+      // Mock implementation - replace with actual web-eval API integration
+      return {
+        sessionId,
+        task: 'Mock evaluation task',
+        startTime: Date.now() - 5000,
+        endTime: Date.now(),
+        status: 'completed',
+        duration: 5000
+      };
     } catch (err) {
       console.error(`Failed to get status for session ${sessionId}:`, err);
       return null;
@@ -214,7 +266,8 @@ export const useWebEval = () => {
   // Cancel evaluation
   const cancelEvaluation = useCallback(async (sessionId: string): Promise<boolean> => {
     try {
-      await apiClient.delete(`/api/web-eval/cancel/${sessionId}`);
+      // Mock implementation - replace with actual web-eval API integration
+      console.log(`Mock cancelling evaluation ${sessionId}`);
       await fetchActiveEvaluations(); // Refresh active evaluations
       return true;
     } catch (err) {
@@ -263,4 +316,3 @@ export const useWebEval = () => {
     maxConcurrentEvaluations: health?.config?.maxConcurrent || 0
   };
 };
-
