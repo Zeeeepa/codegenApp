@@ -256,16 +256,16 @@ CODEGEN_ORG_ID=your_organization_id_here
 CODEGEN_USER_ID=your_user_id_here
 
 # Cloudflare Webhook Configuration
-CLOUDFLARE_ACCOUNT_ID=2b2a1d3effa7f7fe4fe2a8c4e48681e3
+CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id_here
 CLOUDFLARE_WORKER_NAME=webhook-gateway
-CLOUDFLARE_WORKER_URL=https://webhook-gateway.pixeliumperfecto.workers.dev
+CLOUDFLARE_WORKER_URL=https://webhook-gateway.yourdomain.workers.dev
 CLOUDFLARE_API_KEY=your_cloudflare_api_key_here
 
 # GitHub Integration
 GITHUB_TOKEN=your_github_token_here
-GITHUB_APP_ID=1484403
-GITHUB_CLIENT_ID=Iv23li9PqHMExi84gaq1
-GITHUB_CLIENT_SECRET=d1fbd80a53d530773b3361f23efab3732c436a7b
+GITHUB_APP_ID=your_github_app_id_here
+GITHUB_CLIENT_ID=your_github_client_id_here
+GITHUB_CLIENT_SECRET=your_github_client_secret_here
 
 # Web-Eval-Agent Configuration
 GEMINI_API_KEY=your_gemini_api_key_here
@@ -297,7 +297,7 @@ npm start              # Frontend dashboard (port 8000)
 
 - **Dashboard**: `http://localhost:8000`
 - **API Documentation**: `http://localhost:8000/docs`
-- **Webhook Endpoint**: `https://webhook-gateway.pixeliumperfecto.workers.dev`
+- **Webhook Endpoint**: `https://webhook-gateway.yourdomain.workers.dev`
 
 ## 📊 Dashboard Usage Guide
 
@@ -545,4 +545,3 @@ MIT License - see [LICENSE](LICENSE) file for details.
 **🚀 Built for modern CI/CD workflows with AI-powered intelligence**
 
 [🔗 Live Demo](https://codegenapp.netlify.app) • [📖 Documentation](https://docs.codegenapp.com) • [🐛 Report Issues](https://github.com/Zeeeepa/codegenApp/issues)
-
