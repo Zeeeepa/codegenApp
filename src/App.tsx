@@ -4,6 +4,7 @@ import { Settings } from 'lucide-react';
 import ListAgentRuns from './list-agent-runs';
 import { SetupGuide } from './components/SetupGuide';
 import { ProjectDashboard } from './components/ProjectDashboard';
+import { IntegrationDashboard } from './components/IntegrationDashboard';
 import { AgentRunSelectionProvider } from './contexts/AgentRunSelectionContext';
 import { DialogProvider } from './contexts/DialogContext';
 import { SettingsDialog } from './components/SettingsDialog';
@@ -17,9 +18,11 @@ import './App.css';
 interface HeaderProps {
   selectedProject: CachedProject | null;
   onProjectChange: (project: CachedProject | null) => void;
+  currentView: string;
+  onViewChange: (view: string) => void;
 }
 
-function Header({ selectedProject, onProjectChange }: HeaderProps) {
+function Header({ selectedProject, onProjectChange, currentView, onViewChange }: HeaderProps) {
   const [showSettings, setShowSettings] = React.useState(false);
   
   return (
@@ -27,13 +30,37 @@ function Header({ selectedProject, onProjectChange }: HeaderProps) {
       <header className="bg-black border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
+            <div className="flex items-center space-x-6">
               <h1 className="text-xl font-bold text-white">
-                {selectedProject ? `📁 ${selectedProject.name}` : '🤖 Agent Runs Dashboard'}
+                {selectedProject && currentView === 'dashboard' ? `📁 ${selectedProject.name}` : '🤖 Codegen Agent Manager'}
               </h1>
+              <nav className="flex space-x-4">
+                <button
+                  onClick={() => onViewChange('dashboard')}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    currentView === 'dashboard'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                  }`}
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => onViewChange('integration')}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    currentView === 'integration'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                  }`}
+                >
+                  Integration
+                </button>
+              </nav>
             </div>
             <div className="flex items-center space-x-3">
-              <ProjectDropdown onProjectChange={onProjectChange} />
+              {currentView === 'dashboard' && (
+                <ProjectDropdown onProjectChange={onProjectChange} />
+              )}
               <button
                 onClick={() => setShowSettings(true)}
                 className="inline-flex items-center p-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800 transition-colors"
@@ -115,6 +142,7 @@ function Dashboard({ selectedProject }: DashboardProps) {
 
 function App() {
   const [selectedProject, setSelectedProject] = useState<CachedProject | null>(null);
+  const [currentView, setCurrentView] = useState<string>('dashboard');
 
   return (
     <DialogProvider>
@@ -122,7 +150,9 @@ function App() {
         <div className="min-h-screen bg-black">
           <Header 
             selectedProject={selectedProject} 
-            onProjectChange={setSelectedProject} 
+            onProjectChange={setSelectedProject}
+            currentView={currentView}
+            onViewChange={setCurrentView}
           />
           <Toaster
             position="top-right"
@@ -149,7 +179,13 @@ function App() {
             }}
           />
           
-          <Dashboard selectedProject={selectedProject} />
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {currentView === 'dashboard' ? (
+              <Dashboard selectedProject={selectedProject} />
+            ) : (
+              <IntegrationDashboard />
+            )}
+          </main>
         </div>
       </AgentRunSelectionProvider>
     </DialogProvider>
