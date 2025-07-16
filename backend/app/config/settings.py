@@ -17,10 +17,37 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False, description="Debug mode")
     
     # Codegen API configuration
+    codegen_org_id: str = Field(..., description="Codegen organization ID")
     codegen_api_token: str = Field(..., description="Codegen API token")
     codegen_api_base_url: str = Field(
         default="https://api.codegen.com", 
         description="Codegen API base URL"
+    )
+    
+    # GitHub API configuration
+    github_token: Optional[str] = Field(
+        default=None,
+        description="GitHub API token for repository access"
+    )
+    
+    # AI Services configuration
+    gemini_api_key: Optional[str] = Field(
+        default=None,
+        description="Google Gemini API key for AI analysis"
+    )
+    
+    # Cloudflare configuration
+    cloudflare_api_key: Optional[str] = Field(
+        default=None,
+        description="Cloudflare API key"
+    )
+    cloudflare_account_id: Optional[str] = Field(
+        default=None,
+        description="Cloudflare account ID"
+    )
+    cloudflare_worker_url: Optional[str] = Field(
+        default=None,
+        description="Cloudflare worker URL for webhooks"
     )
     
     # Database configuration (for workflow persistence)
