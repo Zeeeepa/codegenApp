@@ -1,37 +1,34 @@
+/**
+ * Project dropdown selector component.
+ * 
+ * Provides a dropdown interface for selecting projects
+ * with search functionality and project status indicators.
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Plus, Github, Search, X } from 'lucide-react';
-import { CachedProject } from '../api/types';
-import { GitHubRepository } from '../api/githubTypes';
-import { getCachedProjects, getSelectedProject, setSelectedProject, addProjectToCache, githubRepoToProject } from '../storage/projectCache';
-import { getGitHubClient } from '../api/github';
-import { getPreferenceValues } from '../utils/preferences';
-import toast from 'react-hot-toast';
+import { ChevronDown, Search, Circle } from 'lucide-react';
+import { useProject, Project } from '../contexts/ProjectContext';
 
 interface ProjectDropdownProps {
-  onProjectChange?: (project: CachedProject | null) => void;
+  className?: string;
 }
 
-export function ProjectDropdown({ onProjectChange }: ProjectDropdownProps) {
+export function ProjectDropdown({ className = '' }: ProjectDropdownProps) {
+  const { state, loadProjects, selectProject } = useProject();
   const [isOpen, setIsOpen] = useState(false);
-  const [projects, setProjects] = useState<CachedProject[]>([]);
-  const [selectedProject, setSelectedProjectState] = useState<CachedProject | null>(null);
-  const [showAddProject, setShowAddProject] = useState(false);
-  const [availableRepos, setAvailableRepos] = useState<GitHubRepository[]>([]);
-  const [loadingRepos, setLoadingRepos] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Load projects and selected project on mount
+  // Load projects on mount
   useEffect(() => {
     loadProjects();
-  }, []);
+  }, [loadProjects]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
-        setShowAddProject(false);
       }
     }
 
@@ -41,247 +38,137 @@ export function ProjectDropdown({ onProjectChange }: ProjectDropdownProps) {
     };
   }, []);
 
-  const loadProjects = async () => {
-    try {
-      const cachedProjects = await getCachedProjects();
-      setProjects(cachedProjects);
-
-      const selectedId = await getSelectedProject();
-      if (selectedId) {
-        const selected = cachedProjects.find(p => p.id === selectedId);
-        if (selected) {
-          setSelectedProjectState(selected);
-          onProjectChange?.(selected);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load projects:', error);
-    }
-  };
-
-  const handleProjectSelect = async (project: CachedProject) => {
-    try {
-      setSelectedProjectState(project);
-      await setSelectedProject(project.id);
-      setIsOpen(false);
-      onProjectChange?.(project);
-      toast.success(`Selected project: ${project.name}`);
-    } catch (error) {
-      console.error('Failed to select project:', error);
-      toast.error('Failed to select project');
-    }
-  };
-
-  const loadAvailableRepositories = async () => {
-    setLoadingRepos(true);
-    try {
-      const preferences = await getPreferenceValues();
-      if (!preferences.githubToken) {
-        toast.error('GitHub token not configured. Please set it up in Settings.');
-        return;
-      }
-
-      const client = getGitHubClient(preferences.githubToken);
-      const repos = await client.getUserRepositories({
-        sort: 'updated',
-        direction: 'desc',
-        per_page: 100,
-      });
-
-      // Filter out repos that are already added as projects
-      const existingProjectIds = projects.map(p => p.id);
-      const availableRepos = repos.filter(repo => !existingProjectIds.includes(repo.full_name));
-      
-      setAvailableRepos(availableRepos);
-    } catch (error) {
-      console.error('Failed to load repositories:', error);
-      toast.error('Failed to load repositories');
-    } finally {
-      setLoadingRepos(false);
-    }
-  };
-
-  const handleAddProject = async (repo: GitHubRepository) => {
-    try {
-      const project = githubRepoToProject(repo);
-      await addProjectToCache(project);
-      
-      // Reload projects
-      await loadProjects();
-      
-      // Select the newly added project
-      await handleProjectSelect({ ...project, lastUpdated: new Date().toISOString() });
-      
-      setShowAddProject(false);
-      toast.success(`Added project: ${repo.name}`);
-    } catch (error) {
-      console.error('Failed to add project:', error);
-      toast.error('Failed to add project');
-    }
-  };
-
-  const filteredRepos = availableRepos.filter(repo =>
-    repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    repo.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (repo.description && repo.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  // Filter projects based on search term
+  const filteredProjects = state.projects.filter(project =>
+    project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    project.github_repo.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleProjectSelect = (project: Project) => {
+    selectProject(project);
+    setIsOpen(false);
+    setSearchTerm('');
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'text-green-500';
+      case 'inactive':
+        return 'text-yellow-500';
+      case 'archived':
+        return 'text-gray-500';
+      default:
+        return 'text-gray-400';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className={`relative ${className}`} ref={dropdownRef}>
       {/* Dropdown Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center px-3 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+        disabled={state.loading}
       >
-        <Github className="h-4 w-4 mr-2" />
-        <span className="max-w-48 truncate">
-          {selectedProject ? selectedProject.name : 'Select Project'}
-        </span>
-        <ChevronDown className="h-4 w-4 ml-2" />
+        <div className="flex items-center space-x-3">
+          {state.selectedProject ? (
+            <>
+              <Circle className={`w-3 h-3 fill-current ${getStatusColor(state.selectedProject.status)}`} />
+              <div className="text-left">
+                <div className="font-medium text-gray-900">{state.selectedProject.name}</div>
+                <div className="text-sm text-gray-500">{state.selectedProject.github_repo}</div>
+              </div>
+            </>
+          ) : (
+            <div className="text-gray-500">
+              {state.loading ? 'Loading projects...' : 'Select a project'}
+            </div>
+          )}
+        </div>
+        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-50">
-          {!showAddProject ? (
-            <>
-              {/* Header */}
-              <div className="px-4 py-3 border-b border-gray-600">
-                <h3 className="text-sm font-medium text-white">Select Project</h3>
-              </div>
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-96 overflow-hidden">
+          {/* Search Input */}
+          <div className="p-3 border-b border-gray-200">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search projects..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
 
-              {/* Project List */}
-              <div className="max-h-64 overflow-y-auto">
-                {projects.length === 0 ? (
-                  <div className="px-4 py-3 text-center text-gray-400">
-                    <p className="text-sm">No projects added yet</p>
-                    <p className="text-xs mt-1">Click "Add Project" to get started</p>
-                  </div>
-                ) : (
-                  projects.map((project) => (
-                    <button
-                      key={project.id}
-                      onClick={() => handleProjectSelect(project)}
-                      className={`w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors ${
-                        selectedProject?.id === project.id ? 'bg-blue-900/20 border-r-2 border-blue-500' : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white truncate">{project.name}</p>
-                          <p className="text-xs text-gray-400 truncate">{project.fullName}</p>
-                          {project.description && (
-                            <p className="text-xs text-gray-300 mt-1 line-clamp-2">{project.description}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-2 ml-3">
-                          {project.prCount !== undefined && project.prCount > 0 && (
-                            <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
-                              {project.prCount}
-                            </span>
-                          )}
-                          {project.language && (
-                            <span className="px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded">
-                              {project.language}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                )}
+          {/* Project List */}
+          <div className="max-h-64 overflow-y-auto">
+            {filteredProjects.length === 0 ? (
+              <div className="px-4 py-3 text-gray-500 text-center">
+                {searchTerm ? 'No projects found' : 'No projects available'}
               </div>
-
-              {/* Footer */}
-              <div className="px-4 py-3 border-t border-gray-600">
+            ) : (
+              filteredProjects.map((project) => (
                 <button
-                  onClick={() => {
-                    setShowAddProject(true);
-                    loadAvailableRepositories();
-                  }}
-                  className="w-full inline-flex items-center justify-center px-3 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                  key={project.id}
+                  onClick={() => handleProjectSelect(project)}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-colors"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Project
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Add Project Header */}
-              <div className="px-4 py-3 border-b border-gray-600 flex items-center justify-between">
-                <h3 className="text-sm font-medium text-white">Add Project from GitHub</h3>
-                <button
-                  onClick={() => setShowAddProject(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Search */}
-              <div className="px-4 py-3 border-b border-gray-600">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search repositories..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Repository List */}
-              <div className="max-h-64 overflow-y-auto">
-                {loadingRepos ? (
-                  <div className="px-4 py-3 text-center text-gray-400">
-                    <p className="text-sm">Loading repositories...</p>
-                  </div>
-                ) : filteredRepos.length === 0 ? (
-                  <div className="px-4 py-3 text-center text-gray-400">
-                    <p className="text-sm">
-                      {searchQuery ? 'No repositories match your search' : 'No available repositories'}
-                    </p>
-                  </div>
-                ) : (
-                  filteredRepos.map((repo) => (
-                    <button
-                      key={repo.id}
-                      onClick={() => handleAddProject(repo)}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white truncate">{repo.name}</p>
-                          <p className="text-xs text-gray-400 truncate">{repo.full_name}</p>
-                          {repo.description && (
-                            <p className="text-xs text-gray-300 mt-1 line-clamp-2">{repo.description}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-2 ml-3">
-                          {repo.language && (
-                            <span className="px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded">
-                              {repo.language}
-                            </span>
-                          )}
-                          {repo.private && (
-                            <span className="px-2 py-1 text-xs bg-yellow-700 text-yellow-200 rounded">
-                              Private
-                            </span>
-                          )}
-                          <span className="text-xs text-gray-400">⭐ {repo.stargazers_count}</span>
-                        </div>
+                  <div className="flex items-center space-x-3">
+                    <Circle className={`w-3 h-3 fill-current ${getStatusColor(project.status)}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 truncate">{project.name}</div>
+                      <div className="text-sm text-gray-500 truncate">{project.github_repo}</div>
+                      <div className="flex items-center space-x-4 mt-1">
+                        <span className={`text-xs ${getStatusColor(project.status)}`}>
+                          {getStatusText(project.status)}
+                        </span>
+                        {project.last_run && (
+                          <span className="text-xs text-gray-400">
+                            Last run: {new Date(project.last_run).toLocaleDateString()}
+                          </span>
+                        )}
                       </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </>
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+
+          {/* Footer */}
+          {filteredProjects.length > 0 && (
+            <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
+              {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''} available
+            </div>
           )}
+        </div>
+      )}
+
+      {/* Error State */}
+      {state.error && (
+        <div className="absolute z-50 w-full mt-1 p-3 bg-red-50 border border-red-200 rounded-lg shadow-lg">
+          <div className="text-red-700 text-sm">
+            Error loading projects: {state.error}
+          </div>
+          <button
+            onClick={loadProjects}
+            className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
+          >
+            Try again
+          </button>
         </div>
       )}
     </div>
   );
 }
+
