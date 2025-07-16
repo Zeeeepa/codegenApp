@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { apiClient } from '../api/client';
+import { getAPIClient } from '../api/client';
 
 export interface WebEvalRequest {
   url: string;
@@ -76,6 +76,7 @@ export const useWebEval = () => {
   // Fetch active evaluations
   const fetchActiveEvaluations = useCallback(async () => {
     try {
+      const apiClient = getAPIClient();
       const response = await apiClient.get('/api/web-eval/active');
       setActiveEvaluations(response.data.evaluations || []);
     } catch (err) {
@@ -86,6 +87,7 @@ export const useWebEval = () => {
   // Fetch health status
   const fetchHealth = useCallback(async () => {
     try {
+      const apiClient = getAPIClient();
       const response = await apiClient.get('/api/web-eval/health');
       setHealth(response.data);
     } catch (err) {
@@ -119,6 +121,7 @@ export const useWebEval = () => {
     setError(null);
 
     try {
+      const apiClient = getAPIClient();
       const response = await apiClient.post('/api/web-eval/evaluate', request);
       const result = response.data as EvaluationResult;
       
@@ -141,6 +144,7 @@ export const useWebEval = () => {
     setError(null);
 
     try {
+      const apiClient = getAPIClient();
       const response = await apiClient.post('/api/web-eval/test-github-pr', request);
       const result = response.data as EvaluationResult;
       
@@ -163,6 +167,7 @@ export const useWebEval = () => {
     setError(null);
 
     try {
+      const apiClient = getAPIClient();
       const response = await apiClient.post('/api/web-eval/test-github-branch', request);
       const result = response.data as EvaluationResult;
       
@@ -185,6 +190,7 @@ export const useWebEval = () => {
     setError(null);
 
     try {
+      const apiClient = getAPIClient();
       const response = await apiClient.post('/api/web-eval/setup-browser', request);
       const result = response.data as EvaluationResult;
       
@@ -203,6 +209,7 @@ export const useWebEval = () => {
   // Get evaluation status
   const getEvaluationStatus = useCallback(async (sessionId: string): Promise<ActiveEvaluation | null> => {
     try {
+      const apiClient = getAPIClient();
       const response = await apiClient.get(`/api/web-eval/status/${sessionId}`);
       return response.data;
     } catch (err) {
@@ -214,6 +221,7 @@ export const useWebEval = () => {
   // Cancel evaluation
   const cancelEvaluation = useCallback(async (sessionId: string): Promise<boolean> => {
     try {
+      const apiClient = getAPIClient();
       await apiClient.delete(`/api/web-eval/cancel/${sessionId}`);
       await fetchActiveEvaluations(); // Refresh active evaluations
       return true;
@@ -263,4 +271,3 @@ export const useWebEval = () => {
     maxConcurrentEvaluations: health?.config?.maxConcurrent || 0
   };
 };
-

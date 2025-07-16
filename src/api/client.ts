@@ -242,6 +242,35 @@ export class CodegenAPIClient {
       return false;
     }
   }
+
+  // Generic HTTP methods for web-eval integration
+  async get<T = any>(endpoint: string): Promise<{ data: T }> {
+    const result = await this.makeRequest<T>(endpoint);
+    return { data: result };
+  }
+
+  async post<T = any>(endpoint: string, data?: any): Promise<{ data: T }> {
+    const result = await this.makeRequest<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    return { data: result };
+  }
+
+  async put<T = any>(endpoint: string, data?: any): Promise<{ data: T }> {
+    const result = await this.makeRequest<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    return { data: result };
+  }
+
+  async delete<T = any>(endpoint: string): Promise<{ data: T }> {
+    const result = await this.makeRequest<T>(endpoint, {
+      method: 'DELETE',
+    });
+    return { data: result };
+  }
 }
 
 // Singleton instance

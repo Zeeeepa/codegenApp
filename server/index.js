@@ -7,7 +7,7 @@ import webEvalRoutes from './web-eval-routes.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3004;
 const CODEGEN_API_BASE = process.env.CODEGEN_API_BASE || 'https://api.codegen.com';
 
 // CORS configuration with credentials support

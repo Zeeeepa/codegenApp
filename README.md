@@ -2,6 +2,276 @@
 
 A comprehensive, enterprise-grade web application for managing AI-powered software development workflows with integrated code analysis, web evaluation, and automated CI/CD orchestration. This platform provides a unified interface for modern software development teams leveraging AI agents, automated testing, and intelligent code analysis.
 
+## 🔄 The One and Only Flow
+
+CodegenApp follows a single, comprehensive flow from project selection to validated implementation. This flow ensures every feature request goes through proper development, validation, and deployment cycles.
+
+### Flow Overview
+
+```
+Opening Program → Project Selection → Feature Request → Codegen Processing → Response Handling → Validation Flow → Completion
+```
+
+### Detailed Flow Steps
+
+#### 1. 🚀 Application Startup
+**Frontend Components:**
+- `src/App.tsx` - Main application component initialization
+- `src/components/ProjectDashboard.tsx` - Dashboard rendering
+- `src/storage/projectCache.ts` - Load cached projects
+- `src/utils/credentials.ts` - Validate user authentication
+
+**Backend Services:**
+- `backend/main.py` - FastAPI server startup
+- `backend/app/core/integration/integration_manager.py` - Initialize integration framework
+- `backend/app/core/integration/config_manager.py` - Load system configuration
+
+#### 2. 📋 Project Selection from Dropdown
+**Frontend Flow:**
+```typescript
+// src/components/ProjectDropdown.tsx
+getCachedProjects() → getGitHubClient() → fetchRepositories() → setSelectedProject()
+```
+
+**Functions Called:**
+- `getCachedProjects()` - Retrieve cached project list
+- `getGitHubClient()` - Initialize GitHub API client
+- `getPreferenceValues()` - Load user preferences
+- `setSelectedProject()` - Update selected project state
+- `addProjectToCache()` - Cache new project selections
+
+**Backend Integration:**
+- `backend/app/services/adapters/codegen_adapter.py` - Project metadata sync
+- `backend/app/storage/projectCache.ts` - Project persistence
+
+#### 3. 🎯 Project Card Display & Options
+**Frontend Components:**
+- `src/components/ProjectCard.tsx` - Render project with action buttons
+- `src/components/ProjectSettingsDialog.tsx` - Project configuration
+- `src/components/PRListModal.tsx` - Show existing PRs
+
+**Available Actions:**
+- **Run Button** - Start new agent run
+- **Settings** - Configure project parameters
+- **View PRs** - Show existing pull requests
+- **Monitor** - Background monitoring toggle
+
+#### 4. 💬 Run Dialog - Target Requirements Input
+**Frontend Flow:**
+```typescript
+// src/components/CreateRunDialog.tsx
+validateCredentials() → getAPIClient() → createAgentRun() → associateAgentRunWithProject()
+```
+
+**Functions Called:**
+- `validateCredentials()` - Ensure API access
+- `getAPIClient()` - Get authenticated Codegen client
+- `getBackgroundMonitoringService()` - Setup monitoring
+- `useCurrentUser()` - Get user context
+
+**Backend Processing:**
+- `backend/app/api/v1/routes/workflow.py` - Handle run creation
+- `backend/app/core/workflow/engine.py` - Initialize workflow execution
+
+#### 5. 🤖 Codegen API Processing
+**Backend Workflow Engine:**
+```python
+# backend/app/core/workflow/engine.py
+WorkflowEngine.execute() → ServiceCoordinator.execute_step() → CodegenAdapter.process_request()
+```
+
+**Processing Pipeline:**
+- `WorkflowEngine.execute()` - Orchestrate execution
+- `ServiceCoordinator.execute_step()` - Coordinate services
+- `CodegenAdapter.process_request()` - Send to Codegen API
+- `WorkflowStateManager.update_state()` - Track progress
+
+**Integration Points:**
+- `backend/app/services/adapters/codegen_adapter.py` - Codegen API client
+- `backend/app/core/orchestration/coordinator.py` - Service coordination
+- `backend/app/core/orchestration/state_manager.py` - State management
+
+#### 6. 📨 Response Processing (3 Types)
+
+##### Type 1: Simple Response
+**Frontend Handling:**
+```typescript
+// src/components/AgentRunResponseModal.tsx
+displayResponse() → enableContinuation() → sendFollowUpMessage()
+```
+
+**Functions:**
+- `displayResponse()` - Show response content
+- `enableContinuation()` - Allow follow-up input
+- `sendFollowUpMessage()` - Continue conversation
+
+##### Type 2: Plan Response
+**Frontend Flow:**
+```typescript
+// src/components/AgentRunDialog.tsx
+displayPlan() → showPlanSteps() → enablePlanContinuation()
+```
+
+**Functions:**
+- `displayPlan()` - Render plan structure
+- `showPlanSteps()` - Display step-by-step breakdown
+- `enablePlanContinuation()` - Allow plan refinement
+
+##### Type 3: PR Response
+**Triggers Validation Flow:**
+```typescript
+// src/components/AgentRunDialog.tsx
+detectPRResponse() → initializeValidationFlow() → startGrainchainValidation()
+```
+
+#### 7. 🔍 PR Validation Flow (Grainchain Integration)
+
+##### Phase 1: Sandbox Creation
+**Backend Services:**
+```python
+# backend/app/services/adapters/grainchain_adapter.py
+GrainchainAdapter.create_sandbox() → initialize_environment() → clone_pr_contents()
+```
+
+**Functions Called:**
+- `create_sandbox()` - Create isolated environment
+- `initialize_environment()` - Setup dependencies
+- `clone_pr_contents()` - Pull PR code
+- `setup_graph_sitter()` - Initialize code analysis
+
+##### Phase 2: Code Analysis
+**Graph-Sitter Integration:**
+```python
+# backend/app/services/adapters/graph_sitter_adapter.py
+GraphSitterAdapter.analyze_pr() → parse_code_changes() → validate_syntax()
+```
+
+**Analysis Pipeline:**
+- `analyze_pr()` - Comprehensive code analysis
+- `parse_code_changes()` - Parse modified files
+- `validate_syntax()` - Syntax validation
+- `check_dependencies()` - Dependency analysis
+- `generate_analysis_report()` - Create analysis summary
+
+##### Phase 3: Deployment Script Generation
+**Backend Workflow:**
+```python
+# backend/app/core/workflow/templates/deployment_validation_workflow.py
+DeploymentValidationWorkflow.generate_deployment_script() → validate_build_process()
+```
+
+**Script Generation:**
+- `generate_deployment_script()` - Create deployment commands
+- `validate_build_process()` - Test build pipeline
+- `check_environment_compatibility()` - Validate environment
+- `prepare_test_data()` - Setup test fixtures
+
+##### Phase 4: Build Validation
+**Grainchain Execution:**
+```python
+# backend/app/services/adapters/grainchain_adapter.py
+execute_build_script() → monitor_build_process() → validate_build_success()
+```
+
+**Build Process:**
+- `execute_build_script()` - Run deployment script
+- `monitor_build_process()` - Track build progress
+- `validate_build_success()` - Verify successful build
+- `capture_build_logs()` - Log build output
+
+##### Phase 5: Web Evaluation
+**Web-Eval-Agent Integration:**
+```python
+# backend/app/services/web_eval_service.py
+WebEvalService.evaluate_deployment() → run_automated_tests() → validate_functionality()
+```
+
+**Evaluation Pipeline:**
+- `evaluate_deployment()` - Start web evaluation
+- `run_automated_tests()` - Execute test suite
+- `validate_functionality()` - Verify features work
+- `capture_screenshots()` - Document UI state
+- `generate_evaluation_report()` - Create test report
+
+#### 8. ✅ Validation Results & PR Merge
+
+##### Success Path:
+```python
+# backend/app/core/workflow/engine.py
+validation_success() → approve_pr() → merge_pr() → update_project_status()
+```
+
+**Success Functions:**
+- `validation_success()` - Mark validation complete
+- `approve_pr()` - Approve pull request
+- `merge_pr()` - Merge to main branch
+- `update_project_status()` - Update project state
+- `notify_completion()` - Send completion notification
+
+##### Failure Path:
+```python
+# backend/app/core/workflow/engine.py
+validation_failure() → generate_failure_report() → request_fixes()
+```
+
+**Failure Handling:**
+- `validation_failure()` - Mark validation failed
+- `generate_failure_report()` - Create failure analysis
+- `request_fixes()` - Request code fixes
+- `rollback_changes()` - Revert if necessary
+
+#### 9. 📊 Project Card Status Updates
+
+**Frontend Status Display:**
+```typescript
+// src/components/ProjectCard.tsx
+updateRunStatus() → displayValidationSteps() → showCompletionStatus()
+```
+
+**Status Tracking:**
+- `updateRunStatus()` - Real-time status updates
+- `displayValidationSteps()` - Show validation progress
+- `showCompletionStatus()` - Display final status
+- `enableParallelRuns()` - Allow multiple concurrent runs
+
+**Backend State Management:**
+```python
+# backend/app/core/orchestration/state_manager.py
+WorkflowStateManager.update_run_status() → broadcast_status_change()
+```
+
+#### 10. 🔄 Parallel Run Management
+
+**Multi-Run Support:**
+```typescript
+// src/storage/agentRunCache.ts
+manageMultipleRuns() → trackRunStates() → updateRunProgress()
+```
+
+**Parallel Execution:**
+- `manageMultipleRuns()` - Handle concurrent runs
+- `trackRunStates()` - Monitor all run states
+- `updateRunProgress()` - Update individual progress
+- `preventResourceConflicts()` - Avoid conflicts
+
+### 🎯 Key Integration Points
+
+1. **Frontend ↔ Backend**: REST API via `src/api/client.ts`
+2. **Backend ↔ Codegen**: `backend/app/services/adapters/codegen_adapter.py`
+3. **Backend ↔ Grainchain**: `backend/app/services/adapters/grainchain_adapter.py`
+4. **Backend ↔ Graph-Sitter**: `backend/app/services/adapters/graph_sitter_adapter.py`
+5. **Backend ↔ Web-Eval**: `backend/app/services/web_eval_service.py`
+
+### 📈 Flow Monitoring
+
+**Real-time Updates:**
+- WebSocket connections for live status updates
+- Event bus for inter-service communication
+- Progress tracking at each validation step
+- Error handling and recovery mechanisms
+
+This comprehensive flow ensures every feature request goes through proper AI-powered development, automated validation, and safe deployment while maintaining full visibility and control for the user.
+
 ## 🚀 Platform Overview
 
 CodegenApp is a full-stack platform that orchestrates multiple AI-powered tools and services to create a seamless development experience. It combines agent-based development, automated testing, code analysis, and deployment workflows into a single, cohesive platform.
@@ -82,12 +352,23 @@ CodegenApp is a full-stack platform that orchestrates multiple AI-powered tools 
 - **Testing**: Jest + Supertest
 
 ### Backend Services Layer
-- **Framework**: FastAPI (Python 3.11+)
+- **Framework**: FastAPI (Python 3.12+)
 - **Architecture**: Clean Architecture with Domain-Driven Design
 - **API**: RESTful APIs with OpenAPI/Swagger documentation
 - **Validation**: Pydantic models with strict type checking
 - **Testing**: Pytest + AsyncIO testing
 - **Documentation**: Auto-generated API docs
+
+### Webhook & Edge Layer
+- **Platform**: Cloudflare Workers with Python support
+- **Runtime**: Pyodide (Python in WebAssembly)
+- **Package Manager**: uv for fast Python dependency management
+- **Features**: 
+  - Global edge deployment
+  - GitHub webhook processing
+  - Automatic PR validation triggering
+  - Real-time event routing
+  - Secure signature validation
 
 ### External Integrations
 
@@ -269,14 +550,16 @@ graph TD
 
 ### Prerequisites
 - **Node.js 18+** and npm
-- **Python 3.11+** with pip
+- **Python 3.12+** with pip and uv package manager
 - **Docker** (for local development)
 - **Git** for version control
+- **Cloudflare Account** (for webhook handling)
 
 ### Required API Keys
 - **Codegen API Token**: Get from [Codegen Dashboard](https://app.codegen.com/settings)
 - **Google Gemini API Key**: For web evaluation features
 - **GitHub Token**: For GitHub integration features
+- **Cloudflare API Token**: For webhook worker deployment
 - **Netlify/Vercel Token**: For deployment features (optional)
 
 ### Installation
@@ -373,6 +656,115 @@ npm start              # Frontend (port 3000)
 - **Proxy Server**: `http://localhost:3001`
 - **API Documentation**: `http://localhost:8000/docs`
 
+## 🔔 PR Notification System & Webhook Integration
+
+### Current PR Monitoring Architecture
+
+CodegenApp implements a **hybrid PR notification system** that combines manual synchronization with automated webhook processing:
+
+#### ✅ **Implemented Components**
+
+1. **Manual PR Sync System**
+   - `syncProjectWithGitHub()` function for on-demand PR data fetching
+   - `updateProjectPRCount()` for tracking PR counts per project
+   - GitHub API integration for comprehensive PR metadata
+   - Project cache system for PR data persistence
+
+2. **Event Bus Infrastructure** 
+   - Comprehensive event system in `backend/app/core/integration/event_bus.py`
+   - Event publishing, subscription, and routing capabilities
+   - Ready for webhook integration but not yet connected
+
+3. **Web-Eval-Agent Integration**
+   - PR testing capabilities via web-eval-agent
+   - Automated UI/UX validation for PR changes
+   - Performance testing and screenshot capture
+
+#### 🚧 **Webhook System Implementation**
+
+**Cloudflare Worker for GitHub Webhooks**
+
+The system includes a Cloudflare Worker (`cloudflare-webhook-worker/`) that:
+
+- **Receives GitHub webhook events** for PR actions (opened, synchronized, closed)
+- **Validates webhook signatures** for security
+- **Triggers Grainchain validation flow** automatically when PRs are created/updated
+- **Notifies dashboard** of PR status changes in real-time
+- **Handles multiple repositories** with configurable webhook targets
+
+**Key Features:**
+```python
+# Automatic PR validation triggering
+@app.post("/webhook/github")
+async def handle_github_webhook():
+    # Validates GitHub signature
+    # Triggers Grainchain validation for PR events
+    # Updates dashboard with real-time PR status
+```
+
+**Backend Webhook Endpoints**
+
+New webhook endpoints in `backend/app/api/v1/routes/webhooks.py`:
+
+- `POST /api/v1/webhooks/pr-validation` - Triggers validation workflow
+- `POST /api/v1/webhooks/pr-update` - Updates dashboard PR status
+- `GET /api/v1/webhooks/status` - System health check
+- `GET /api/v1/webhooks/events/recent` - Recent webhook events
+
+#### 🔧 **Project-Specific Webhook Configuration**
+
+When adding projects to the dashboard, each project can be configured with:
+
+1. **Webhook Target URL**: Specific domain URL for webhook delivery
+2. **Validation Settings**: Custom validation rules per project
+3. **Event Filtering**: Choose which PR events trigger validation
+4. **Security Configuration**: Project-specific webhook secrets
+
+**Implementation Flow:**
+```
+GitHub PR Event → Cloudflare Worker → CodegenApp Backend → Grainchain Validation → Dashboard Update
+```
+
+#### 📋 **Setup Instructions**
+
+1. **Deploy Cloudflare Worker**
+   ```bash
+   cd cloudflare-webhook-worker
+   ./build.sh
+   wrangler secret put GITHUB_WEBHOOK_SECRET
+   wrangler secret put CODEGENAPP_BASE_URL
+   npx wrangler deploy
+   ```
+
+2. **Configure GitHub Webhooks**
+   - Add webhook URL: `https://your-worker.workers.dev/webhook/github`
+   - Select events: `pull_request`, `push`
+   - Set webhook secret (same as Cloudflare Worker)
+
+3. **Update Project Configuration**
+   - Set `WEBHOOK_WORKER_URL` in environment
+   - Configure project-specific webhook targets
+   - Test webhook delivery with `/webhook/test` endpoint
+
+#### 🎯 **Value-Added Components Analysis**
+
+| Component | Value Rating | Integration Status | Benefits |
+|-----------|-------------|-------------------|----------|
+| **Event Bus System** | ⭐⭐⭐ | Ready for integration | Real-time updates, scalable architecture |
+| **GitHub API Client** | ⭐⭐⭐ | Fully implemented | Comprehensive PR data, reliable sync |
+| **Cloudflare Worker** | ⭐⭐⭐ | New implementation | Fast webhook processing, global edge |
+| **Grainchain Integration** | ⭐⭐⭐ | Ready for webhooks | Automated validation, sandbox testing |
+| **Web-Eval-Agent** | ⭐⭐ | Manual trigger only | UI testing, performance validation |
+| **Project Cache System** | ⭐⭐ | Basic implementation | Fast data access, offline capability |
+
+#### 🚀 **Future Enhancements**
+
+- **Real-time Dashboard Updates**: WebSocket integration for live PR status
+- **Advanced Filtering**: Custom rules for webhook event processing  
+- **Multi-Repository Management**: Bulk webhook configuration
+- **Analytics Dashboard**: Webhook delivery metrics and success rates
+- **Notification Channels**: Slack, email, and custom integrations
+
 ## 📚 API Documentation
 
 ### Core API Endpoints
@@ -411,6 +803,15 @@ POST   /api/v1/workflows                # Create workflow
 GET    /api/v1/workflows/{id}           # Get workflow details
 PUT    /api/v1/workflows/{id}           # Update workflow
 POST   /api/v1/workflows/{id}/execute   # Execute workflow
+```
+
+#### Webhook Management
+```http
+POST   /api/v1/webhooks/pr-validation  # Trigger PR validation workflow
+POST   /api/v1/webhooks/pr-update      # Update PR status in dashboard
+GET    /api/v1/webhooks/status         # Get webhook system status
+POST   /api/v1/webhooks/test           # Test webhook functionality
+GET    /api/v1/webhooks/events/recent  # Get recent webhook events
 ```
 
 ### Response Format
@@ -648,4 +1049,3 @@ MIT License - see [LICENSE](LICENSE) file for details.
 **Built with ❤️ by the CodegenApp team**
 
 [🔗 Live Demo](https://codegenapp.netlify.app) • [📖 Documentation](https://docs.codegenapp.com) • [🐛 Report Issues](https://github.com/Zeeeepa/codegenApp/issues)
-
