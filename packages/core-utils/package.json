@@ -1,0 +1,41 @@
+{
+  "name": "@codegenapp/core-utils",
+  "version": "1.0.0",
+  "description": "Core utility functions and helpers for CodegenApp platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "src/**/*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [
+    "typescript",
+    "utilities",
+    "codegen",
+    "helpers",
+    "shared"
+  ],
+  "author": "CodegenApp Team",
+  "license": "MIT",
+  "dependencies": {
+    "@codegenapp/shared-types": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.5",
+    "jest": "^29.7.0",
+    "@types/jest": "^30.0.0"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}
+

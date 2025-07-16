@@ -1,6 +1,7 @@
 """
 FastAPI Backend for Strands-Agents Workflow Orchestration System
 Integrates: Codegen SDK, grainchain, graph-sitter, web-eval-agent
+Enhanced with Library Kit Integration Framework
 """
 
 from fastapi import FastAPI, HTTPException
@@ -10,6 +11,7 @@ import uvicorn
 import logging
 from typing import Dict, Any
 import asyncio
+from pathlib import Path
 
 # Import our properly structured components
 from app.config.settings import get_settings
@@ -21,6 +23,16 @@ from app.services.adapters.grainchain_adapter import GrainchainAdapter
 from app.api.v1.dependencies import set_global_dependencies
 from app.api.v1.routes.workflow import router as workflow_router
 from app.models.api.api_models import HealthResponse
+
+# Import integration components
+from app.core.integration.integration_manager import (
+    IntegrationManager, 
+    initialize_integration_manager,
+    get_integration_manager
+)
+from app.core.integration.config_manager import get_config_manager
+from app.core.integration.event_bus import get_event_bus
+from app.core.integration.plugin_system import get_plugin_manager
 
 # Configure logging
 logging.basicConfig(
@@ -35,6 +47,7 @@ service_coordinator: ServiceCoordinator = None
 state_manager = None
 codegen_adapter = None
 grainchain_adapter = None
+integration_manager: IntegrationManager = None
 
 
 @asynccontextmanager
@@ -46,23 +59,34 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     
     # Initialize global instances
-    global workflow_engine, service_coordinator, state_manager, codegen_adapter, grainchain_adapter
+    global workflow_engine, service_coordinator, state_manager, codegen_adapter, grainchain_adapter, integration_manager
     
     try:
+        # Initialize integration manager with configuration
+        config_file = Path("config.yaml") if Path("config.yaml").exists() else None
+        integration_manager = initialize_integration_manager(config_file)
+        await integration_manager.initialize()
+        await integration_manager.start()
+        
+        # Get components from integration manager
+        config_manager = integration_manager.get_config_manager()
+        event_bus = integration_manager.get_event_bus()
+        plugin_manager = integration_manager.get_plugin_manager()
+        service_coordinator = integration_manager.get_service_coordinator()
+        
         # Initialize state manager
         state_manager = StateManagerFactory.create_in_memory_manager()
         await state_manager.start()
         
-        # Initialize service coordinator
-        service_coordinator = ServiceCoordinator()
-        
-        # Initialize service adapters
+        # Initialize service adapters with configuration
+        codegen_config = config_manager.get_component_config("codegen") if config_manager else {}
         codegen_adapter = CodegenService(
             api_token=settings.codegen_api_token,
-            base_url=settings.codegen_api_base_url
+            base_url=codegen_config.get("api_base_url", settings.codegen_api_base_url)
         )
         
-        grainchain_adapter = GrainchainAdapter(settings.grainchain_config)
+        grainchain_config = config_manager.get_component_config("grainchain") if config_manager else settings.grainchain_config
+        grainchain_adapter = GrainchainAdapter(grainchain_config)
         
         # Register adapters with coordinator
         service_coordinator.register_adapter("codegen", codegen_adapter)
@@ -82,7 +106,7 @@ async def lifespan(app: FastAPI):
             codegen_adapter=codegen_adapter
         )
         
-        logger.info("✅ All services initialized successfully")
+        logger.info("✅ All services initialized successfully with integration framework")
         
     except Exception as e:
         logger.error(f"❌ Failed to initialize services: {e}")
@@ -94,6 +118,8 @@ async def lifespan(app: FastAPI):
     logger.info("🛑 Shutting down Strands-Agents Backend")
     
     # Cleanup services
+    if integration_manager:
+        await integration_manager.cleanup()
     if state_manager:
         await state_manager.stop()
     if codegen_adapter:
@@ -122,6 +148,10 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(workflow_router, prefix="/api/v1")
+
+# Import and include integration routes
+from app.api.v1.routes.integration import router as integration_router
+app.include_router(integration_router, prefix="/api/v1")
 
 
 # Health check endpoint

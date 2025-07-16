@@ -1,8 +1,11 @@
 {
-  "name": "agent-run-manager-web",
+  "name": "codegenapp-monorepo",
   "version": "1.0.0",
-  "description": "A web application for managing agent runs, converted from Raycast extension",
+  "description": "A comprehensive AI-powered development platform with library-based architecture",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "dependencies": {
     "@types/react": "^18.2.6",
     "@types/react-dom": "^18.2.4",
@@ -70,6 +73,12 @@
     "@types/node": "^24.0.3",
     "dotenv": "^16.5.0",
     "supertest": "^7.0.0",
-    "@types/supertest": "^6.0.2"
+    "@types/supertest": "^6.0.2",
+    "lerna": "^8.1.2",
+    "@nrwl/workspace": "^17.3.2",
+    "nx": "^17.3.2",
+    "@nrwl/node": "^17.3.2",
+    "@nrwl/react": "^17.3.2",
+    "turbo": "^1.13.2"
   }
 }
