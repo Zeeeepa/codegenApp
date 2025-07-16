@@ -117,6 +117,15 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
       if (validation.valid && validation.user) {
         setGithubUser(validation.user);
         setGithubTokenValid(true);
+        
+        // Save the token immediately after successful validation
+        await setPreferenceValues({
+          apiToken: token,
+          defaultOrganization: orgId,
+          githubToken: githubToken,
+          planningStatement: planningStatement,
+        });
+        
         toast.success(`GitHub token validated! Welcome, ${validation.user.login}`);
       } else {
         setGithubUser(null);
@@ -144,6 +153,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
 
     setLoadingGithubRepos(true);
     try {
+      console.log('🔄 Loading GitHub repositories...');
       const client = getGitHubClient(githubToken);
       const repos = await client.getUserRepositories({
         sort: 'updated',
@@ -151,11 +161,21 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
         per_page: 50,
       });
       
+      console.log('✅ Loaded repositories:', repos.length);
       setGithubRepos(repos);
       toast.success(`Loaded ${repos.length} repositories`);
     } catch (error) {
-      console.error('Failed to load GitHub repositories:', error);
-      toast.error('Failed to load repositories');
+      console.error('❌ Failed to load GitHub repositories:', error);
+      
+      // More detailed error message
+      let errorMessage = 'Failed to load repositories. ';
+      if (error instanceof Error) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += 'Check your GitHub token permissions.';
+      }
+      
+      toast.error(errorMessage);
       setGithubRepos([]);
     } finally {
       setLoadingGithubRepos(false);
@@ -172,6 +192,27 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
           setToken(preferences.apiToken || '');
           setGithubToken(preferences.githubToken || '');
           setPlanningStatement(preferences.planningStatement || '');
+          
+          // If we have a saved GitHub token, automatically validate it
+          if (preferences.githubToken) {
+            console.log('Found saved GitHub token, validating...');
+            try {
+              const client = getGitHubClient(preferences.githubToken);
+              const validation = await client.validateToken();
+              
+              if (validation.valid && validation.user) {
+                setGithubUser(validation.user);
+                setGithubTokenValid(true);
+                console.log('Saved GitHub token is still valid');
+              } else {
+                setGithubTokenValid(false);
+                console.log('Saved GitHub token is no longer valid');
+              }
+            } catch (error) {
+              console.error('Error validating saved GitHub token:', error);
+              setGithubTokenValid(false);
+            }
+          }
           
           console.log('Loaded preferences:', {
             hasToken: !!preferences.apiToken,
@@ -466,13 +507,16 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                 </label>
                 <div className="space-y-3">
                   <input
-                    type="password"
+                    type="text"
                     id="github_token"
                     value={githubToken}
                     onChange={(e) => {
                       setGithubToken(e.target.value);
-                      setGithubTokenValid(null);
-                      setGithubUser(null);
+                      // Only reset validation if the token actually changed
+                      if (e.target.value !== githubToken) {
+                        setGithubTokenValid(null);
+                        setGithubUser(null);
+                      }
                     }}
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
@@ -484,6 +528,14 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                       className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
                     >
                       Validate Token
+                    </button>
+                    
+                    <button
+                      onClick={handleSave}
+                      disabled={!githubToken}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
+                    >
+                      Save Token
                     </button>
                     
                     {githubTokenValid === true && (
