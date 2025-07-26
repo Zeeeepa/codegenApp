@@ -118,14 +118,19 @@ class CodegenAPIService {
       try {
         console.log(`Trying Codegen API endpoint: ${url}`);
         
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
         const response = await fetch(url, {
           ...options,
           headers: {
             ...headers,
             ...options.headers,
           },
-          timeout: 15000, // 15 second timeout
+          signal: controller.signal,
         });
+        
+        clearTimeout(timeoutId);
 
         if (response.ok) {
           console.log(`Codegen API request successful: ${url}`);
@@ -145,7 +150,7 @@ class CodegenAPIService {
           continue; // Try next URL
         }
       } catch (error) {
-        console.warn(`Request failed for ${url}:`, error.message);
+        console.warn(`Request failed for ${url}:`, error instanceof Error ? error.message : String(error));
         lastError = error as Error;
         continue; // Try next URL
       }
@@ -318,7 +323,7 @@ class CodegenAPIService {
         console.log(`Codegen API connection successful with endpoint: ${endpoint}`);
         return true;
       } catch (error) {
-        console.log(`Endpoint ${endpoint} failed:`, error.message);
+        console.log(`Endpoint ${endpoint} failed:`, error instanceof Error ? error.message : String(error));
         continue;
       }
     }
@@ -329,10 +334,15 @@ class CodegenAPIService {
       const headers = await this.getHeaders();
       
       // Test if we can at least authenticate (even if endpoint doesn't exist)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch('https://api.codegen.com/api/v1/organizations', {
         headers,
-        timeout: 10000
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.status === 401) {
         console.error('Codegen API authentication failed - invalid API key');

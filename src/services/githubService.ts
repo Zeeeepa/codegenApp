@@ -147,11 +147,16 @@ class GitHubService {
       headers['Content-Type'] = 'application/json';
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    
     const response = await fetch(url, {
       ...options,
       headers,
-      timeout: 15000, // 15 second timeout
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -435,45 +440,55 @@ class GitHubService {
           console.log('GitHub API connection successful with authentication');
           return true;
         } catch (authError) {
-          console.warn('GitHub authenticated request failed:', authError.message);
+          console.warn('GitHub authenticated request failed:', authError instanceof Error ? authError.message : String(authError));
           // Continue to try public endpoints
         }
       }
 
       // If authentication fails or no token, try public endpoints
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
         const response = await fetch(`${this.baseUrl}/zen`, {
           headers: {
             'Accept': 'application/vnd.github.v3+json',
             'User-Agent': 'CodegenApp/1.0.0',
           },
-          timeout: 10000
+          signal: controller.signal,
         });
+        
+        clearTimeout(timeoutId);
 
         if (response.ok) {
           console.log('GitHub API connection successful (public endpoints only)');
           return true;
         }
       } catch (publicError) {
-        console.warn('GitHub public endpoint test failed:', publicError.message);
+        console.warn('GitHub public endpoint test failed:', publicError instanceof Error ? publicError.message : String(publicError));
       }
 
       // Try to get rate limit info (public endpoint)
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
         const response = await fetch(`${this.baseUrl}/rate_limit`, {
           headers: {
             'Accept': 'application/vnd.github.v3+json',
             'User-Agent': 'CodegenApp/1.0.0',
           },
-          timeout: 10000
+          signal: controller.signal,
         });
+        
+        clearTimeout(timeoutId);
 
         if (response.ok) {
           console.log('GitHub API is accessible (rate limit endpoint)');
           return true;
         }
       } catch (rateLimitError) {
-        console.warn('GitHub rate limit endpoint test failed:', rateLimitError.message);
+        console.warn('GitHub rate limit endpoint test failed:', rateLimitError instanceof Error ? rateLimitError.message : String(rateLimitError));
       }
 
       console.error('All GitHub API connection tests failed');

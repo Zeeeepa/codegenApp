@@ -443,7 +443,10 @@ Provide specific, actionable recommendations for improvement.`;
         }
       };
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.geminiApiKey}`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
       const response = await fetch(url, {
         method: 'POST',
@@ -451,8 +454,10 @@ Provide specific, actionable recommendations for improvement.`;
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
-        timeout: 10000 // 10 second timeout
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
