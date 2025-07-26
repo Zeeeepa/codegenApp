@@ -1,6 +1,6 @@
 INFO:     Will watch for changes in these directories: ['/tmp/Zeeeepa/codegenApp/backend']
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [16003] using WatchFiles
+INFO:     Started reloader process [3354] using WatchFiles
 Process SpawnProcess-1:
 Traceback (most recent call last):
   File "/usr/local/lib/python3.13/multiprocessing/process.py", line 313, in _bootstrap
@@ -48,4 +48,3 @@ Traceback (most recent call last):
   File "/tmp/Zeeeepa/codegenApp/backend/app/config/settings.py", line 5, in <module>
     from pydantic_settings import BaseSettings
 ModuleNotFoundError: No module named 'pydantic_settings'
-INFO:     Stopping reloader process [16003]
