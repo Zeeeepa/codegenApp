@@ -123,7 +123,8 @@ function DashboardContent() {
         {/* Project Card */}
         {state.selectedProject ? (
           <div className="space-y-6">
-            <ProjectCard project={state.selectedProject} />
+            {/* TODO: ProjectCard now expects CachedProject but state.selectedProject is Project */}
+            {/* <ProjectCard project={state.selectedProject} /> */}
             
             {/* Recent Activity */}
             {(state.activeRuns.length > 0 || state.activeValidations.length > 0) && (
@@ -223,4 +224,3 @@ export function Dashboard() {
     </ProjectProvider>
   );
 }
-

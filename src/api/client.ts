@@ -260,3 +260,90 @@ export async function resetAPIClient(): Promise<void> {
   // Clear stored user info when credentials change
   await clearStoredUserInfo();
 }
+
+// Web Evaluation API Client (separate from main Codegen API)
+class WebEvalAPIClient {
+  private baseUrl: string;
+  private apiToken: string;
+
+  constructor() {
+    this.baseUrl = '';
+    this.apiToken = '';
+  }
+
+  private async initializeCredentials(): Promise<void> {
+    if (!this.apiToken) {
+      const credentials = await getCredentials();
+      this.baseUrl = credentials.apiBaseUrl || DEFAULT_API_BASE_URL;
+      this.apiToken = credentials.apiToken;
+    }
+  }
+
+  private async makeRequest<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    await this.initializeCredentials();
+    const url = `${this.baseUrl}${endpoint}`;
+    
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiToken}`,
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed with status ${response.status}`);
+    }
+
+    return await response.json() as T;
+  }
+
+  async get<T = any>(endpoint: string): Promise<{ data: T }> {
+    const data = await this.makeRequest<T>(endpoint);
+    return { data };
+  }
+
+  async post<T = any>(endpoint: string, body: any): Promise<{ data: T }> {
+    const data = await this.makeRequest<T>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    return { data };
+  }
+
+  async delete<T = any>(endpoint: string): Promise<{ data: T }> {
+    const data = await this.makeRequest<T>(endpoint, {
+      method: 'DELETE',
+    });
+    return { data };
+  }
+}
+
+// Singleton instance for web evaluation
+let webEvalClient: WebEvalAPIClient | null = null;
+
+// Generic API client for web evaluation endpoints (backward compatibility)
+export const webEvalApiClient = {
+  get: async <T = any>(endpoint: string) => {
+    if (!webEvalClient) {
+      webEvalClient = new WebEvalAPIClient();
+    }
+    return webEvalClient.get<T>(endpoint);
+  },
+  post: async <T = any>(endpoint: string, body: any) => {
+    if (!webEvalClient) {
+      webEvalClient = new WebEvalAPIClient();
+    }
+    return webEvalClient.post<T>(endpoint, body);
+  },
+  delete: async <T = any>(endpoint: string) => {
+    if (!webEvalClient) {
+      webEvalClient = new WebEvalAPIClient();
+    }
+    return webEvalClient.delete<T>(endpoint);
+  },
+};
