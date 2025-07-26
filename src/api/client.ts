@@ -6,12 +6,18 @@ import {
   AgentRunResponse,
   UserResponse,
   OrganizationResponse,
-  CreateAgentRunRequest,
-  ResumeAgentRunRequest,
+  CreateAgentRunRequest as LegacyCreateAgentRunRequest,
+  ResumeAgentRunRequest as LegacyResumeAgentRunRequest,
   StopAgentRunRequest,
   PaginatedResponse,
   APIError,
 } from "./types";
+import { 
+  getCodegenService, 
+  CreateAgentRunRequest, 
+  ResumeAgentRunRequest,
+  AgentRunResponse as RealAgentRunResponse 
+} from "../services/codegenService";
 
 export class CodegenAPIClient {
   private baseUrl: string;
@@ -137,7 +143,7 @@ export class CodegenAPIClient {
   // Agent Run Methods
   async createAgentRun(
     organizationId: number,
-    request: CreateAgentRunRequest
+    request: LegacyCreateAgentRunRequest
   ): Promise<AgentRunResponse> {
     return this.makeRequest<AgentRunResponse>(
       API_ENDPOINTS.AGENT_RUN_CREATE(organizationId),
@@ -160,9 +166,9 @@ export class CodegenAPIClient {
   async resumeAgentRun(
     organizationId: number,
     agentRunId: number,
-    request: Omit<ResumeAgentRunRequest, 'agent_run_id'>
+    request: Omit<LegacyResumeAgentRunRequest, 'agent_run_id'>
   ): Promise<AgentRunResponse> {
-    const fullRequest: ResumeAgentRunRequest = {
+    const fullRequest: LegacyResumeAgentRunRequest = {
       ...request,
       agent_run_id: agentRunId,
     };
@@ -241,6 +247,71 @@ export class CodegenAPIClient {
     } catch {
       return false;
     }
+  }
+
+  // ============================================================================
+  // REAL CODEGEN API METHODS - Official API Integration
+  // ============================================================================
+
+  /**
+   * Create a new agent run using the official Codegen API
+   */
+  async createRealAgentRun(request: CreateAgentRunRequest): Promise<RealAgentRunResponse> {
+    const codegenService = getCodegenService();
+    return await codegenService.createAgentRun(request);
+  }
+
+  /**
+   * Resume an existing agent run using the official Codegen API
+   */
+  async resumeRealAgentRun(request: ResumeAgentRunRequest): Promise<RealAgentRunResponse> {
+    const codegenService = getCodegenService();
+    return await codegenService.resumeAgentRun(request);
+  }
+
+  /**
+   * Get agent run status using the official Codegen API
+   */
+  async getRealAgentRunStatus(runId: string) {
+    const codegenService = getCodegenService();
+    return await codegenService.getAgentRunStatus(runId);
+  }
+
+  /**
+   * Get full agent run details using the official Codegen API
+   */
+  async getRealAgentRun(runId: string): Promise<RealAgentRunResponse> {
+    const codegenService = getCodegenService();
+    return await codegenService.getAgentRun(runId);
+  }
+
+  /**
+   * Cancel an agent run using the official Codegen API
+   */
+  async cancelRealAgentRun(runId: string): Promise<boolean> {
+    const codegenService = getCodegenService();
+    return await codegenService.cancelAgentRun(runId);
+  }
+
+  /**
+   * List agent runs using the official Codegen API
+   */
+  async listRealAgentRuns(options: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+    repository?: string;
+  } = {}): Promise<RealAgentRunResponse[]> {
+    const codegenService = getCodegenService();
+    return await codegenService.listAgentRuns(options);
+  }
+
+  /**
+   * Test connection to the official Codegen API
+   */
+  async testRealCodegenConnection(): Promise<boolean> {
+    const codegenService = getCodegenService();
+    return await codegenService.testConnection();
   }
 }
 
