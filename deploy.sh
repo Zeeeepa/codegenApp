@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# CodegenApp Full Deployment Script
-# This script sets up and starts both UI and backend in fully working mode
+# =============================================================================
+# CodegenApp Deployment Script - Full CI/CD Flow with Real Implementation
+# =============================================================================
 
 set -e  # Exit on any error
 
@@ -10,11 +11,23 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR"
+LOG_FILE="$PROJECT_ROOT/deploy.log"
+
+# Environment variables with REAL CREDENTIALS
+export CODEGEN_API_KEY="sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99"
+export CODEGEN_ORG_ID="323"
+export GITHUB_TOKEN="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"
+export GEMINI_API_KEY="AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0"
+export CLOUDFLARE_API_KEY="eae82cf159577a8838cc83612104c09c5a0d6"
+export CLOUDFLARE_ACCOUNT_ID="2b2a1d3effa7f7fe4fe2a8c4e48681e3"
+export CLOUDFLARE_WORKER_URL="https://webhook-gateway.pixeliumperfecto.workers.dev"
+
+# Port configuration
 UI_PORT=3002
 SERVER_PORT=3001
 BACKEND_PORT=8000
@@ -25,21 +38,87 @@ PID_DIR="./pids"
 # Create necessary directories
 mkdir -p "$LOG_DIR" "$PID_DIR"
 
-# Function to print colored output
+# Logging functions
+log() {
+    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1" | tee -a "$LOG_FILE"
+}
+
+error() {
+    echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] ERROR:${NC} $1" | tee -a "$LOG_FILE"
+}
+
+warning() {
+    echo -e "${YELLOW}[$(date +'%Y-%m-%d %H:%M:%S')] WARNING:${NC} $1" | tee -a "$LOG_FILE"
+}
+
+info() {
+    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')] INFO:${NC} $1" | tee -a "$LOG_FILE"
+}
+
+# Legacy functions for compatibility
 print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    info "$1"
 }
 
 print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    log "$1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    warning "$1"
 }
 
 print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    error "$1"
+}
+
+# Function to create Codegen agent run
+create_codegen_run() {
+    local prompt="$1"
+    local context="${2:-general}"
+    
+    info "Creating Codegen agent run..."
+    
+    local response=$(curl -s -X POST "https://api.codegen.com/v1/organizations/323/agent/run" \
+        -H "Authorization: Bearer $CODEGEN_API_KEY" \
+        -H "Content-Type: application/json" \
+        -d "{
+            \"prompt\": \"$prompt\",
+            \"images\": []
+        }")
+    
+    local run_id=$(echo "$response" | jq -r '.id // empty' 2>/dev/null)
+    
+    if [ -n "$run_id" ] && [ "$run_id" != "null" ]; then
+        log "✅ Codegen agent run created: $run_id"
+        echo "🔗 View run: https://app.codegen.com/runs/$run_id"
+        echo "$run_id"
+    else
+        warning "⚠️  Failed to create Codegen agent run"
+        echo "$response" | jq '.' 2>/dev/null || echo "$response"
+        return 1
+    fi
+}
+
+# Function to wait for service to be ready
+wait_for_service() {
+    local url=$1
+    local timeout=${2:-30}
+    local count=0
+    
+    info "Waiting for service at $url to be ready..."
+    
+    while [ $count -lt $timeout ]; do
+        if curl -s -f "$url" >/dev/null 2>&1; then
+            log "✅ Service at $url is ready"
+            return 0
+        fi
+        sleep 1
+        count=$((count + 1))
+    done
+    
+    error "❌ Service at $url failed to start within $timeout seconds"
+    return 1
 }
 
 print_header() {
@@ -683,4 +762,3 @@ case "${1:-start}" in
         exit 1
         ;;
 esac
-

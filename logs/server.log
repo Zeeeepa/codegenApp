@@ -1,0 +1,7 @@
+
+> agent-run-manager-server@1.0.0 start
+> node index.js
+
+🚀 Proxy server running on port 3001
+🎯 Proxying to: https://api.codegen.com
+🌐 Health check: http://localhost:3001/health

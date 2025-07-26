@@ -11,7 +11,7 @@ const https = require('https');
 const fs = require('fs');
 
 // Configuration
-const CODEGEN_API_BASE = 'https://api.codegen.com/api/v1';
+const CODEGEN_API_BASE = 'https://api.codegen.com';
 const API_KEY = process.env.CODEGEN_API_KEY || process.env.REACT_APP_CODEGEN_API_KEY;
 
 if (!API_KEY) {
@@ -21,14 +21,8 @@ if (!API_KEY) {
 
 // Test data
 const testAgentRun = {
-  message: "Test agent run for CI/CD pipeline validation",
-  agent_id: "test-agent",
-  context: {
-    repository: "Zeeeepa/codegenApp",
-    branch: "main",
-    test_run: true,
-    timestamp: new Date().toISOString()
-  }
+  prompt: "Test agent run for CI/CD pipeline validation. Analyze the codegenApp repository for potential improvements and provide feedback on the current implementation.",
+  images: []
 };
 
 /**
@@ -96,7 +90,7 @@ async function testConnectivity() {
   console.log('🔍 Testing Codegen API connectivity...');
   
   try {
-    const response = await makeRequest('GET', '/agent-runs?limit=1');
+    const response = await makeRequest('GET', `/v1/organizations/323/agent/runs?limit=1`);
     
     if (response.statusCode === 200) {
       console.log('✅ API connectivity test passed');
@@ -122,7 +116,7 @@ async function testCreateAgentRun() {
   console.log('🚀 Testing agent run creation...');
   
   try {
-    const response = await makeRequest('POST', '/agent-runs', testAgentRun);
+    const response = await makeRequest('POST', '/v1/organizations/323/agent/run', testAgentRun);
     
     if (response.statusCode === 200 || response.statusCode === 201) {
       console.log('✅ Agent run creation test passed');
@@ -151,7 +145,7 @@ async function testGetAgentRun(runId) {
   console.log('📋 Testing agent run retrieval...');
   
   try {
-    const response = await makeRequest('GET', `/agent-runs/${runId}`);
+    const response = await makeRequest('GET', `/v1/organizations/323/agent/runs/${runId}`);
     
     if (response.statusCode === 200) {
       console.log('✅ Agent run retrieval test passed');
@@ -180,7 +174,7 @@ async function testResumeAgentRun(runId) {
   console.log('▶️  Testing agent run resume...');
   
   try {
-    const response = await makeRequest('POST', `/agent-runs/${runId}/resume`);
+    const response = await makeRequest('POST', `/api/v1/agent-runs/${runId}/resume`);
     
     if (response.statusCode === 200 || response.statusCode === 404) {
       // 404 is acceptable if resume endpoint doesn't exist or run can't be resumed
