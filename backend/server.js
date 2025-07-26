@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 import { getDatabase } from './database/connection.js';
 import projectRoutes from './routes/projects.js';
 import webhookRoutes from './routes/webhooks.js';
+import codegenRoutes from './routes/codegen.js';
 
 // Load environment variables
 dotenv.config();
@@ -62,6 +63,7 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/projects', projectRoutes);
+app.use('/api/codegen', codegenRoutes);
 app.use('/webhooks', webhookRoutes);
 
 // Agent runs routes (proxy to existing server for now)
