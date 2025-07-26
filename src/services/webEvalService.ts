@@ -424,16 +424,63 @@ Provide specific, actionable recommendations for improvement.`;
   }
 
   /**
-   * Test Gemini API connection
+   * Test Gemini API connection with robust error handling
    */
   async testGeminiConnection(): Promise<boolean> {
     try {
-      const response = await this.callGeminiAPI('Test connection', {});
-      return response.confidence > 0;
+      // Simple test request to verify API key and connectivity
+      const testPrompt = 'Test connection from CodegenApp. Please respond with "Connection successful".';
+      
+      const requestBody = {
+        contents: [{
+          parts: [{
+            text: testPrompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 50,
+        }
+      };
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        timeout: 10000 // 10 second timeout
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        console.log('Gemini API connection successful:', generatedText.substring(0, 50));
+        return true;
+      } else if (response.status === 401) {
+        console.error('Gemini API authentication failed - invalid API key');
+        return false;
+      } else if (response.status === 403) {
+        console.error('Gemini API access forbidden - check API key permissions');
+        return false;
+      } else {
+        const errorText = await response.text();
+        console.error(`Gemini API error (${response.status}):`, errorText);
+        return false;
+      }
     } catch (error) {
       console.error('Gemini API connection test failed:', error);
       return false;
     }
+  }
+
+  /**
+   * Test connection (alias for testGeminiConnection for consistency)
+   */
+  async testConnection(): Promise<boolean> {
+    return this.testGeminiConnection();
   }
 
   /**
@@ -476,4 +523,3 @@ export function getWebEvalService(): WebEvalService {
 }
 
 export default WebEvalService;
-

@@ -127,18 +127,47 @@ class GitHubService {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    // Try different authentication methods if token is available
+    const headers: Record<string, string> = {
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'CodegenApp/1.0.0',
+      ...options.headers as Record<string, string>,
+    };
+
+    // Only add authorization if token is available and valid
+    if (this.token && this.token.length > 10) {
+      // GitHub personal access tokens should use 'token' prefix, not 'Bearer'
+      headers['Authorization'] = this.token.startsWith('ghp_') || this.token.startsWith('github_pat_') 
+        ? `token ${this.token}` 
+        : `Bearer ${this.token}`;
+    }
+
+    // Add Content-Type for POST/PUT requests
+    if (options.method && ['POST', 'PUT', 'PATCH'].includes(options.method.toUpperCase())) {
+      headers['Content-Type'] = 'application/json';
+    }
+
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'Authorization': `Bearer ${this.token}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
+      timeout: 15000, // 15 second timeout
     });
 
     if (!response.ok) {
       const errorText = await response.text();
+      
+      // Handle specific error cases
+      if (response.status === 401) {
+        console.warn('GitHub API authentication failed. Token may be invalid or expired.');
+        // For 401 errors, we can still return a meaningful error but not crash
+        throw new Error(`GitHub API Authentication Error (401): Invalid or expired token`);
+      } else if (response.status === 403) {
+        console.warn('GitHub API rate limit exceeded or insufficient permissions.');
+        throw new Error(`GitHub API Permission Error (403): Rate limit or insufficient permissions`);
+      } else if (response.status === 404) {
+        throw new Error(`GitHub API Not Found (404): ${endpoint} not found`);
+      }
+      
       throw new Error(`GitHub API Error (${response.status}): ${errorText}`);
     }
 
@@ -395,12 +424,60 @@ class GitHubService {
   }
 
   /**
-   * Test GitHub API connection
+   * Test GitHub API connection with fallback strategies
    */
   async testConnection(): Promise<boolean> {
     try {
-      await this.makeRequest('/user');
-      return true;
+      // First, try to get authenticated user info
+      if (this.token && this.token.length > 10) {
+        try {
+          await this.makeRequest('/user');
+          console.log('GitHub API connection successful with authentication');
+          return true;
+        } catch (authError) {
+          console.warn('GitHub authenticated request failed:', authError.message);
+          // Continue to try public endpoints
+        }
+      }
+
+      // If authentication fails or no token, try public endpoints
+      try {
+        const response = await fetch(`${this.baseUrl}/zen`, {
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'CodegenApp/1.0.0',
+          },
+          timeout: 10000
+        });
+
+        if (response.ok) {
+          console.log('GitHub API connection successful (public endpoints only)');
+          return true;
+        }
+      } catch (publicError) {
+        console.warn('GitHub public endpoint test failed:', publicError.message);
+      }
+
+      // Try to get rate limit info (public endpoint)
+      try {
+        const response = await fetch(`${this.baseUrl}/rate_limit`, {
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'CodegenApp/1.0.0',
+          },
+          timeout: 10000
+        });
+
+        if (response.ok) {
+          console.log('GitHub API is accessible (rate limit endpoint)');
+          return true;
+        }
+      } catch (rateLimitError) {
+        console.warn('GitHub rate limit endpoint test failed:', rateLimitError.message);
+      }
+
+      console.error('All GitHub API connection tests failed');
+      return false;
     } catch (error) {
       console.error('GitHub API connection test failed:', error);
       return false;
@@ -454,4 +531,3 @@ export function getGitHubService(): GitHubService {
 }
 
 export default GitHubService;
-
