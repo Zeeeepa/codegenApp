@@ -7,7 +7,8 @@ and response types within the CI/CD workflow.
 
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from pydantic import BaseModel, Field
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, JSON, Text, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -30,6 +31,65 @@ class ResponseType(Enum):
     REGULAR = "regular"  # Continue button available
     PLAN = "plan"        # Confirm/Modify options
     PR = "pr"           # PR created, validation triggered
+
+
+# Official API compatible models
+class AgentRunResponse(BaseModel):
+    """
+    Pydantic model for official Codegen API agent run responses.
+    
+    This model represents the processed response from the official Codegen API,
+    with additional metadata and type classification.
+    """
+    
+    id: str = Field(..., description="Unique identifier for the agent run")
+    status: str = Field(..., description="Current status of the agent run")
+    message: str = Field(..., description="Agent response message")
+    type: str = Field(default="regular", description="Response type classification")
+    
+    # Timestamps
+    created_at: Optional[datetime] = Field(None, description="When the run was created")
+    updated_at: Optional[datetime] = Field(None, description="When the run was last updated")
+    processed_at: Optional[datetime] = Field(None, description="When the response was processed")
+    
+    # Repository information
+    repository: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Repository information")
+    organization_id: Optional[str] = Field(None, description="Organization ID")
+    
+    # Additional metadata
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    
+    # Type-specific fields
+    pr_url: Optional[str] = Field(None, description="PR URL if type is 'pr'")
+    plan_content: Optional[Dict[str, Any]] = Field(None, description="Plan content if type is 'plan'")
+    
+    # Error information
+    error: Optional[Dict[str, Any]] = Field(None, description="Error information if run failed")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat() if v else None
+        }
+
+
+class AgentRunRequest(BaseModel):
+    """
+    Pydantic model for agent run creation requests.
+    """
+    
+    message: str = Field(..., description="Message/prompt for the agent")
+    repository_owner: str = Field(..., description="GitHub repository owner")
+    repository_name: str = Field(..., description="GitHub repository name")
+    branch: Optional[str] = Field(None, description="Target branch (optional)")
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional metadata")
+
+
+class AgentRunResumeRequest(BaseModel):
+    """
+    Pydantic model for agent run resume requests.
+    """
+    
+    message: str = Field(..., description="Additional message/input for the agent")
 
 
 class AgentRun(Base):
@@ -112,4 +172,3 @@ class AgentRun(Base):
     def requires_validation(self) -> bool:
         """Check if the agent run requires validation pipeline."""
         return self.response_type == ResponseType.PR and self.status == AgentRunStatus.COMPLETED
-

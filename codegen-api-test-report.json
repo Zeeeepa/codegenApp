@@ -1,0 +1,27 @@
+{
+  "timestamp": "2025-07-26T10:56:11.968Z",
+  "api_key_configured": true,
+  "tests": [
+    {
+      "test": "connectivity",
+      "passed": true
+    },
+    {
+      "test": "create_agent_run",
+      "passed": true
+    },
+    {
+      "test": "get_agent_run",
+      "passed": false
+    },
+    {
+      "test": "resume_agent_run",
+      "passed": true
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "passed": 3,
+    "failed": 1
+  }
+}

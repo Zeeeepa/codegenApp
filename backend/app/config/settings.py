@@ -16,11 +16,18 @@ class Settings(BaseSettings):
     port: int = Field(default=8001, description="Server port")
     debug: bool = Field(default=False, description="Debug mode")
     
-    # Codegen API configuration
-    codegen_api_token: str = Field(..., description="Codegen API token")
+    # Official Codegen API configuration
+    codegen_api_key: str = Field(..., description="Official Codegen API key")
+    codegen_org_id: str = Field(..., description="Codegen organization ID")
     codegen_api_base_url: str = Field(
         default="https://api.codegen.com", 
-        description="Codegen API base URL"
+        description="Official Codegen API base URL"
+    )
+    
+    # Legacy Codegen API configuration (deprecated)
+    codegen_api_token: Optional[str] = Field(
+        default=None, 
+        description="Legacy Codegen API token (deprecated, use codegen_api_key)"
     )
     
     # Database configuration (for workflow persistence)
@@ -124,6 +131,57 @@ class Settings(BaseSettings):
         
         # Allow extra fields for extensibility
         extra = "allow"
+    
+    def get_codegen_headers(self) -> Dict[str, str]:
+        """
+        Get headers for official Codegen API requests.
+        
+        Returns:
+            Dict[str, str]: Headers for API requests
+        """
+        return {
+            "Authorization": f"Bearer {self.codegen_api_key}",
+            "Content-Type": "application/json",
+        }
+    
+    def get_legacy_codegen_headers(self) -> Dict[str, str]:
+        """
+        Get headers for legacy Codegen API requests (deprecated).
+        
+        Returns:
+            Dict[str, str]: Headers for legacy API requests
+        """
+        if not self.codegen_api_token:
+            return {}
+        
+        return {
+            "Authorization": f"Bearer {self.codegen_api_token}",
+            "Content-Type": "application/json",
+            "X-Organization-ID": self.codegen_org_id,
+        }
+    
+    def is_official_api_enabled(self) -> bool:
+        """
+        Check if official Codegen API should be used.
+        
+        Returns:
+            bool: True if official API is configured and should be used
+        """
+        return bool(self.codegen_api_key and self.codegen_org_id)
+    
+    def get_api_endpoint(self, path: str) -> str:
+        """
+        Get full API endpoint URL.
+        
+        Args:
+            path: API path (e.g., '/api/v1/agents/runs')
+            
+        Returns:
+            str: Full API endpoint URL
+        """
+        base_url = self.codegen_api_base_url.rstrip('/')
+        path = path.lstrip('/')
+        return f"{base_url}/{path}"
 
 
 # Global settings instance
