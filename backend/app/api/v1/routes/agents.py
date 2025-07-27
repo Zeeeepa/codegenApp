@@ -109,7 +109,7 @@ async def create_agent_run(request: CreateAgentRequest, background_tasks: Backgr
             branch=request.branch,
             files=request.files,
             context=request.context,
-            metadata=request.metadata,
+            task_metadata=request.metadata,
             progress=codegen_response.progress,
             created_at=codegen_response.created_at,
             updated_at=codegen_response.updated_at

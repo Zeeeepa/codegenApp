@@ -173,3 +173,8 @@ class DatabaseManager:
 def get_db() -> Generator[Session, None, None]:
     """FastAPI dependency for database sessions."""
     return get_database_session()
+
+
+def get_db_session() -> Generator[Session, None, None]:
+    """Alternative name for get_database_session for compatibility."""
+    return get_database_session()

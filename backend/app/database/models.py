@@ -97,18 +97,48 @@ class AgentRun(Base):
     __tablename__ = "agent_runs"
     
     id = Column(String, primary_key=True)
-    project_id = Column(String, ForeignKey("projects.id"), nullable=False, index=True)
-    target_text = Column(Text, nullable=False)
+    
+    # Codegen agent information
+    agent_id = Column(String, unique=True, nullable=True, index=True)  # Codegen agent ID
+    task_type = Column(String(100), nullable=True, index=True)  # Type of task
+    description = Column(Text, nullable=True)  # Task description
+    
+    # Legacy fields (for backward compatibility)
+    project_id = Column(String, ForeignKey("projects.id"), nullable=True, index=True)
+    target_text = Column(Text, nullable=True)
+    
+    # Status and progress
     status = Column(Enum(AgentRunStatus), default=AgentRunStatus.PENDING, index=True)
-    progress_percentage = Column(Float, default=0.0)
+    progress_percentage = Column(Float, default=0.0)  # Legacy field
+    progress = Column(Float, default=0.0)  # New field for Codegen integration
     current_step = Column(String(255))
     
-    # Response data
+    # Repository information
+    repository_url = Column(String(500), nullable=True)
+    branch = Column(String(100), nullable=True, default="main")
+    files = Column(JSON, nullable=True)  # List of files to work on
+    
+    # Execution details
+    priority = Column(Integer, default=5)
+    timeout_minutes = Column(Integer, default=30)
+    
+    # Results and metadata
+    result = Column(JSON, nullable=True)  # Execution result
+    error = Column(Text, nullable=True)   # Error message if failed
+    logs = Column(JSON, nullable=True)    # Execution logs
+    artifacts = Column(JSON, nullable=True)  # Created artifacts (PRs, files, etc.)
+    metrics = Column(JSON, nullable=True)    # Performance metrics
+    
+    # Additional context
+    context = Column(JSON, nullable=True)    # Additional context for the task
+    task_metadata = Column(JSON, nullable=True)   # Additional metadata
+    
+    # Legacy response data
     response_type = Column(String(50))  # 'regular', 'plan', 'pr'
     response_data = Column(JSON)
     
     # Error handling
-    error_message = Column(Text)
+    error_message = Column(Text)  # Legacy field
     retry_count = Column(Integer, default=0)
     
     # Session information
@@ -129,17 +159,35 @@ class AgentRun(Base):
         Index('idx_agent_run_status_created', 'status', 'created_at'),
         Index('idx_agent_run_project_status', 'project_id', 'status'),
         Index('idx_agent_run_session', 'session_id'),
+        Index('idx_agent_run_agent_id', 'agent_id'),
+        Index('idx_agent_run_task_type', 'task_type'),
     )
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert agent run to dictionary"""
         return {
             'id': self.id,
+            'agent_id': self.agent_id,
+            'task_type': self.task_type,
+            'description': self.description,
             'project_id': self.project_id,
             'target_text': self.target_text,
             'status': self.status.value if self.status else None,
             'progress_percentage': self.progress_percentage,
+            'progress': self.progress,
             'current_step': self.current_step,
+            'repository_url': self.repository_url,
+            'branch': self.branch,
+            'files': self.files,
+            'priority': self.priority,
+            'timeout_minutes': self.timeout_minutes,
+            'result': self.result,
+            'error': self.error,
+            'logs': self.logs,
+            'artifacts': self.artifacts,
+            'metrics': self.metrics,
+            'context': self.context,
+            'task_metadata': self.task_metadata,
             'response_type': self.response_type,
             'response_data': self.response_data,
             'error_message': self.error_message,
