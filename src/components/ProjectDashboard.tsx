@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, RefreshCw } from 'lucide-react';
 import { CachedProject, ProjectFilters } from '../api/types';
 import { getCachedProjects, filterProjects } from '../storage/projectCache';
 import { ProjectCard } from './ProjectCard';
@@ -25,20 +25,7 @@ export function ProjectDashboard({ selectedProject, onProjectSelect }: ProjectDa
     sortDirection: 'desc',
   });
 
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  useEffect(() => {
-    // Apply filters whenever projects or filters change
-    const filtered = filterProjects(projects, {
-      ...filters,
-      searchQuery,
-    });
-    setFilteredProjects(filtered);
-  }, [projects, filters, searchQuery]);
-
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     try {
       setLoading(true);
       const cachedProjects = await getCachedProjects();
@@ -52,7 +39,20 @@ export function ProjectDashboard({ selectedProject, onProjectSelect }: ProjectDa
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
+
+  useEffect(() => {
+    // Apply filters whenever projects or filters change
+    const filtered = filterProjects(projects, {
+      ...filters,
+      searchQuery,
+    });
+    setFilteredProjects(filtered);
+  }, [projects, filters, searchQuery]);
 
   const loadPRCounts = async (projectList: CachedProject[]) => {
     try {

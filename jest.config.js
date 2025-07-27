@@ -1,32 +1,28 @@
 module.exports = {
-  preset: 'react-scripts',
-  setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
-  testEnvironment: 'jsdom',
-  moduleNameMapping: {
+  testEnvironment: 'node',
+  setupFilesAfterEnv: ['<rootDir>/backend/test-setup.js'],
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1'
   },
   collectCoverageFrom: [
-    'src/**/*.{js,jsx,ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/index.tsx',
-    '!src/reportWebVitals.ts'
+    'backend/**/*.{js,jsx,ts,tsx}',
+    'tests/**/*.{js,jsx,ts,tsx}',
+    '!backend/**/*.d.ts'
   ],
   transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['react-app'] }]
+    '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest'
   },
   transformIgnorePatterns: [
-    '[/\\\\]node_modules[/\\\\].+\\.(js|jsx|ts|tsx)$',
-    '^.+\\.module\\.(css|sass|scss)$'
+    'node_modules/(?!.*\\.mjs$)'
   ],
   moduleFileExtensions: [
-    'web.js',
     'js',
-    'web.ts',
     'ts',
-    'web.tsx',
     'tsx',
     'json',
-    'web.jsx',
     'jsx'
+  ],
+  testMatch: [
+    '<rootDir>/tests/web-eval-agent/web-eval-service.test.js'
   ]
 };

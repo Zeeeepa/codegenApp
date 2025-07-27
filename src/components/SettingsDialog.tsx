@@ -3,7 +3,7 @@ import { X, Building, Settings as SettingsIcon, Github } from 'lucide-react';
 import { getPreferenceValues, setPreferenceValues, getEnvFileContent, validateEnvironmentConfiguration } from '../utils/preferences';
 import { getAPIClient } from '../api/client';
 import { OrganizationResponse } from '../api/types';
-import { getGitHubClient, resetGitHubClient } from '../api/github';
+import { getGitHubClient } from '../api/github';
 import { GitHubRepository, GitHubUser } from '../api/githubTypes';
 import toast from 'react-hot-toast';
 

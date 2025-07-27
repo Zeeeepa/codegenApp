@@ -1,7 +1,9 @@
 /// <reference types="jest" />
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
 import App from './App';
+import { ProjectProvider } from './contexts/ProjectContext';
 
 // Mock the preferences module to avoid environment variable issues in tests
 jest.mock('./utils/preferences', () => ({
@@ -27,14 +29,31 @@ jest.mock('react-hot-toast', () => ({
   Toaster: () => null
 }));
 
+// Test wrapper component
+const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <BrowserRouter>
+    <ProjectProvider>
+      {children}
+    </ProjectProvider>
+  </BrowserRouter>
+);
+
 describe('App Component', () => {
   test('renders without crashing', () => {
-    const { container } = render(<App />);
+    const { container } = render(
+      <TestWrapper>
+        <App />
+      </TestWrapper>
+    );
     expect(container).toBeInTheDocument();
   });
 
   test('renders main content area', () => {
-    render(<App />);
+    render(
+      <TestWrapper>
+        <App />
+      </TestWrapper>
+    );
     
     // Should render the main app structure
     const mainContent = document.querySelector('.min-h-screen');

@@ -8,7 +8,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Play, 
-  Square, 
   RotateCcw, 
   GitBranch, 
   Clock, 
@@ -18,7 +17,7 @@ import {
   ExternalLink,
   Settings
 } from 'lucide-react';
-import { useProject, AgentRun, ValidationPipeline } from '../contexts/ProjectContext';
+import { useProject } from '../contexts/ProjectContext';
 import { CachedProject } from '../api/types';
 import { getProjectSettings, ProjectSettings } from '../storage/projectSettings';
 

@@ -1,0 +1,182 @@
+{
+  "test_run": {
+    "timestamp": "2025-07-27T10:25:00.408Z",
+    "duration_ms": 139,
+    "environment": "development"
+  },
+  "summary": {
+    "total_tests": 27,
+    "passed": 9,
+    "failed": 18,
+    "success_rate": 33
+  },
+  "configuration": {
+    "base_url": "http://localhost:3002",
+    "test_project_id": "test-complete-workflow-1753611900269",
+    "test_requirements": "Create a simple REST API with user authentication and a dashboard UI"
+  },
+  "test_results": [
+    {
+      "name": "Services Status Endpoint",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-07-27T10:25:00.311Z"
+    },
+    {
+      "name": "Codegen Service Configured",
+      "passed": false,
+      "details": "Codegen API not configured",
+      "timestamp": "2025-07-27T10:25:00.311Z"
+    },
+    {
+      "name": "Web-Eval-Agent Service Available",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-07-27T10:25:00.311Z"
+    },
+    {
+      "name": "Cloudflare Service Available",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-07-27T10:25:00.311Z"
+    },
+    {
+      "name": "GitHub Service Available",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-07-27T10:25:00.311Z"
+    },
+    {
+      "name": "Grainchain Service Available",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-07-27T10:25:00.311Z"
+    },
+    {
+      "name": "Workflow Orchestrator Available",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-07-27T10:25:00.311Z"
+    },
+    {
+      "name": "Codegen API Connection",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-07-27T10:25:00.316Z"
+    },
+    {
+      "name": "Web-Eval-Agent Service Test",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-07-27T10:25:00.320Z"
+    },
+    {
+      "name": "Cloudflare Service Test",
+      "passed": true,
+      "details": "",
+      "timestamp": "2025-07-27T10:25:00.324Z"
+    },
+    {
+      "name": "GitHub Service Test",
+      "passed": false,
+      "details": "Status: 0",
+      "timestamp": "2025-07-27T10:25:00.366Z"
+    },
+    {
+      "name": "Grainchain Service Test",
+      "passed": false,
+      "details": "Status: 0",
+      "timestamp": "2025-07-27T10:25:00.369Z"
+    },
+    {
+      "name": "UI Validation Functionality",
+      "passed": false,
+      "details": "Connection failed",
+      "timestamp": "2025-07-27T10:25:00.372Z"
+    },
+    {
+      "name": "Build Validation Functionality",
+      "passed": false,
+      "details": "Status: 0",
+      "timestamp": "2025-07-27T10:25:00.374Z"
+    },
+    {
+      "name": "PR Notification Functionality",
+      "passed": false,
+      "details": "Connection failed",
+      "timestamp": "2025-07-27T10:25:00.377Z"
+    },
+    {
+      "name": "Workflow Start Endpoint",
+      "passed": false,
+      "details": "Status: 0, Error: undefined",
+      "timestamp": "2025-07-27T10:25:00.397Z"
+    },
+    {
+      "name": "Active Workflows Endpoint",
+      "passed": false,
+      "details": "Status: 0",
+      "timestamp": "2025-07-27T10:25:00.399Z"
+    },
+    {
+      "name": "GET /api/codegen/test",
+      "passed": false,
+      "details": "Status: 0",
+      "timestamp": "2025-07-27T10:25:00.400Z"
+    },
+    {
+      "name": "GET /api/codegen/config",
+      "passed": false,
+      "details": "Status: 0",
+      "timestamp": "2025-07-27T10:25:00.401Z"
+    },
+    {
+      "name": "GET /api/codegen/stats",
+      "passed": false,
+      "details": "Status: 0",
+      "timestamp": "2025-07-27T10:25:00.402Z"
+    },
+    {
+      "name": "GET /api/codegen/services/status",
+      "passed": false,
+      "details": "Status: 0",
+      "timestamp": "2025-07-27T10:25:00.403Z"
+    },
+    {
+      "name": "GET /api/codegen/workflows/active",
+      "passed": false,
+      "details": "Status: 0",
+      "timestamp": "2025-07-27T10:25:00.404Z"
+    },
+    {
+      "name": "GET /api/codegen/web-eval/test",
+      "passed": false,
+      "details": "Status: 0",
+      "timestamp": "2025-07-27T10:25:00.405Z"
+    },
+    {
+      "name": "GET /api/codegen/cloudflare/test",
+      "passed": false,
+      "details": "Status: 0",
+      "timestamp": "2025-07-27T10:25:00.405Z"
+    },
+    {
+      "name": "GET /api/codegen/github/test",
+      "passed": false,
+      "details": "Status: 0",
+      "timestamp": "2025-07-27T10:25:00.406Z"
+    },
+    {
+      "name": "GET /api/codegen/grainchain/test",
+      "passed": false,
+      "details": "Status: 0",
+      "timestamp": "2025-07-27T10:25:00.407Z"
+    },
+    {
+      "name": "Integration Flow - Services Check",
+      "passed": false,
+      "details": "Services status check failed",
+      "timestamp": "2025-07-27T10:25:00.408Z"
+    }
+  ]
+}
