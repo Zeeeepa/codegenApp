@@ -6,11 +6,16 @@ utilities for the CI/CD flow management system.
 """
 
 import os
-from typing import Generator
+import logging
+from typing import Generator, Optional
+from contextlib import contextmanager
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import QueuePool
+from sqlalchemy.exc import SQLAlchemyError
+
+logger = logging.getLogger(__name__)
 
 # Database configuration
 DATABASE_URL = os.getenv(
@@ -18,11 +23,14 @@ DATABASE_URL = os.getenv(
     "postgresql://user:pass@localhost/codegenapp"
 )
 
-# Create SQLAlchemy engine
+# Create SQLAlchemy engine with enhanced connection pooling
 engine = create_engine(
     DATABASE_URL,
+    poolclass=QueuePool,
+    pool_size=10,
+    max_overflow=20,
     pool_pre_ping=True,
-    pool_recycle=300,
+    pool_recycle=3600,
     echo=os.getenv("DATABASE_DEBUG", "false").lower() == "true"
 )
 
@@ -73,7 +81,41 @@ def reset_database():
 
 
 class DatabaseManager:
-    """Database management utilities."""
+    """Enhanced database management utilities."""
+    
+    def __init__(self):
+        self._initialized = False
+    
+    def initialize(self, database_url: Optional[str] = None) -> None:
+        """Initialize database with custom URL if provided"""
+        if database_url:
+            global engine, SessionLocal
+            engine = create_engine(
+                database_url,
+                poolclass=QueuePool,
+                pool_size=10,
+                max_overflow=20,
+                pool_pre_ping=True,
+                pool_recycle=3600,
+                echo=os.getenv("DATABASE_DEBUG", "false").lower() == "true"
+            )
+            SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        
+        self._initialized = True
+        logger.info("Database initialized successfully")
+    
+    @contextmanager
+    def session_scope(self) -> Generator[Session, None, None]:
+        """Provide a transactional scope around a series of operations"""
+        session = SessionLocal()
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
     
     @staticmethod
     def health_check() -> bool:
@@ -87,7 +129,8 @@ class DatabaseManager:
             with engine.connect() as connection:
                 connection.execute("SELECT 1")
             return True
-        except Exception:
+        except SQLAlchemyError as e:
+            logger.error(f"Database health check failed: {e}")
             return False
     
     @staticmethod
@@ -130,4 +173,3 @@ class DatabaseManager:
 def get_db() -> Generator[Session, None, None]:
     """FastAPI dependency for database sessions."""
     return get_database_session()
-

@@ -5,7 +5,7 @@
  * and WebSocket integration for the CI/CD dashboard.
  */
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, ReactNode } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
 
 // Types
@@ -275,7 +275,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }, [state.selectedProject, sendMessage]);
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     dispatch({ type: 'SET_LOADING', payload: true });
     
     try {
@@ -289,13 +289,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Unknown error' });
     }
-  };
+  }, []);
 
-  const selectProject = (project: Project) => {
+  const selectProject = useCallback((project: Project) => {
     dispatch({ type: 'SELECT_PROJECT', payload: project });
-  };
+  }, []);
 
-  const startAgentRun = async (projectId: string, targetText: string): Promise<AgentRun> => {
+  const startAgentRun = useCallback(async (projectId: string, targetText: string): Promise<AgentRun> => {
     const response = await fetch('/api/v1/agent-runs', {
       method: 'POST',
       headers: {
@@ -326,9 +326,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     dispatch({ type: 'ADD_AGENT_RUN', payload: agentRun });
     return agentRun;
-  };
+  }, []);
 
-  const continueAgentRun = async (runId: string, continuationText: string) => {
+  const continueAgentRun = useCallback(async (runId: string, continuationText: string) => {
     const response = await fetch(`/api/v1/agent-runs/${runId}/continue`, {
       method: 'POST',
       headers: {
@@ -344,9 +344,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     // Update will come via WebSocket
-  };
+  }, []);
 
-  const handlePlanResponse = async (
+  const handlePlanResponse = useCallback(async (
     runId: string, 
     action: 'confirm' | 'modify', 
     modificationText?: string
@@ -367,7 +367,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     // Update will come via WebSocket
-  };
+  }, []);
 
   const contextValue: ProjectContextType = {
     state,
@@ -393,4 +393,3 @@ export function useProject() {
   }
   return context;
 }
-

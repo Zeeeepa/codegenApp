@@ -7,9 +7,29 @@ and project-specific notifications in the CI/CD system.
 
 import json
 import asyncio
-from typing import Dict, List, Set, Any
+import logging
+import uuid
+from typing import Dict, List, Set, Any, Optional
 from fastapi import WebSocket, WebSocketDisconnect
 from datetime import datetime
+from dataclasses import dataclass, asdict
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class WebSocketMessage:
+    """WebSocket message structure"""
+    type: str
+    data: Dict[str, Any]
+    timestamp: str = None
+    message_id: str = None
+    
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.utcnow().isoformat()
+        if self.message_id is None:
+            self.message_id = str(uuid.uuid4())
 
 
 class ConnectionManager:
@@ -313,4 +333,3 @@ class ConnectionManager:
 
 # Global connection manager instance
 connection_manager = ConnectionManager()
-
