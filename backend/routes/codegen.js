@@ -5,12 +5,22 @@
 
 import express from 'express';
 import CodegenApiService from '../services/CodegenApiService.js';
+import { WebEvalAgentService } from '../services/WebEvalAgentService.js';
+import { CloudflareService } from '../services/CloudflareService.js';
+import { GitHubService } from '../services/GitHubService.js';
+import { GrainchainService } from '../services/GrainchainService.js';
+import { WorkflowOrchestrator } from '../services/WorkflowOrchestrator.js';
 import { AgentRun } from '../models/AgentRun.js';
 import { ValidationPipeline } from '../models/ValidationPipeline.js';
 import { Project } from '../models/Project.js';
 
 const router = express.Router();
 const codegenService = new CodegenApiService();
+const webEvalService = new WebEvalAgentService();
+const cloudflareService = new CloudflareService();
+const githubService = new GitHubService();
+const grainchainService = new GrainchainService();
+const workflowOrchestrator = new WorkflowOrchestrator();
 
 /**
  * Test Codegen API connection
@@ -386,6 +396,361 @@ router.get('/stats', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to get statistics',
+      details: error.message
+    });
+  }
+});
+
+// ============================================================================
+// COMPLETE WORKFLOW ORCHESTRATION ENDPOINTS
+// ============================================================================
+
+/**
+ * Start autonomous workflow
+ * POST /api/codegen/workflow/start
+ */
+router.post('/workflow/start', async (req, res) => {
+  try {
+    const { projectId, requirements, context } = req.body;
+
+    // Validate required fields
+    if (!projectId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: projectId'
+      });
+    }
+
+    if (!requirements) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: requirements'
+      });
+    }
+
+    console.log(`🚀 Starting autonomous workflow for project: ${projectId}`);
+    console.log(`📋 Requirements: ${requirements}`);
+
+    // Start autonomous workflow
+    const result = await workflowOrchestrator.startAutonomousWorkflow({
+      projectId,
+      requirements,
+      context: context || {}
+    });
+
+    res.json({
+      success: true,
+      message: 'Autonomous workflow started successfully',
+      data: result
+    });
+
+  } catch (error) {
+    console.error('❌ Start workflow error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to start autonomous workflow',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Get workflow status
+ * GET /api/codegen/workflow/:workflowId/status
+ */
+router.get('/workflow/:workflowId/status', async (req, res) => {
+  try {
+    const { workflowId } = req.params;
+
+    // Get workflow status
+    const status = await workflowOrchestrator.getWorkflowStatus(workflowId);
+
+    res.json({
+      success: true,
+      message: 'Workflow status retrieved successfully',
+      data: status
+    });
+
+  } catch (error) {
+    console.error('❌ Get workflow status error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get workflow status',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * List active workflows
+ * GET /api/codegen/workflows/active
+ */
+router.get('/workflows/active', async (req, res) => {
+  try {
+    // Get active workflows
+    const activeWorkflows = workflowOrchestrator.getActiveWorkflows();
+
+    res.json({
+      success: true,
+      message: 'Active workflows retrieved successfully',
+      data: {
+        workflows: activeWorkflows,
+        count: activeWorkflows.length
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Get active workflows error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get active workflows',
+      details: error.message
+    });
+  }
+});
+
+// ============================================================================
+// SERVICE-SPECIFIC ENDPOINTS
+// ============================================================================
+
+/**
+ * Test Web-Eval-Agent service
+ * GET /api/codegen/web-eval/test
+ */
+router.get('/web-eval/test', async (req, res) => {
+  try {
+    const status = webEvalService.getStatus();
+
+    res.json({
+      success: true,
+      message: 'Web-Eval-Agent status retrieved',
+      data: status
+    });
+
+  } catch (error) {
+    console.error('❌ Web-Eval-Agent test error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to test Web-Eval-Agent',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Validate UI with Web-Eval-Agent
+ * POST /api/codegen/web-eval/validate
+ */
+router.post('/web-eval/validate', async (req, res) => {
+  try {
+    const { url, elements, projectId } = req.body;
+
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: url'
+      });
+    }
+
+    // Validate UI
+    const result = await webEvalService.validateUI({
+      url,
+      elements: elements || [],
+      projectId
+    });
+
+    res.json({
+      success: true,
+      message: 'UI validation completed',
+      data: result
+    });
+
+  } catch (error) {
+    console.error('❌ UI validation error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to validate UI',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Test Cloudflare service
+ * GET /api/codegen/cloudflare/test
+ */
+router.get('/cloudflare/test', async (req, res) => {
+  try {
+    const result = await cloudflareService.testConnection();
+
+    res.json({
+      success: result.success,
+      message: result.success ? 'Cloudflare connection successful' : 'Cloudflare connection failed',
+      data: result
+    });
+
+  } catch (error) {
+    console.error('❌ Cloudflare test error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to test Cloudflare connection',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Send PR notification via Cloudflare
+ * POST /api/codegen/cloudflare/pr-notification
+ */
+router.post('/cloudflare/pr-notification', async (req, res) => {
+  try {
+    const { prUrl, status, projectId, metadata } = req.body;
+
+    if (!prUrl || !status || !projectId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: prUrl, status, projectId'
+      });
+    }
+
+    // Send PR notification
+    const result = await cloudflareService.sendPRNotification({
+      prUrl,
+      status,
+      projectId,
+      metadata: metadata || {}
+    });
+
+    res.json({
+      success: true,
+      message: 'PR notification sent successfully',
+      data: result
+    });
+
+  } catch (error) {
+    console.error('❌ PR notification error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send PR notification',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Test GitHub service
+ * GET /api/codegen/github/test
+ */
+router.get('/github/test', async (req, res) => {
+  try {
+    const result = await githubService.testConnection();
+
+    res.json({
+      success: result.success,
+      message: result.success ? 'GitHub connection successful' : 'GitHub connection failed',
+      data: result
+    });
+
+  } catch (error) {
+    console.error('❌ GitHub test error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to test GitHub connection',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Test Grainchain service
+ * GET /api/codegen/grainchain/test
+ */
+router.get('/grainchain/test', async (req, res) => {
+  try {
+    const result = await grainchainService.testService();
+
+    res.json({
+      success: result.success,
+      message: result.success ? 'Grainchain service test successful' : 'Grainchain service test failed',
+      data: result
+    });
+
+  } catch (error) {
+    console.error('❌ Grainchain test error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to test Grainchain service',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Run Grainchain build validation
+ * POST /api/codegen/grainchain/validate
+ */
+router.post('/grainchain/validate', async (req, res) => {
+  try {
+    const { projectId, prUrl, branch, buildConfig } = req.body;
+
+    if (!projectId || !prUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: projectId, prUrl'
+      });
+    }
+
+    // Run build validation
+    const result = await grainchainService.validateBuildDeployment({
+      projectId,
+      prUrl,
+      branch: branch || 'main',
+      buildConfig: buildConfig || {}
+    });
+
+    res.json({
+      success: result.overall_status === 'success',
+      message: 'Build validation completed',
+      data: result
+    });
+
+  } catch (error) {
+    console.error('❌ Build validation error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to run build validation',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Get all services status
+ * GET /api/codegen/services/status
+ */
+router.get('/services/status', async (req, res) => {
+  try {
+    const servicesStatus = {
+      codegen: codegenService.getStatus ? codegenService.getStatus() : { configured: codegenService.isConfigured() },
+      web_eval: webEvalService.getStatus(),
+      cloudflare: cloudflareService.getStatus(),
+      github: githubService.getStatus(),
+      grainchain: grainchainService.getStatus(),
+      workflow_orchestrator: workflowOrchestrator.getStatus()
+    };
+
+    res.json({
+      success: true,
+      message: 'Services status retrieved successfully',
+      data: servicesStatus
+    });
+
+  } catch (error) {
+    console.error('❌ Get services status error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get services status',
       details: error.message
     });
   }
