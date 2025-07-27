@@ -327,3 +327,119 @@ class APIError(BaseModel):
     details: Optional[str] = Field(None, description="Additional error details")
     error_code: Optional[str] = Field(None, description="Internal error code")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ============================================================================
+# PROJECT MANAGEMENT MODELS
+# ============================================================================
+
+class ProjectStatus(str, Enum):
+    """Project status enum"""
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    ARCHIVED = "archived"
+
+
+class DeploymentSettings(BaseModel):
+    """Project deployment settings"""
+    build_command: str = Field(default="npm run build", description="Build command")
+    deploy_command: str = Field(default="npm run deploy", description="Deploy command")
+    health_check_url: str = Field(default="/health", description="Health check URL")
+    environment_variables: Dict[str, str] = Field(default_factory=dict, description="Environment variables")
+
+
+class ValidationSettings(BaseModel):
+    """Project validation settings"""
+    auto_merge: bool = Field(default=False, description="Auto-merge PRs after validation")
+    required_checks: List[str] = Field(default_factory=list, description="Required CI checks")
+    timeout_minutes: int = Field(default=30, description="Validation timeout in minutes")
+    max_retries: int = Field(default=3, description="Maximum retry attempts")
+
+
+class ProjectResponse(BaseModel):
+    """Project response model"""
+    id: str = Field(..., description="Project ID")
+    name: str = Field(..., description="Project name")
+    description: Optional[str] = Field(None, description="Project description")
+    webhook_url: str = Field(..., description="Webhook URL")
+    github_repo: str = Field(..., description="GitHub repository")
+    status: ProjectStatus = Field(..., description="Project status")
+    created_at: str = Field(..., description="Creation timestamp")
+    updated_at: str = Field(..., description="Last update timestamp")
+    last_run: Optional[str] = Field(None, description="Last run timestamp")
+    deployment_settings: DeploymentSettings = Field(..., description="Deployment settings")
+    validation_settings: ValidationSettings = Field(..., description="Validation settings")
+
+
+class CreateProjectRequest(BaseModel):
+    """Create project request"""
+    name: str = Field(..., description="Project name")
+    description: Optional[str] = Field(None, description="Project description")
+    webhook_url: str = Field(..., description="Webhook URL")
+    github_repo: str = Field(..., description="GitHub repository")
+    deployment_settings: Dict[str, Any] = Field(default_factory=dict, description="Deployment settings")
+    validation_settings: Dict[str, Any] = Field(default_factory=dict, description="Validation settings")
+
+
+class UpdateProjectRequest(BaseModel):
+    """Update project request"""
+    name: Optional[str] = Field(None, description="Project name")
+    description: Optional[str] = Field(None, description="Project description")
+    webhook_url: Optional[str] = Field(None, description="Webhook URL")
+    github_repo: Optional[str] = Field(None, description="GitHub repository")
+    status: Optional[ProjectStatus] = Field(None, description="Project status")
+    deployment_settings: Optional[Dict[str, Any]] = Field(None, description="Deployment settings")
+    validation_settings: Optional[Dict[str, Any]] = Field(None, description="Validation settings")
+
+
+class ProjectAgentRunStatus(str, Enum):
+    """Project agent run status enum"""
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    WAITING_INPUT = "waiting_input"
+
+
+class ProjectAgentRunResponse(BaseModel):
+    """Project agent run response model"""
+    id: str = Field(..., description="Agent run ID")
+    project_id: str = Field(..., description="Project ID")
+    target_text: str = Field(..., description="Target text for the run")
+    status: ProjectAgentRunStatus = Field(..., description="Current status")
+    progress_percentage: int = Field(..., description="Progress percentage")
+    current_step: Optional[str] = Field(None, description="Current step")
+    response_type: Optional[str] = Field(None, description="Response type")
+    response_data: Optional[Dict[str, Any]] = Field(None, description="Response data")
+    error_message: Optional[str] = Field(None, description="Error message if failed")
+    retry_count: int = Field(..., description="Retry count")
+    session_id: str = Field(..., description="Session ID")
+    created_at: str = Field(..., description="Creation timestamp")
+    updated_at: str = Field(..., description="Last update timestamp")
+
+
+class CreateAgentRunRequest(BaseModel):
+    """Create agent run request"""
+    target_text: str = Field(..., description="Target text for the agent run")
+
+
+class ValidationPipelineStatus(str, Enum):
+    """Validation pipeline status enum"""
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class ValidationPipelineResponse(BaseModel):
+    """Validation pipeline response model"""
+    id: str = Field(..., description="Validation pipeline ID")
+    project_id: str = Field(..., description="Project ID")
+    pull_request_id: str = Field(..., description="Pull request ID")
+    status: ValidationPipelineStatus = Field(..., description="Current status")
+    progress_percentage: int = Field(..., description="Progress percentage")
+    current_step: Optional[str] = Field(None, description="Current step")
+    deployment_url: Optional[str] = Field(None, description="Deployment URL")
+    created_at: str = Field(..., description="Creation timestamp")
