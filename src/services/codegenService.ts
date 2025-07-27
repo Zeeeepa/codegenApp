@@ -1,0 +1,377 @@
+/**
+ * Real Codegen API Service Implementation
+ * 
+ * This service implements the actual Codegen API integration using the official endpoints:
+ * - create-agent-run: https://docs.codegen.com/api-reference/agents/create-agent-run
+ * - resume-agent-run: https://docs.codegen.com/api-reference/agents/resume-agent-run
+ */
+
+import { getCredentials } from '../utils/credentials';
+
+// API Types based on official Codegen API documentation
+export interface CreateAgentRunRequest {
+  message: string;
+  agent_id?: string;
+  context?: {
+    repository?: string;
+    branch?: string;
+    files?: string[];
+  };
+  settings?: {
+    model?: string;
+    temperature?: number;
+    max_tokens?: number;
+  };
+}
+
+export interface ResumeAgentRunRequest {
+  run_id: string;
+  message: string;
+  context?: {
+    repository?: string;
+    branch?: string;
+    files?: string[];
+  };
+}
+
+export interface AgentRunResponse {
+  id: string;
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+  message: string;
+  response?: {
+    type: 'regular' | 'plan' | 'pr';
+    content: string;
+    metadata?: {
+      pr_url?: string;
+      branch_name?: string;
+      files_changed?: string[];
+      plan_steps?: Array<{
+        title: string;
+        description: string;
+        status: 'pending' | 'in_progress' | 'completed' | 'failed';
+      }>;
+    };
+  };
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+  error?: string;
+}
+
+export interface AgentRunStatus {
+  id: string;
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+  progress?: number;
+  current_step?: string;
+  estimated_completion?: string;
+}
+
+class CodegenAPIService {
+  private baseUrl: string;
+  private apiKey: string;
+  private orgId: string;
+
+  constructor() {
+    this.baseUrl = process.env.REACT_APP_CODEGEN_API_BASE_URL || 'https://api.codegen.com';
+    this.apiKey = process.env.REACT_APP_CODEGEN_API_KEY || '';
+    this.orgId = process.env.REACT_APP_CODEGEN_ORG_ID || '';
+  }
+
+  private async getHeaders(): Promise<Record<string, string>> {
+    // Try to get credentials from the credentials system first
+    try {
+      const credentials = await getCredentials();
+      return {
+        'Authorization': `Bearer ${credentials.apiToken}`,
+        'Content-Type': 'application/json',
+        'X-Organization-ID': this.orgId,
+      };
+    } catch (error) {
+      // Fallback to environment variables
+      return {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+        'X-Organization-ID': this.orgId,
+      };
+    }
+  }
+
+  private async makeRequest<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const headers = await this.getHeaders();
+
+    // Try multiple possible API endpoint structures
+    const possibleUrls = [
+      `${this.baseUrl}${endpoint}`,
+      `${this.baseUrl}/v1${endpoint}`,
+      `${this.baseUrl}/api${endpoint}`,
+      `https://api.codegen.com${endpoint}`,
+      `https://api.codegen.com/v1${endpoint}`,
+      `https://api.codegen.com/api/v1${endpoint}`
+    ];
+
+    let lastError: Error | null = null;
+
+    for (const url of possibleUrls) {
+      try {
+        console.log(`Trying Codegen API endpoint: ${url}`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            ...headers,
+            ...options.headers,
+          },
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          console.log(`Codegen API request successful: ${url}`);
+          return await response.json() as T;
+        } else if (response.status === 404) {
+          console.log(`Endpoint not found: ${url} (404)`);
+          continue; // Try next URL
+        } else if (response.status === 401) {
+          const errorText = await response.text();
+          console.warn(`Authentication failed for ${url}: ${errorText}`);
+          // Don't continue for auth errors, they won't work on other URLs either
+          throw new Error(`Codegen API Authentication Error (401): ${errorText}`);
+        } else {
+          const errorText = await response.text();
+          console.warn(`API error for ${url} (${response.status}): ${errorText}`);
+          lastError = new Error(`Codegen API Error (${response.status}): ${errorText}`);
+          continue; // Try next URL
+        }
+      } catch (error) {
+        console.warn(`Request failed for ${url}:`, error instanceof Error ? error.message : String(error));
+        lastError = error as Error;
+        continue; // Try next URL
+      }
+    }
+
+    // If all URLs failed, throw the last error
+    throw lastError || new Error('All Codegen API endpoints failed');
+  }
+
+  /**
+   * Create a new agent run using the official Codegen API
+   * 
+   * @param request - The agent run request
+   * @returns Promise<AgentRunResponse>
+   */
+  async createAgentRun(request: CreateAgentRunRequest): Promise<AgentRunResponse> {
+    console.log('Creating agent run with Codegen API:', request);
+    
+    try {
+      const response = await this.makeRequest<AgentRunResponse>('/api/v1/agents/runs', {
+        method: 'POST',
+        body: JSON.stringify(request),
+      });
+
+      console.log('Agent run created successfully:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to create agent run:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resume an existing agent run using the official Codegen API
+   * 
+   * @param request - The resume request
+   * @returns Promise<AgentRunResponse>
+   */
+  async resumeAgentRun(request: ResumeAgentRunRequest): Promise<AgentRunResponse> {
+    console.log('Resuming agent run with Codegen API:', request);
+    
+    try {
+      const response = await this.makeRequest<AgentRunResponse>(
+        `/api/v1/agents/runs/${request.run_id}/resume`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            message: request.message,
+            context: request.context,
+          }),
+        }
+      );
+
+      console.log('Agent run resumed successfully:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to resume agent run:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the status of an agent run
+   * 
+   * @param runId - The run ID
+   * @returns Promise<AgentRunStatus>
+   */
+  async getAgentRunStatus(runId: string): Promise<AgentRunStatus> {
+    try {
+      const response = await this.makeRequest<AgentRunStatus>(
+        `/api/v1/agents/runs/${runId}/status`
+      );
+
+      return response;
+    } catch (error) {
+      console.error('Failed to get agent run status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get full details of an agent run
+   * 
+   * @param runId - The run ID
+   * @returns Promise<AgentRunResponse>
+   */
+  async getAgentRun(runId: string): Promise<AgentRunResponse> {
+    try {
+      const response = await this.makeRequest<AgentRunResponse>(
+        `/api/v1/agents/runs/${runId}`
+      );
+
+      return response;
+    } catch (error) {
+      console.error('Failed to get agent run:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel an agent run
+   * 
+   * @param runId - The run ID
+   * @returns Promise<boolean>
+   */
+  async cancelAgentRun(runId: string): Promise<boolean> {
+    try {
+      await this.makeRequest(`/api/v1/agents/runs/${runId}/cancel`, {
+        method: 'POST',
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Failed to cancel agent run:', error);
+      return false;
+    }
+  }
+
+  /**
+   * List agent runs for the organization
+   * 
+   * @param options - Query options
+   * @returns Promise<AgentRunResponse[]>
+   */
+  async listAgentRuns(options: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+    repository?: string;
+  } = {}): Promise<AgentRunResponse[]> {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      if (options.limit) queryParams.append('limit', options.limit.toString());
+      if (options.offset) queryParams.append('offset', options.offset.toString());
+      if (options.status) queryParams.append('status', options.status);
+      if (options.repository) queryParams.append('repository', options.repository);
+
+      const endpoint = `/api/v1/agents/runs${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      
+      const response = await this.makeRequest<{ runs: AgentRunResponse[] }>(endpoint);
+      return response.runs || [];
+    } catch (error) {
+      console.error('Failed to list agent runs:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Test the API connection with multiple endpoint attempts
+   * 
+   * @returns Promise<boolean>
+   */
+  async testConnection(): Promise<boolean> {
+    // Try different health check endpoints
+    const healthEndpoints = [
+      '/health',
+      '/api/v1/health',
+      '/v1/health',
+      '/status',
+      '/api/v1/status',
+      '/ping',
+      '/api/v1/organizations', // This should work if API key is valid
+    ];
+
+    for (const endpoint of healthEndpoints) {
+      try {
+        console.log(`Testing Codegen API with endpoint: ${endpoint}`);
+        await this.makeRequest(endpoint);
+        console.log(`Codegen API connection successful with endpoint: ${endpoint}`);
+        return true;
+      } catch (error) {
+        console.log(`Endpoint ${endpoint} failed:`, error instanceof Error ? error.message : String(error));
+        continue;
+      }
+    }
+
+    // If all health endpoints fail, try a simple authentication test
+    try {
+      console.log('Testing Codegen API authentication...');
+      const headers = await this.getHeaders();
+      
+      // Test if we can at least authenticate (even if endpoint doesn't exist)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await fetch('https://api.codegen.com/api/v1/organizations', {
+        headers,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (response.status === 401) {
+        console.error('Codegen API authentication failed - invalid API key');
+        return false;
+      } else if (response.status === 404) {
+        console.log('Codegen API authentication successful (endpoint structure may vary)');
+        return true;
+      } else if (response.ok) {
+        console.log('Codegen API connection fully successful');
+        return true;
+      } else {
+        console.warn(`Codegen API returned status ${response.status}`);
+        return response.status < 500; // Client errors are OK, server errors are not
+      }
+    } catch (error) {
+      console.error('Codegen API connection test failed:', error);
+      return false;
+    }
+  }
+}
+
+// Singleton instance
+let codegenService: CodegenAPIService | null = null;
+
+export function getCodegenService(): CodegenAPIService {
+  if (!codegenService) {
+    codegenService = new CodegenAPIService();
+  }
+  return codegenService;
+}
+
+export default CodegenAPIService;

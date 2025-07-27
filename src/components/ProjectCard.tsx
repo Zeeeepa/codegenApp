@@ -5,7 +5,7 @@
  * progress updates for the CI/CD workflow system.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Play, 
   Square, 
@@ -18,20 +18,39 @@ import {
   ExternalLink,
   Settings
 } from 'lucide-react';
-import { useProject, Project, AgentRun, ValidationPipeline } from '../contexts/ProjectContext';
+import { useProject, AgentRun, ValidationPipeline } from '../contexts/ProjectContext';
+import { CachedProject } from '../api/types';
+import { getProjectSettings, ProjectSettings } from '../storage/projectSettings';
 
 interface ProjectCardProps {
-  project: Project;
+  project: CachedProject;
+  isSelected?: boolean;
+  onSelect?: () => void;
+  onUpdate?: (project: CachedProject) => void;
   className?: string;
 }
 
-export function ProjectCard({ project, className = '' }: ProjectCardProps) {
+export function ProjectCard({ project, isSelected, onSelect, onUpdate, className = '' }: ProjectCardProps) {
   const { state, startAgentRun, continueAgentRun, handlePlanResponse } = useProject();
   const [targetText, setTargetText] = useState('');
+  const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
   const [continuationText, setContinuationText] = useState('');
   const [planModificationText, setPlanModificationText] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Load project settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await getProjectSettings(project.id);
+        setProjectSettings(settings);
+      } catch (error) {
+        console.error('Failed to load project settings:', error);
+      }
+    };
+    loadSettings();
+  }, [project.id]);
 
   // Get active runs and validations for this project
   const activeRuns = state.activeRuns.filter(run => run.project_id === project.id);
@@ -119,17 +138,15 @@ export function ProjectCard({ project, className = '' }: ProjectCardProps) {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
-            <p className="text-sm text-gray-500 mt-1">{project.description}</p>
+            <p className="text-sm text-gray-500 mt-1">{project.description || 'No description available'}</p>
             <div className="flex items-center space-x-4 mt-2">
               <div className="flex items-center space-x-1 text-sm text-gray-500">
                 <GitBranch className="w-4 h-4" />
-                <span>{project.github_repo}</span>
+                <span>{project.fullName}</span>
               </div>
-              {project.last_run && (
-                <div className="text-sm text-gray-500">
-                  Last run: {new Date(project.last_run).toLocaleDateString()}
-                </div>
-              )}
+              <div className="text-sm text-gray-500">
+                Updated: {new Date(project.updatedAt).toLocaleDateString()}
+              </div>
             </div>
           </div>
           <button
@@ -142,26 +159,26 @@ export function ProjectCard({ project, className = '' }: ProjectCardProps) {
       </div>
 
       {/* Settings Panel */}
-      {showSettings && (
+      {showSettings && projectSettings && (
         <div className="p-4 bg-gray-50 border-b border-gray-200">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="font-medium text-gray-700">Auto-merge:</span>
-              <span className={`ml-2 ${project.validation_settings.auto_merge ? 'text-green-600' : 'text-red-600'}`}>
-                {project.validation_settings.auto_merge ? 'Enabled' : 'Disabled'}
+              <span className="font-medium text-gray-700">Auto-confirm Plan:</span>
+              <span className={`ml-2 ${projectSettings.autoConfirmPlan ? 'text-green-600' : 'text-red-600'}`}>
+                {projectSettings.autoConfirmPlan ? 'Enabled' : 'Disabled'}
               </span>
             </div>
             <div>
-              <span className="font-medium text-gray-700">Timeout:</span>
-              <span className="ml-2 text-gray-600">{project.validation_settings.timeout_minutes}m</span>
+              <span className="font-medium text-gray-700">Selected Branch:</span>
+              <span className="ml-2 text-gray-600">{projectSettings.selectedBranch || 'main'}</span>
             </div>
             <div>
-              <span className="font-medium text-gray-700">Max retries:</span>
-              <span className="ml-2 text-gray-600">{project.validation_settings.max_retries}</span>
+              <span className="font-medium text-gray-700">Last Updated:</span>
+              <span className="ml-2 text-gray-600">{new Date(projectSettings.lastUpdated).toLocaleDateString()}</span>
             </div>
             <div>
-              <span className="font-medium text-gray-700">Required checks:</span>
-              <span className="ml-2 text-gray-600">{project.validation_settings.required_checks.length}</span>
+              <span className="font-medium text-gray-700">Repository Rules:</span>
+              <span className="ml-2 text-gray-600">{projectSettings.repositoryRules ? 'Configured' : 'None'}</span>
             </div>
           </div>
         </div>
@@ -377,4 +394,3 @@ export function ProjectCard({ project, className = '' }: ProjectCardProps) {
     </div>
   );
 }
-
