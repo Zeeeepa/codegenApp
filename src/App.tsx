@@ -6,6 +6,7 @@ import { SetupGuide } from './components/SetupGuide';
 import { ProjectDashboard } from './components/ProjectDashboard';
 import { AgentRunSelectionProvider } from './contexts/AgentRunSelectionContext';
 import { DialogProvider } from './contexts/DialogContext';
+import { ProjectProvider } from './contexts/ProjectContext';
 import { SettingsDialog } from './components/SettingsDialog';
 import { ProjectDropdown } from './components/ProjectDropdown';
 import { validateEnvironmentConfiguration } from './utils/preferences';
@@ -118,40 +119,42 @@ function App() {
 
   return (
     <DialogProvider>
-      <AgentRunSelectionProvider>
-        <div className="min-h-screen bg-black">
-          <Header 
-            selectedProject={selectedProject} 
-            onProjectChange={setSelectedProject} 
-          />
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-              },
-              success: {
-                duration: 3000,
-                iconTheme: {
-                  primary: '#4ade80',
-                  secondary: '#fff',
+      <ProjectProvider>
+        <AgentRunSelectionProvider>
+          <div className="min-h-screen bg-black">
+            <Header 
+              selectedProject={selectedProject} 
+              onProjectChange={setSelectedProject} 
+            />
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: '#363636',
+                  color: '#fff',
                 },
-              },
-              error: {
-                duration: 5000,
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
+                success: {
+                  duration: 3000,
+                  iconTheme: {
+                    primary: '#4ade80',
+                    secondary: '#fff',
+                  },
                 },
-              },
-            }}
-          />
-          
-          <Dashboard selectedProject={selectedProject} />
-        </div>
-      </AgentRunSelectionProvider>
+                error: {
+                  duration: 5000,
+                  iconTheme: {
+                    primary: '#ef4444',
+                    secondary: '#fff',
+                  },
+                },
+              }}
+            />
+            
+            <Dashboard selectedProject={selectedProject} />
+          </div>
+        </AgentRunSelectionProvider>
+      </ProjectProvider>
     </DialogProvider>
   );
 }
