@@ -123,7 +123,11 @@ export class GrainchainService {
    * Create isolated environment for validation
    */
   async createIsolatedEnvironment(validationId, prUrl, branch) {
-    const sandboxPath = path.join(this.sandboxDir, validationId);
+    let sandboxPath = path.join(this.sandboxDir, validationId);
+    sandboxPath = path.resolve(sandboxPath);
+    if (!sandboxPath.startsWith(path.resolve(this.sandboxDir))) {
+      throw new Error('Invalid sandbox path: Directory traversal detected');
+    }
     
     try {
       console.log(`🏗️ Creating isolated environment: ${sandboxPath}`);
@@ -132,7 +136,11 @@ export class GrainchainService {
       await fs.mkdir(sandboxPath, { recursive: true });
 
       // Clone repository (simulate - in real implementation would clone from PR)
-      const repoPath = path.join(sandboxPath, 'repo');
+      let repoPath = path.join(sandboxPath, 'repo');
+      repoPath = path.resolve(repoPath);
+      if (!repoPath.startsWith(path.resolve(sandboxPath))) {
+        throw new Error('Invalid repository path: Directory traversal detected');
+      }
       await fs.mkdir(repoPath, { recursive: true });
 
       // Create mock project structure for testing
@@ -192,7 +200,11 @@ app.listen(port, () => {
 module.exports = app;
 `;
 
-    await fs.writeFile(path.join(repoPath, 'app.js'), appJs);
+    const appJsPath = path.resolve(path.join(repoPath, 'app.js'));
+    if (!appJsPath.startsWith(path.resolve(repoPath))) {
+      throw new Error('Invalid app.js path: Directory traversal detected');
+    }
+    await fs.writeFile(appJsPath, appJs);
 
     // Create Dockerfile
     const dockerfile = `
@@ -205,7 +217,11 @@ EXPOSE 3000
 CMD ["node", "app.js"]
 `;
 
-    await fs.writeFile(path.join(repoPath, 'Dockerfile'), dockerfile);
+    const dockerfilePath = path.resolve(path.join(repoPath, 'Dockerfile'));
+    if (!dockerfilePath.startsWith(path.resolve(repoPath))) {
+      throw new Error('Invalid Dockerfile path: Directory traversal detected');
+    }
+    await fs.writeFile(dockerfilePath, dockerfile);
 
     console.log(`✅ Mock project created in: ${repoPath}`);
   }
