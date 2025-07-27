@@ -14,6 +14,7 @@ export const CACHE_NAMESPACES = {
   AGENT_RUNS: "agent-runs",
   ORGANIZATIONS: "organizations",
   USERS: "users",
+  STRUCTURAL_ANALYSIS: "structural-analysis",
 } as const;
 
 // Cache Entry Types
@@ -68,6 +69,11 @@ export const CACHE_CONFIGS: Record<string, CacheConfig> = {
     ttl: 30 * 60 * 1000, // 30 minutes for users
     maxEntries: 500,
     namespace: CACHE_NAMESPACES.USERS,
+  },
+  [CACHE_NAMESPACES.STRUCTURAL_ANALYSIS]: {
+    ttl: 15 * 60 * 1000, // 15 minutes for structural analysis
+    maxEntries: 200,
+    namespace: CACHE_NAMESPACES.STRUCTURAL_ANALYSIS,
   },
 };
 

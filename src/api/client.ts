@@ -2,6 +2,12 @@ import { showToast, ToastStyle } from "../utils/toast";
 import { getCredentials, showCredentialsError, validateCredentials } from "../utils/credentials";
 import { clearStoredUserInfo } from "../storage/userStorage";
 import { API_ENDPOINTS, DEFAULT_API_BASE_URL } from "./constants";
+import { 
+  structuralAnalysisService, 
+  ValidationResult, 
+  FunctionAnalysis,
+  ClassAnalysis 
+} from "../utils/structuralAnalysis";
 import {
   AgentRunResponse,
   UserResponse,
@@ -22,11 +28,14 @@ import {
 export class CodegenAPIClient {
   private baseUrl: string;
   private apiToken: string;
+  private structuralAnalysis: typeof structuralAnalysisService;
+  private enableStructuralValidation: boolean = true;
 
   constructor() {
     // Note: Constructor cannot be async, so we'll handle credentials in makeRequest
     this.baseUrl = DEFAULT_API_BASE_URL;
     this.apiToken = '';
+    this.structuralAnalysis = structuralAnalysisService;
   }
 
   private async initializeCredentials(): Promise<void> {
@@ -42,6 +51,99 @@ export class CodegenAPIClient {
     const credentials = await getCredentials();
     this.baseUrl = credentials.apiBaseUrl || DEFAULT_API_BASE_URL;
     this.apiToken = credentials.apiToken;
+  }
+
+  // Structural Analysis Methods using Graph-Sitter
+
+  /**
+   * Enable or disable structural validation for API calls
+   */
+  public setStructuralValidation(enabled: boolean): void {
+    this.enableStructuralValidation = enabled;
+  }
+
+  /**
+   * Validate API client structure using graph-sitter Function analysis
+   */
+  public async validateAPIStructure(): Promise<ValidationResult> {
+    if (!this.enableStructuralValidation) {
+      return {
+        isValid: true,
+        issues: [],
+        summary: {
+          totalIssues: 0,
+          errors: 0,
+          warnings: 0,
+          infos: 0,
+          filesAnalyzed: 0,
+          functionsAnalyzed: 0,
+          classesAnalyzed: 0
+        }
+      };
+    }
+
+    console.log('🔍 Validating API client structure...');
+    return await this.structuralAnalysis.validateAPIUsage('src/api/client.ts');
+  }
+
+  /**
+   * Get function analysis for API methods using graph-sitter Function.call_sites
+   */
+  public async getAPIMethodAnalysis(): Promise<FunctionAnalysis[]> {
+    if (!this.enableStructuralValidation) {
+      return [];
+    }
+
+    console.log('🔧 Analyzing API methods...');
+    return await this.structuralAnalysis.analyzeFunctions('src/api/client.ts');
+  }
+
+  /**
+   * Get class analysis for API client using graph-sitter Class.methods
+   */
+  public async getAPIClientAnalysis(): Promise<ClassAnalysis[]> {
+    if (!this.enableStructuralValidation) {
+      return [];
+    }
+
+    console.log('🏗️ Analyzing API client class...');
+    return await this.structuralAnalysis.analyzeClasses('src/api/client.ts');
+  }
+
+  /**
+   * Validate parameter usage in API methods
+   */
+  public async validateParameterUsage(): Promise<ValidationResult> {
+    if (!this.enableStructuralValidation) {
+      return {
+        isValid: true,
+        issues: [],
+        summary: {
+          totalIssues: 0,
+          errors: 0,
+          warnings: 0,
+          infos: 0,
+          filesAnalyzed: 0,
+          functionsAnalyzed: 0,
+          classesAnalyzed: 0
+        }
+      };
+    }
+
+    console.log('📝 Validating API parameter usage...');
+    return await this.structuralAnalysis.validateParameterUsage('src/api/client.ts');
+  }
+
+  /**
+   * Get dependency graph for API client
+   */
+  public async getAPIDependencyGraph() {
+    if (!this.enableStructuralValidation) {
+      return [];
+    }
+
+    console.log('🕸️ Building API dependency graph...');
+    return await this.structuralAnalysis.getDependencyGraph('src/api/client.ts');
   }
 
   private async makeRequest<T>(
