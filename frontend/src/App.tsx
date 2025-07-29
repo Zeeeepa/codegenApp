@@ -4,6 +4,8 @@ import { Github, Settings } from 'lucide-react';
 import { ProjectSelector } from './components/dashboard/ProjectSelector';
 import { ProjectCard } from './components/dashboard/ProjectCard';
 import { SettingsDialog } from './components/settings/SettingsDialog';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { SkipNavigation } from './components/SkipNavigation';
 import { useProjectStore } from './store/projectStore';
 import { githubService } from './services/github';
 import './App.css';
@@ -80,43 +82,53 @@ function App() {
   const selectedProjectNames = projects.map(p => p.repository.full_name);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Github className="w-5 h-5 text-white" />
+    <ErrorBoundary>
+      <SkipNavigation />
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 shadow-sm" role="banner">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <Github className="w-5 h-5 text-white" aria-hidden="true" />
+                  </div>
+                  <h1 className="text-xl font-bold text-gray-900">
+                    CodegenApp Dashboard
+                  </h1>
                 </div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  CodegenApp Dashboard
-                </h1>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div id="project-selector">
+                  <ProjectSelector
+                    onProjectSelect={handleProjectSelect}
+                    selectedProjects={selectedProjectNames}
+                  />
+                </div>
+                
+                <button 
+                  id="settings-button"
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="p-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg transition-colors"
+                  data-testid="settings-button"
+                  aria-label="Open settings"
+                >
+                  <Settings className="w-5 h-5" aria-hidden="true" />
+                </button>
               </div>
             </div>
-            
-            <div className="flex items-center gap-4">
-              <ProjectSelector
-                onProjectSelect={handleProjectSelect}
-                selectedProjects={selectedProjectNames}
-              />
-              
-              <button 
-                onClick={() => setIsSettingsOpen(true)}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                data-testid="settings-button"
-                aria-label="Open settings"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Main Content */}
+        <main 
+          id="main-content" 
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+          role="main"
+          aria-label="Dashboard content"
+        >
         {/* Error Display */}
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -169,40 +181,41 @@ function App() {
             </div>
           </div>
         )}
-      </main>
+        </main>
 
-      {/* Settings Dialog */}
-      <SettingsDialog 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
-      />
+        {/* Settings Dialog */}
+        <SettingsDialog 
+          isOpen={isSettingsOpen} 
+          onClose={() => setIsSettingsOpen(false)} 
+        />
 
-      {/* Toast Notifications */}
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
-            duration: 3000,
-            iconTheme: {
-              primary: '#4ade80',
-              secondary: '#fff',
+        {/* Toast Notifications */}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#363636',
+              color: '#fff',
             },
-          },
-          error: {
-            duration: 5000,
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
+            success: {
+              duration: 3000,
+              iconTheme: {
+                primary: '#4ade80',
+                secondary: '#fff',
+              },
             },
-          },
-        }}
-      />
-    </div>
+            error: {
+              duration: 5000,
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
+      </div>
+    </ErrorBoundary>
   );
 }
 
