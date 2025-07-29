@@ -10,11 +10,18 @@ import {
   Clock,
   AlertCircle,
   ExternalLink,
-  Trash2
+  Trash2,
+  GitPullRequest,
+  Terminal,
+  Key,
+  GitBranch,
+  Eye,
+  CheckSquare
 } from 'lucide-react';
 import { ProjectCardProps, AgentRun } from '../../types';
 import { AgentRunDialog } from '../agent/AgentRunDialog';
-import { ProjectSettings } from './ProjectSettings';
+import { ProjectSettingsDialog } from './ProjectSettingsDialog';
+import { ValidationFlowDialog } from './ValidationFlowDialog';
 import { useAgentRun } from '../../hooks';
 import { formatDistanceToNow } from 'date-fns';
 import { clsx } from 'clsx';
@@ -26,6 +33,8 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 }) => {
   const [showAgentDialog, setShowAgentDialog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showValidationFlow, setShowValidationFlow] = useState(false);
+  const [selectedPR, setSelectedPR] = useState<number | null>(null);
   const { createAgentRun, isLoading } = useAgentRun();
 
   const handleAgentRun = async (target: string) => {
@@ -43,6 +52,21 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
       settings: { ...project.settings, ...settings }
     });
     setShowSettings(false);
+  };
+
+  const handlePRClick = (prNumber: number) => {
+    setSelectedPR(prNumber);
+    setShowValidationFlow(true);
+  };
+
+  const handleValidationComplete = (success: boolean) => {
+    setShowValidationFlow(false);
+    setSelectedPR(null);
+    // Update project status based on validation result
+    if (success) {
+      // Handle successful validation
+      console.log('Validation completed successfully');
+    }
   };
 
   const getStatusIcon = (status: AgentRun['status']) => {
@@ -75,13 +99,23 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   
   const recentAgentRun = project.agentRuns[0];
   const unreadNotifications = project.notifications.filter(n => !n.read);
-  const hasCustomRules = project.settings.repositoryRules.trim().length > 0;
+  const hasCustomRules = project.settings?.repositoryRules?.trim().length > 0;
+  const hasSetupCommands = project.settings?.setupCommands?.trim().length > 0;
+  const hasSecrets = project.settings?.secrets && Object.keys(project.settings.secrets).length > 0;
+  
+  // Mock PR data - in real implementation, this would come from GitHub API
+  const activePRs = [
+    { number: 123, title: "Add new feature", status: "open", validationStatus: "pending" },
+    { number: 124, title: "Fix bug in auth", status: "open", validationStatus: "passed" }
+  ];
 
   return (
     <>
       <div className={clsx(
         "bg-white rounded-lg border-2 shadow-sm hover:shadow-md transition-all duration-200",
-        hasCustomRules ? "border-blue-200" : "border-gray-200"
+        hasCustomRules ? "border-blue-200" : "border-gray-200",
+        hasSetupCommands && "border-l-4 border-l-green-400",
+        hasSecrets && "border-r-4 border-r-purple-400"
       )}>
         {/* Header */}
         <div className="p-4 border-b border-gray-100">
@@ -154,21 +188,41 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 
         {/* Content */}
         <div className="p-4">
-          {/* Auto-merge checkbox */}
-          <div className="flex items-center gap-2 mb-4">
-            <input
-              type="checkbox"
-              id={`auto-merge-${project.id}`}
-              checked={project.settings.autoMergeValidatedPR}
-              onChange={(e) => handleSettingsSave({ autoMergeValidatedPR: e.target.checked })}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label 
-              htmlFor={`auto-merge-${project.id}`}
-              className="text-sm text-gray-700 cursor-pointer"
-            >
-              Auto-merge validated PR
-            </label>
+          {/* Auto-confirm and Auto-merge checkboxes */}
+          <div className="space-y-2 mb-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id={`auto-confirm-${project.id}`}
+                checked={project.settings?.autoConfirmProposedPlan || false}
+                onChange={(e) => handleSettingsSave({ autoConfirmProposedPlan: e.target.checked })}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label 
+                htmlFor={`auto-confirm-${project.id}`}
+                className="text-sm text-gray-700 cursor-pointer flex items-center gap-1"
+              >
+                <CheckSquare className="w-3 h-3" />
+                Auto Confirm Proposed Plan
+              </label>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id={`auto-merge-${project.id}`}
+                checked={project.settings?.autoMergeValidatedPR || false}
+                onChange={(e) => handleSettingsSave({ autoMergeValidatedPR: e.target.checked })}
+                className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+              />
+              <label 
+                htmlFor={`auto-merge-${project.id}`}
+                className="text-sm text-gray-700 cursor-pointer flex items-center gap-1"
+              >
+                <GitPullRequest className="w-3 h-3" />
+                Auto-merge validated PR
+              </label>
+            </div>
           </div>
 
           {/* Recent Agent Run */}
@@ -232,6 +286,41 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             </div>
           )}
 
+          {/* Active PRs */}
+          {activePRs.length > 0 && (
+            <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <GitPullRequest className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-medium text-purple-900">
+                    Active PRs ({activePRs.length})
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                {activePRs.map((pr) => (
+                  <div 
+                    key={pr.number}
+                    className="flex items-center justify-between p-2 bg-white rounded border cursor-pointer hover:bg-gray-50"
+                    onClick={() => handlePRClick(pr.number)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
+                        <span className="text-xs font-medium text-purple-700">#{pr.number}</span>
+                      </div>
+                      <span className="text-sm text-gray-700 truncate">{pr.title}</span>
+                    </div>
+                    <div className={clsx(
+                      "w-2 h-2 rounded-full",
+                      pr.validationStatus === "passed" ? "bg-green-500" :
+                      pr.validationStatus === "failed" ? "bg-red-500" : "bg-yellow-500"
+                    )} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Active Runs Indicator */}
           {activeAgentRuns.length > 0 && (
             <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded-lg">
@@ -282,13 +371,22 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         onClose={() => setShowAgentDialog(false)}
         onSubmit={handleAgentRun}
         isLoading={isLoading}
+        project={project}
       />
 
-      <ProjectSettings
+      <ProjectSettingsDialog
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
         project={project}
         onSave={handleSettingsSave}
+      />
+
+      <ValidationFlowDialog
+        isOpen={showValidationFlow}
+        onClose={() => setShowValidationFlow(false)}
+        project={project}
+        prNumber={selectedPR}
+        onComplete={handleValidationComplete}
       />
     </>
   );

@@ -1,6 +1,6 @@
-# CodegenApp - AI-Powered CI/CD Flow Management System
+# CodegenApp Dashboard - Complete CI/CD Automation Platform
 
-A comprehensive CI/CD orchestration platform that integrates AI agents with automated validation pipelines for seamless development workflows.
+A comprehensive dashboard for managing GitHub projects with AI-powered code generation, automated validation, and complete CI/CD workflows using cutting-edge AI agents.
 
 ## 🏗️ **NEW MODULAR ARCHITECTURE**
 
