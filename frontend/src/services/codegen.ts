@@ -245,21 +245,50 @@ class CodegenService {
     const lowerContent = content.toLowerCase();
     
     // Check for PR indicators
-    if (lowerContent.includes('pull request') || 
-        lowerContent.includes('pr created') || 
-        lowerContent.includes('github.com') && lowerContent.includes('/pull/')) {
+    if (
+      lowerContent.includes('pull request') ||
+      lowerContent.includes('pr created') ||
+      this.containsGitHubPullRequestUrl(content)
+    ) {
       return 'pr';
     }
     
     // Check for plan indicators
-    if (lowerContent.includes('plan:') || 
-        lowerContent.includes('proposed plan') || 
-        lowerContent.includes('step 1') || 
-        lowerContent.includes('implementation plan')) {
+    if (
+      lowerContent.includes('plan:') ||
+      lowerContent.includes('proposed plan') ||
+      lowerContent.includes('step 1') ||
+      lowerContent.includes('implementation plan')
+    ) {
       return 'plan';
     }
     
     return 'regular';
+  }
+
+  /**
+   * Check if content contains a GitHub pull request URL
+   */
+  private containsGitHubPullRequestUrl(content: string): boolean {
+    // Simple regex to extract URLs
+    const urlRegex = /https?:\/\/[^\s]+/g;
+    const matches = content.match(urlRegex);
+    if (!matches) return false;
+    for (const urlString of matches) {
+      try {
+        const url = new URL(urlString);
+        if (
+          url.hostname === 'github.com' &&
+          url.pathname.includes('/pull/')
+        ) {
+          return true;
+        }
+      } catch (e) {
+        // Ignore invalid URLs
+        continue;
+      }
+    }
+    return false;
   }
 
   /**
