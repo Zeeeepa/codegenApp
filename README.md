@@ -223,7 +223,7 @@ npm start
 # Set required environment variables
 export GEMINI_API_KEY=AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0
 export CODEGEN_API_TOKEN=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
-export GITHUB_TOKEN=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
+export GITHUB_TOKEN=your_github_personal_access_token
 
 # Run full deployment test with web-eval-agent
 npm run deploy:test
@@ -334,7 +334,7 @@ kubectl apply -f k8s/
 ```bash
 # Production settings
 NODE_ENV=production
-DATABASE_URL=postgresql://prod_user:pass@db:5432/codegenapp
+DATABASE_URL=postgresql://user:password@localhost:5432/database
 REDIS_URL=redis://redis:6379
 CODEGEN_API_URL=https://api.codegen.com
 ```
