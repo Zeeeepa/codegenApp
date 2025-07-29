@@ -2,6 +2,20 @@
 
 A comprehensive CI/CD orchestration platform that integrates AI agents with automated validation pipelines for seamless development workflows.
 
+## 🏗️ **NEW MODULAR ARCHITECTURE**
+
+This project has been completely restructured into a clean, modular architecture with proper separation of concerns:
+
+```
+codegenapp/
+├── frontend/           # React TypeScript Dashboard
+├── backend/           # FastAPI Python Backend  
+├── shared/            # Shared TypeScript types & utilities
+├── cloudflare-worker/ # Webhook gateway worker
+├── docs/              # Documentation
+└── tests/             # Test suites
+```
+
 ## 🚀 Overview
 
 CodegenApp is a sophisticated CI/CD management system that combines the power of AI agents (via Codegen API) with automated validation pipelines to create a seamless development experience. The system provides real-time dashboard monitoring, automated testing, and intelligent deployment workflows.
@@ -81,25 +95,30 @@ graph TB
 
 ## 🔧 Technology Stack
 
-### Frontend
+### Frontend (`/frontend`)
 - **React 18** with TypeScript
 - **Tailwind CSS** for styling
 - **WebSocket** for real-time communication
 - **Context API** for state management
 - **Lucide React** for icons
 
-### Backend
+### Backend (`/backend`)
 - **FastAPI** (Python) for API endpoints
 - **SQLAlchemy** with PostgreSQL for data persistence
 - **Redis** for state management and caching
 - **WebSocket** for real-time communication
 - **Asyncio** for concurrent operations
 
+### External Services Integration
+- **Codegen SDK** - Agent coordination & code generation
+- **Graph-Sitter** - Static analysis & code quality metrics
+- **Grainchain** - Sandboxing + snapshot creation + PR validation deployments
+- **Web-Eval-Agent** - UI testing & browser automation
+
 ### Infrastructure
 - **Docker/Kubernetes** for validation environments
 - **GitHub API** for repository integration
-- **Codegen API** for AI agent execution
-- **Web-eval-agent** for browser testing
+- **Cloudflare Workers** for webhook gateway
 
 ## 📋 Workflow Process
 
@@ -171,30 +190,42 @@ REACT_APP_WS_URL=ws://localhost:8000/ws
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/your-org/codegenApp.git
+git clone https://github.com/Zeeeepa/codegenApp.git
 cd codegenApp
 ```
 
-2. **Backend Setup**
+2. **Environment Setup**
 ```bash
-cd backend
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn app.main:app --reload --port 8000
+# Copy environment configuration
+cp .env.example .env
+# Edit .env with your actual API keys and configuration
 ```
 
-3. **Frontend Setup**
+3. **Quick Start with Docker**
 ```bash
-cd frontend
-npm install
-npm start
+# Build and start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
 ```
 
-4. **Database Migration**
+4. **Manual Development Setup**
 ```bash
-cd backend
-alembic revision --autogenerate -m "Initial migration"
-alembic upgrade head
+# Install all dependencies
+npm run install:all
+
+# Start development servers
+npm run dev
+```
+
+5. **Individual Service Setup**
+```bash
+# Frontend only
+cd frontend && npm install && npm run dev
+
+# Backend only  
+cd backend && pip install -r requirements.txt && python -m uvicorn main:app --reload --port 8000
 ```
 
 ## 📊 API Documentation
@@ -349,4 +380,3 @@ For support and questions:
 ---
 
 **CodegenApp** - Empowering developers with AI-driven CI/CD workflows 🚀
-
