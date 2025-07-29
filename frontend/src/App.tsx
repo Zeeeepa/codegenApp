@@ -1,13 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { Github, Settings } from 'lucide-react';
 import { ProjectSelector } from './components/ProjectSelector';
 import { ProjectCard } from './components/ProjectCard';
+import { SettingsDialog } from './components/SettingsDialog';
 import { useProjectStore } from './store/projectStore';
 import { githubService } from './services/github';
 import './App.css';
 
 function App() {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
   const {
     projects,
     isLoading,
@@ -99,7 +102,12 @@ function App() {
                 selectedProjects={selectedProjectNames}
               />
               
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+              <button 
+                onClick={() => setIsSettingsOpen(true)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                data-testid="settings-button"
+                aria-label="Open settings"
+              >
                 <Settings className="w-5 h-5" />
               </button>
             </div>
@@ -162,6 +170,12 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Settings Dialog */}
+      <SettingsDialog 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+      />
 
       {/* Toast Notifications */}
       <Toaster
