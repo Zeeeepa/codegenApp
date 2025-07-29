@@ -408,6 +408,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                 <button
                   onClick={handleSave}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
+                  data-testid="settings-save-button"
                 >
                   Save Settings
                 </button>
@@ -797,6 +798,7 @@ Always explain your approach before implementing changes.`}
                         type="button"
                         onClick={() => toggleTokenVisibility('geminiApiKey')}
                         className="absolute right-2 top-2 text-gray-400 hover:text-gray-300"
+                        data-testid="toggle-gemini-api-key-visibility"
                       >
                         {showTokens.geminiApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
@@ -882,6 +884,7 @@ Always explain your approach before implementing changes.`}
                         type="button"
                         onClick={() => toggleTokenVisibility('cloudflareApiKey')}
                         className="absolute right-2 top-2 text-gray-400 hover:text-gray-300"
+                        data-testid="toggle-cloudflare-api-key-visibility"
                       >
                         {showTokens.cloudflareApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>

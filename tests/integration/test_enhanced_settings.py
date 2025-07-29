@@ -32,7 +32,7 @@ class EnhancedSettingsTest:
             
             try:
                 # Navigate to the application
-                await page.goto('http://localhost:3000')
+                await page.goto('http://localhost:3002')
                 await page.wait_for_load_state('networkidle')
                 
                 # Run test suite
@@ -215,7 +215,7 @@ class EnhancedSettingsTest:
                     initial_type = await gemini_field.get_attribute('type')
                     
                     # Look for eye toggle button
-                    eye_toggle = gemini_field.locator('..').locator('button:has([data-lucide="eye"]), button:has([data-lucide="eye-off"])')
+                    eye_toggle = page.locator('[data-testid="toggle-gemini-api-key-visibility"]')
                     
                     if await eye_toggle.count() > 0:
                         # Click toggle
@@ -340,7 +340,7 @@ class EnhancedSettingsTest:
                     await gemini_field.fill(test_value)
                     
                     # Look for save button
-                    save_button = page.locator('[data-testid="settings-save"], button:has-text("Save")')
+                    save_button = page.locator('[data-testid="settings-save-button"]')
                     
                     if await save_button.count() > 0:
                         await save_button.click()
