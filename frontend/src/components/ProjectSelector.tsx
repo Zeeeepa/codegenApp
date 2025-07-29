@@ -141,7 +141,7 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
                             <span>{repo.forks_count}</span>
                           </div>
                           <span>
-                            Updated {formatDistanceToNow(new Date(repo.updated_at), { addSuffix: true })}
+                            Updated {repo.updated_at ? formatDistanceToNow(new Date(repo.updated_at), { addSuffix: true }) : 'Unknown'}
                           </span>
                         </div>
                       </div>
@@ -171,4 +171,3 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
     </div>
   );
 };
-

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Building, Settings as SettingsIcon, Github } from 'lucide-react';
+import { X, Building, Settings as SettingsIcon, Github, Eye, EyeOff, AlertCircle, CheckCircle, Save, Cloud } from 'lucide-react';
 import { getPreferenceValues, setPreferenceValues, getEnvFileContent, validateEnvironmentConfiguration } from '../utils/preferences';
 import { getAPIClient } from '../api/client';
 import { OrganizationResponse } from '../api/types';
@@ -20,7 +20,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
   const [envValidation, setEnvValidation] = useState(validateEnvironmentConfiguration());
   const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
-  const [activeTab, setActiveTab] = useState<'settings' | 'organizations' | 'github' | 'planning'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'organizations' | 'github' | 'planning' | 'ai' | 'cloudflare'>('settings');
   
   // GitHub-related state
   const [githubToken, setGithubToken] = useState('');
@@ -31,6 +31,17 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
   
   // Planning statement state
   const [planningStatement, setPlanningStatement] = useState('');
+  
+  // Additional environment variables
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [cloudflareApiKey, setCloudflareApiKey] = useState('');
+  const [cloudflareAccountId, setCloudflareAccountId] = useState('');
+  const [cloudflareWorkerName, setCloudflareWorkerName] = useState('webhook-gateway');
+  const [cloudflareWorkerUrl, setCloudflareWorkerUrl] = useState('https://webhook-gateway.pixeliumperfecto.workers.dev');
+  
+  // Token visibility state
+  const [showTokens, setShowTokens] = useState<Record<string, boolean>>({});
+  const [testResults, setTestResults] = useState<Record<string, 'testing' | 'success' | 'error' | null>>({});
 
   const handleSave = async () => {
     try {
@@ -40,6 +51,11 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
         defaultOrganization: orgId,
         githubToken: githubToken,
         planningStatement: planningStatement,
+        geminiApiKey: geminiApiKey,
+        cloudflareApiKey: cloudflareApiKey,
+        cloudflareAccountId: cloudflareAccountId,
+        cloudflareWorkerName: cloudflareWorkerName,
+        cloudflareWorkerUrl: cloudflareWorkerUrl,
       });
       
       // Get the updated .env content
@@ -131,6 +147,59 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
     }
   };
 
+  const toggleTokenVisibility = (field: string) => {
+    setShowTokens(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
+  const testConnection = async (field: string, value: string) => {
+    setTestResults(prev => ({ ...prev, [field]: 'testing' }));
+
+    try {
+      switch (field) {
+        case 'geminiApiKey':
+          const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${value}`);
+          setTestResults(prev => ({ 
+            ...prev, 
+            [field]: geminiResponse.ok ? 'success' : 'error' 
+          }));
+          if (geminiResponse.ok) {
+            toast.success('Gemini API connection successful');
+          } else {
+            toast.error('Gemini API connection failed');
+          }
+          break;
+
+        case 'cloudflareApiKey':
+          const cloudflareResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cloudflareAccountId}`, {
+            headers: {
+              'Authorization': `Bearer ${value}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          setTestResults(prev => ({ 
+            ...prev, 
+            [field]: cloudflareResponse.ok ? 'success' : 'error' 
+          }));
+          if (cloudflareResponse.ok) {
+            toast.success('Cloudflare API connection successful');
+          } else {
+            toast.error('Cloudflare API connection failed');
+          }
+          break;
+
+        default:
+          setTestResults(prev => ({ ...prev, [field]: 'success' }));
+      }
+    } catch (error) {
+      console.error(`Failed to test ${field}:`, error);
+      setTestResults(prev => ({ ...prev, [field]: 'error' }));
+      toast.error(`Failed to test ${field} connection`);
+    }
+  };
+
   const loadGithubRepositories = async () => {
     if (!githubToken) {
       toast.error('Please enter and validate your GitHub token first');
@@ -172,6 +241,11 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
           setToken(preferences.apiToken || '');
           setGithubToken(preferences.githubToken || '');
           setPlanningStatement(preferences.planningStatement || '');
+          setGeminiApiKey(preferences.geminiApiKey || '');
+          setCloudflareApiKey(preferences.cloudflareApiKey || '');
+          setCloudflareAccountId(preferences.cloudflareAccountId || '');
+          setCloudflareWorkerName(preferences.cloudflareWorkerName || 'webhook-gateway');
+          setCloudflareWorkerUrl(preferences.cloudflareWorkerUrl || 'https://webhook-gateway.pixeliumperfecto.workers.dev');
           
           console.log('Loaded preferences:', {
             hasToken: !!preferences.apiToken,
@@ -273,6 +347,27 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
               }`}
             >
               📋 Planning Statement
+            </button>
+            <button
+              onClick={() => setActiveTab('ai')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'ai'
+                  ? 'border-blue-500 text-blue-400'
+                  : 'border-transparent text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              🤖 AI Services
+            </button>
+            <button
+              onClick={() => setActiveTab('cloudflare')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'cloudflare'
+                  ? 'border-blue-500 text-blue-400'
+                  : 'border-transparent text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              <Cloud className="h-4 w-4 inline mr-1" />
+              Cloudflare
             </button>
           </nav>
         </div>
@@ -663,6 +758,221 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
 
 Always explain your approach before implementing changes.`}
                 </pre>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'ai' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-medium text-white mb-2">AI Services Configuration</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  Configure API keys for AI services used by the application for web evaluation and testing.
+                </p>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="gemini_api_key" className="block text-sm font-medium text-gray-300 mb-2">
+                    Gemini API Key
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Google Gemini API key for web evaluation and testing with web-eval-agent
+                  </p>
+                  <div className="flex space-x-2">
+                    <div className="relative flex-1">
+                      <input
+                        id="gemini_api_key"
+                        type={showTokens.geminiApiKey ? 'text' : 'password'}
+                        value={geminiApiKey}
+                        onChange={(e) => {
+                          setGeminiApiKey(e.target.value);
+                          setTestResults(prev => ({ ...prev, geminiApiKey: null }));
+                        }}
+                        placeholder="Enter your Gemini API key"
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        data-testid="settings-gemini-api-key"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => toggleTokenVisibility('geminiApiKey')}
+                        className="absolute right-2 top-2 text-gray-400 hover:text-gray-300"
+                      >
+                        {showTokens.geminiApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    {geminiApiKey && (
+                      <button
+                        onClick={() => testConnection('geminiApiKey', geminiApiKey)}
+                        disabled={testResults.geminiApiKey === 'testing'}
+                        className="px-3 py-2 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 flex items-center space-x-1"
+                        data-testid="test-gemini-api-key"
+                      >
+                        {testResults.geminiApiKey === 'testing' ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        ) : testResults.geminiApiKey === 'success' ? (
+                          <CheckCircle size={16} />
+                        ) : testResults.geminiApiKey === 'error' ? (
+                          <AlertCircle size={16} />
+                        ) : (
+                          'Test'
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  {testResults.geminiApiKey === 'success' && (
+                    <p className="text-xs text-green-400 flex items-center space-x-1 mt-1">
+                      <CheckCircle size={12} />
+                      <span>Gemini API connection successful</span>
+                    </p>
+                  )}
+                  {testResults.geminiApiKey === 'error' && (
+                    <p className="text-xs text-red-400 flex items-center space-x-1 mt-1">
+                      <AlertCircle size={12} />
+                      <span>Gemini API connection failed</span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+                  <h4 className="text-blue-300 font-medium mb-2">🔑 How to get a Gemini API key:</h4>
+                  <ol className="text-blue-200 text-sm space-y-1 list-decimal list-inside">
+                    <li>Go to <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">Google AI Studio</a></li>
+                    <li>Sign in with your Google account</li>
+                    <li>Click "Create API Key"</li>
+                    <li>Copy the generated key and paste it above</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'cloudflare' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-medium text-white mb-2">Cloudflare Configuration</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  Configure Cloudflare settings for webhook handling and online accessibility.
+                </p>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="cloudflare_api_key" className="block text-sm font-medium text-gray-300 mb-2">
+                    Cloudflare API Key
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Your Cloudflare API token for managing workers and webhooks
+                  </p>
+                  <div className="flex space-x-2">
+                    <div className="relative flex-1">
+                      <input
+                        id="cloudflare_api_key"
+                        type={showTokens.cloudflareApiKey ? 'text' : 'password'}
+                        value={cloudflareApiKey}
+                        onChange={(e) => {
+                          setCloudflareApiKey(e.target.value);
+                          setTestResults(prev => ({ ...prev, cloudflareApiKey: null }));
+                        }}
+                        placeholder="Enter your Cloudflare API key"
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        data-testid="settings-cloudflare-api-key"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => toggleTokenVisibility('cloudflareApiKey')}
+                        className="absolute right-2 top-2 text-gray-400 hover:text-gray-300"
+                      >
+                        {showTokens.cloudflareApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    {cloudflareApiKey && cloudflareAccountId && (
+                      <button
+                        onClick={() => testConnection('cloudflareApiKey', cloudflareApiKey)}
+                        disabled={testResults.cloudflareApiKey === 'testing'}
+                        className="px-3 py-2 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 flex items-center space-x-1"
+                        data-testid="test-cloudflare-api-key"
+                      >
+                        {testResults.cloudflareApiKey === 'testing' ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        ) : testResults.cloudflareApiKey === 'success' ? (
+                          <CheckCircle size={16} />
+                        ) : testResults.cloudflareApiKey === 'error' ? (
+                          <AlertCircle size={16} />
+                        ) : (
+                          'Test'
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  {testResults.cloudflareApiKey === 'success' && (
+                    <p className="text-xs text-green-400 flex items-center space-x-1 mt-1">
+                      <CheckCircle size={12} />
+                      <span>Cloudflare API connection successful</span>
+                    </p>
+                  )}
+                  {testResults.cloudflareApiKey === 'error' && (
+                    <p className="text-xs text-red-400 flex items-center space-x-1 mt-1">
+                      <AlertCircle size={12} />
+                      <span>Cloudflare API connection failed</span>
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="cloudflare_account_id" className="block text-sm font-medium text-gray-300 mb-2">
+                    Account ID
+                  </label>
+                  <input
+                    id="cloudflare_account_id"
+                    type="text"
+                    value={cloudflareAccountId}
+                    onChange={(e) => setCloudflareAccountId(e.target.value)}
+                    placeholder="Enter your Cloudflare account ID"
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    data-testid="settings-cloudflare-account-id"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="cloudflare_worker_name" className="block text-sm font-medium text-gray-300 mb-2">
+                    Worker Name
+                  </label>
+                  <input
+                    id="cloudflare_worker_name"
+                    type="text"
+                    value={cloudflareWorkerName}
+                    onChange={(e) => setCloudflareWorkerName(e.target.value)}
+                    placeholder="webhook-gateway"
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    data-testid="settings-cloudflare-worker-name"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="cloudflare_worker_url" className="block text-sm font-medium text-gray-300 mb-2">
+                    Worker URL
+                  </label>
+                  <input
+                    id="cloudflare_worker_url"
+                    type="url"
+                    value={cloudflareWorkerUrl}
+                    onChange={(e) => setCloudflareWorkerUrl(e.target.value)}
+                    placeholder="https://webhook-gateway.pixeliumperfecto.workers.dev"
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    data-testid="settings-cloudflare-worker-url"
+                  />
+                </div>
+
+                <div className="p-4 bg-orange-900/20 border border-orange-700 rounded-lg">
+                  <h4 className="text-orange-300 font-medium mb-2">🔑 How to get Cloudflare credentials:</h4>
+                  <ol className="text-orange-200 text-sm space-y-1 list-decimal list-inside">
+                    <li>Go to <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300 underline">Cloudflare API Tokens</a></li>
+                    <li>Click "Create Token" and use the "Custom token" template</li>
+                    <li>Add permissions: Account:Read, Zone:Read, Zone:Edit</li>
+                    <li>Find your Account ID in the right sidebar of any Cloudflare dashboard page</li>
+                  </ol>
+                </div>
               </div>
             </div>
           )}

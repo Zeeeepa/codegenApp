@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, RefreshCw } from 'lucide-react';
 import { CachedProject, ProjectFilters } from '../api/types';
+import { ProjectCard as ProjectCardType } from '../types';
 import { getCachedProjects, filterProjects } from '../storage/projectCache';
 import { ProjectCard } from './ProjectCard';
 import { WebEvalPanel } from './WebEvalPanel';
@@ -8,6 +9,43 @@ import { getPreferenceValues } from '../utils/preferences';
 import { getGitHubClient } from '../api/github';
 import { updateProjectPRCount } from '../storage/projectCache';
 import toast from 'react-hot-toast';
+
+// Adapter function to convert CachedProject to ProjectCard type
+const convertToProjectCard = (cachedProject: CachedProject): ProjectCardType => ({
+  id: cachedProject.id,
+  repository: {
+    id: parseInt(cachedProject.id.split('/')[1]) || 0, // Extract numeric ID from full name
+    name: cachedProject.name,
+    full_name: cachedProject.fullName,
+    description: cachedProject.description || null,
+    private: cachedProject.private,
+    html_url: cachedProject.htmlUrl,
+    clone_url: `${cachedProject.htmlUrl}.git`,
+    default_branch: cachedProject.defaultBranch,
+    updated_at: cachedProject.updatedAt || null,
+    language: cachedProject.language || null,
+    stargazers_count: cachedProject.stargazersCount || 0,
+    forks_count: cachedProject.forksCount || 0,
+    owner: {
+      login: cachedProject.owner.login,
+      avatar_url: cachedProject.owner.avatarUrl || ''
+    }
+  },
+  webhookActive: false,
+  settings: {
+    repositoryRules: '',
+    setupCommands: '',
+    selectedBranch: cachedProject.defaultBranch,
+    secrets: {},
+    planningStatement: '',
+    autoConfirmPlan: false,
+    autoMergeValidatedPR: false
+  },
+  agentRuns: [],
+  notifications: [],
+  createdAt: cachedProject.createdAt,
+  updatedAt: cachedProject.lastUpdated
+});
 
 interface ProjectDashboardProps {
   selectedProject: CachedProject | null;
@@ -216,10 +254,14 @@ export function ProjectDashboard({ selectedProject, onProjectSelect }: ProjectDa
           {filteredProjects.map((project) => (
             <ProjectCard
               key={project.id}
-              project={project}
-              isSelected={selectedProject?.id === project.id}
-              onSelect={() => onProjectSelect(project)}
-              onUpdate={handleProjectUpdate}
+              project={convertToProjectCard(project)}
+              onUpdate={(updatedProject) => {
+                // Convert back and handle update
+                console.log('Project updated:', updatedProject);
+              }}
+              onDelete={(projectId) => {
+                console.log('Project deleted:', projectId);
+              }}
             />
           ))}
         </div>

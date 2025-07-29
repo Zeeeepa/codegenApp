@@ -9,6 +9,11 @@ export interface Preferences {
   apiBaseUrl?: string;
   githubToken?: string;
   planningStatement?: string;
+  geminiApiKey?: string;
+  cloudflareApiKey?: string;
+  cloudflareAccountId?: string;
+  cloudflareWorkerName?: string;
+  cloudflareWorkerUrl?: string;
 }
 
 const PREFERENCES_KEY = 'app_preferences';
@@ -38,6 +43,26 @@ function preferencesToEnvContent(preferences: Partial<Preferences>): string {
   
   if (preferences.apiBaseUrl && preferences.apiBaseUrl !== DEFAULT_PREFERENCES.apiBaseUrl) {
     lines.push(`api_base_url=${preferences.apiBaseUrl}`);
+  }
+  
+  if (preferences.geminiApiKey) {
+    lines.push(`GEMINI_API_KEY=${preferences.geminiApiKey}`);
+  }
+  
+  if (preferences.cloudflareApiKey) {
+    lines.push(`CLOUDFLARE_API_KEY=${preferences.cloudflareApiKey}`);
+  }
+  
+  if (preferences.cloudflareAccountId) {
+    lines.push(`CLOUDFLARE_ACCOUNT_ID=${preferences.cloudflareAccountId}`);
+  }
+  
+  if (preferences.cloudflareWorkerName) {
+    lines.push(`CLOUDFLARE_WORKER_NAME=${preferences.cloudflareWorkerName}`);
+  }
+  
+  if (preferences.cloudflareWorkerUrl) {
+    lines.push(`CLOUDFLARE_WORKER_URL=${preferences.cloudflareWorkerUrl}`);
   }
   
   return lines.join('\n') + '\n';

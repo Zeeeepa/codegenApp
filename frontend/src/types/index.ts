@@ -9,7 +9,7 @@ export interface GitHubRepository {
   html_url: string;
   clone_url: string;
   default_branch: string;
-  updated_at: string;
+  updated_at: string | null;
   language: string | null;
   stargazers_count: number;
   forks_count: number;
@@ -189,4 +189,3 @@ export interface ProjectSettingsProps {
   project: ProjectCard;
   onSave: (settings: ProjectSettings) => void;
 }
-
