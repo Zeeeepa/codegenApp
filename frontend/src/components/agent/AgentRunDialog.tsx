@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Play, Loader2 } from 'lucide-react';
-import { AgentRunDialogProps } from '../types';
+import { AgentRunDialogProps } from '../../types';
 
 export const AgentRunDialog: React.FC<AgentRunDialogProps> = ({
   isOpen,
@@ -103,4 +103,3 @@ export const AgentRunDialog: React.FC<AgentRunDialogProps> = ({
     </>
   );
 };
-

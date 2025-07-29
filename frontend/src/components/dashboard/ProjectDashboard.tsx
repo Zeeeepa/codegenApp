@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, RefreshCw } from 'lucide-react';
-import { CachedProject, ProjectFilters } from '../api/types';
-import { ProjectCard as ProjectCardType } from '../types';
-import { getCachedProjects, filterProjects } from '../storage/projectCache';
+import { CachedProject, ProjectFilters } from '../../api/types';
+import { ProjectCard as ProjectCardType } from '../../types';
+import { getCachedProjects, filterProjects } from '../../storage/projectCache';
 import { ProjectCard } from './ProjectCard';
-import { WebEvalPanel } from './WebEvalPanel';
-import { getPreferenceValues } from '../utils/preferences';
-import { getGitHubClient } from '../api/github';
-import { updateProjectPRCount } from '../storage/projectCache';
+import { WebEvalPanel } from '../WebEvalPanel';
+import { getPreferenceValues } from '../../utils/preferences';
+import { getGitHubClient } from '../../api/github';
+import { updateProjectPRCount } from '../../storage/projectCache';
 import toast from 'react-hot-toast';
 
 // Adapter function to convert CachedProject to ProjectCard type

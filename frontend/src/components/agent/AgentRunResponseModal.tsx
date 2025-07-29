@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, ExternalLink, Copy } from 'lucide-react';
-import { CachedAgentRun } from '../api/types';
+import { CachedAgentRun } from '../../api/types';
 
 interface AgentRunResponseModalProps {
   run: CachedAgentRun;

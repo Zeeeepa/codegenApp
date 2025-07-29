@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { Github, Settings } from 'lucide-react';
-import { ProjectSelector } from './components/ProjectSelector';
-import { ProjectCard } from './components/ProjectCard';
-import { SettingsDialog } from './components/SettingsDialog';
+import { ProjectSelector } from './components/dashboard/ProjectSelector';
+import { ProjectCard } from './components/dashboard/ProjectCard';
+import { SettingsDialog } from './components/settings/SettingsDialog';
 import { useProjectStore } from './store/projectStore';
 import { githubService } from './services/github';
 import './App.css';

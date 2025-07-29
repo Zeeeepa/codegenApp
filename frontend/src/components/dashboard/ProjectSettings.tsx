@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Save, Play, Plus, Trash2, Eye, EyeOff } from 'lucide-react';
-import { ProjectSettingsProps, SecretsFormData } from '../types';
-import { useGitHub } from '../hooks/useGitHub';
+import { ProjectSettingsProps, SecretsFormData } from '../../types';
+import { useGitHub } from '../../hooks';
 
 export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   isOpen,
@@ -367,4 +367,3 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     </>
   );
 };
-

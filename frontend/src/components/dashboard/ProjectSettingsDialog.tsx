@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Settings, FileText, Terminal, Key, GitBranch, Play, Save, AlertCircle, Plus, Trash2 } from 'lucide-react';
-import { CachedProject } from '../api/types';
-import { GitHubBranch } from '../api/githubTypes';
+import { CachedProject } from '../../api/types';
+import { GitHubBranch } from '../../api/githubTypes';
 import { 
   getProjectSettings, 
   updateProjectSettings, 
@@ -9,9 +9,9 @@ import {
   secretsToEnvString,
   envStringToSecrets,
   isValidEnvVarName
-} from '../storage/projectSettings';
-import { getGitHubClient } from '../api/github';
-import { getPreferenceValues } from '../utils/preferences';
+} from '../../storage/projectSettings';
+import { getGitHubClient } from '../../api/github';
+import { getPreferenceValues } from '../../utils/preferences';
 import toast from 'react-hot-toast';
 
 interface ProjectSettingsDialogProps {

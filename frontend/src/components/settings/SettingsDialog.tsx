@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Building, Settings as SettingsIcon, Github, Eye, EyeOff, AlertCircle, CheckCircle, Save, Cloud } from 'lucide-react';
-import { getPreferenceValues, setPreferenceValues, getEnvFileContent, validateEnvironmentConfiguration } from '../utils/preferences';
-import { getAPIClient } from '../api/client';
-import { OrganizationResponse } from '../api/types';
-import { getGitHubClient, resetGitHubClient } from '../api/github';
-import { GitHubRepository, GitHubUser } from '../api/githubTypes';
+import { getPreferenceValues, setPreferenceValues, getEnvFileContent, validateEnvironmentConfiguration } from '../../utils/preferences';
+import { getAPIClient } from '../../api/client';
+import { OrganizationResponse } from '../../api/types';
+import { getGitHubClient, resetGitHubClient } from '../../api/github';
+import { GitHubRepository, GitHubUser } from '../../api/githubTypes';
 import toast from 'react-hot-toast';
 
 interface SettingsDialogProps {

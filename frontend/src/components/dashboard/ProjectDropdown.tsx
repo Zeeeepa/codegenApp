@@ -7,8 +7,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Search, Circle } from 'lucide-react';
-import { useProject, Project } from '../contexts/ProjectContext';
-import { CachedProject } from '../api/types';
+import { useProject, Project } from '../../contexts/ProjectContext';
+import { CachedProject } from '../../api/types';
 
 interface ProjectDropdownProps {
   onProjectChange?: (project: CachedProject | null) => void;

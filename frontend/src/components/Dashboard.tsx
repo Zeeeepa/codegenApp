@@ -7,8 +7,8 @@
 
 import React, { useEffect } from 'react';
 import { ProjectProvider, useProject } from '../contexts/ProjectContext';
-import { ProjectDropdown } from './ProjectDropdown';
-import { ProjectCard } from './ProjectCard';
+import { ProjectDropdown } from './dashboard/ProjectDropdown';
+import { ProjectCard } from './dashboard/ProjectCard';
 import { Activity, GitBranch, Clock, CheckCircle, XCircle } from 'lucide-react';
 
 function DashboardContent() {

@@ -12,10 +12,10 @@ import {
   ExternalLink,
   Trash2
 } from 'lucide-react';
-import { ProjectCardProps, AgentRun } from '../types';
-import { AgentRunDialog } from './AgentRunDialog';
+import { ProjectCardProps, AgentRun } from '../../types';
+import { AgentRunDialog } from '../agent/AgentRunDialog';
 import { ProjectSettings } from './ProjectSettings';
-import { useAgentRun } from '../hooks/useAgentRun';
+import { useAgentRun } from '../../hooks';
 import { formatDistanceToNow } from 'date-fns';
 import { clsx } from 'clsx';
 
@@ -293,4 +293,3 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     </>
   );
 };
-

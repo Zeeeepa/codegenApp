@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronDown, Search, Star, GitBranch, Calendar, ExternalLink, Plus } from 'lucide-react';
-import GitHubService, { GitHubRepository } from '../../../services/githubService';
+import GitHubService, { GitHubRepository } from '../../services/githubService';
 import { Project } from '../../types/dataModels';
 
 interface GitHubProjectSelectorProps {
@@ -43,10 +43,7 @@ const GitHubProjectSelector: React.FC<GitHubProjectSelectorProps> = ({
     setError(null);
 
     try {
-      const repos = await githubService.getRepositories({
-        sort: sortBy === 'updated' ? 'updated' : sortBy === 'name' ? 'full_name' : 'updated',
-        per_page: 100,
-      });
+      const repos = await githubService.getTargetRepositories();
 
       const reposWithStatus: RepositoryWithStatus[] = repos.map(repo => ({
         ...repo,
@@ -352,4 +349,3 @@ const GitHubProjectSelector: React.FC<GitHubProjectSelectorProps> = ({
 };
 
 export default GitHubProjectSelector;
-

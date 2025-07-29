@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useAgentRunSelection } from "./contexts/AgentRunSelectionContext";
 import { useDialog } from "./contexts/DialogContext";
-import { AgentRunResponseModal } from "./components/AgentRunResponseModal";
+import { AgentRunResponseModal } from "./components/agent/AgentRunResponseModal";
 import { ResumeAgentRunDialog } from "./components/ResumeAgentRunDialog";
 import { CreateRunDialog } from "./components/CreateRunDialog";
 import { useCachedAgentRuns } from "./hooks/useCachedAgentRuns";

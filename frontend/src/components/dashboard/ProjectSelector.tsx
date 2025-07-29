@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Search, Plus, Github, Star, GitFork } from 'lucide-react';
-import { useGitHub } from '../hooks/useGitHub';
-import { ProjectSelectorProps } from '../types';
+import { useGitHub } from '../../hooks';
+import { ProjectSelectorProps } from '../../types';
 import { formatDistanceToNow } from 'date-fns';
 
 export const ProjectSelector: React.FC<ProjectSelectorProps> = ({

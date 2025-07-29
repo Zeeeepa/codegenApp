@@ -20,15 +20,15 @@ import {
   Code,
   Activity
 } from 'lucide-react';
-import { getAPIClient } from '../api/client';
-import { getGitHubService } from '../services/githubService';
-import { getWebEvalService } from '../services/webEvalService';
-import { getGrainchainService } from '../services/grainchainService';
+import { getAPIClient } from '../../api/client';
+import { getGitHubService } from '../../services/githubService';
+import { getWebEvalService } from '../../services/webEvalService';
+import { getGrainchainService } from '../../services/grainchainService';
 import { 
   CreateAgentRunRequest, 
   ResumeAgentRunRequest, 
   AgentRunResponse as RealAgentRunResponse 
-} from '../services/codegenService';
+} from '../../services/codegenService';
 
 interface AgentRunManagerProps {
   projectId?: string;
@@ -609,4 +609,3 @@ const AgentRunManager: React.FC<AgentRunManagerProps> = ({
 };
 
 export default AgentRunManager;
-
