@@ -1,0 +1,5 @@
+
+> codegenapp-frontend@1.0.0 dev
+> PORT=3002 react-scripts start
+
+Something is already running on port 3002.

@@ -1,0 +1,117 @@
+{
+  "name": "CodegenApp UI Testing",
+  "description": "Comprehensive testing of CodegenApp dashboard components",
+  "baseUrl": "http://localhost:3002",
+  "geminiApiKey": "${GEMINI_API_KEY}",
+  "testSuites": [
+    {
+      "name": "Dashboard Components",
+      "description": "Test all main dashboard components and interactions",
+      "tests": [
+        {
+          "name": "Project Dropdown",
+          "description": "Verify project dropdown loads and displays GitHub repositories",
+          "actions": [
+            "Navigate to dashboard",
+            "Click project dropdown",
+            "Verify dropdown opens",
+            "Check if projects are loaded",
+            "Select a project",
+            "Verify project card appears"
+          ]
+        },
+        {
+          "name": "Project Card Functionality",
+          "description": "Test project card interactions and settings",
+          "actions": [
+            "Locate project card",
+            "Click 'Agent Run' button",
+            "Verify dialog opens",
+            "Enter target text",
+            "Click confirm button",
+            "Verify agent run starts",
+            "Check progress indicators"
+          ]
+        },
+        {
+          "name": "Settings Dialog",
+          "description": "Test project settings configuration",
+          "actions": [
+            "Click settings gear icon on project card",
+            "Verify settings dialog opens",
+            "Navigate to repository rules tab",
+            "Enter repository rules text",
+            "Navigate to setup commands tab",
+            "Enter setup commands",
+            "Navigate to secrets tab",
+            "Add environment variable",
+            "Save settings",
+            "Verify settings are persisted"
+          ]
+        },
+        {
+          "name": "Real-time Updates",
+          "description": "Test WebSocket connections and live updates",
+          "actions": [
+            "Start agent run",
+            "Monitor progress updates",
+            "Verify status changes in real-time",
+            "Check notification system",
+            "Verify completion status"
+          ]
+        },
+        {
+          "name": "Validation Pipeline",
+          "description": "Test PR validation workflow",
+          "actions": [
+            "Trigger PR creation",
+            "Monitor validation pipeline",
+            "Check snapshot creation status",
+            "Verify deployment commands execution",
+            "Monitor web evaluation progress",
+            "Check final validation results"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User Experience",
+      "description": "Test overall user experience and accessibility",
+      "tests": [
+        {
+          "name": "Navigation Flow",
+          "description": "Test smooth navigation between components",
+          "actions": [
+            "Navigate through all main sections",
+            "Verify smooth transitions",
+            "Check responsive design",
+            "Test keyboard navigation",
+            "Verify accessibility features"
+          ]
+        },
+        {
+          "name": "Error Handling",
+          "description": "Test error states and recovery",
+          "actions": [
+            "Trigger API errors",
+            "Verify error messages display",
+            "Test retry mechanisms",
+            "Check graceful degradation",
+            "Verify error recovery"
+          ]
+        }
+      ]
+    }
+  ],
+  "performance": {
+    "loadTime": "< 3 seconds",
+    "interactionDelay": "< 500ms",
+    "memoryUsage": "< 100MB"
+  },
+  "accessibility": {
+    "wcagLevel": "AA",
+    "keyboardNavigation": true,
+    "screenReaderSupport": true,
+    "colorContrast": true
+  }
+}

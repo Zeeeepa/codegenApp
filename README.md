@@ -2,6 +2,20 @@
 
 A comprehensive CI/CD orchestration platform that integrates AI agents with automated validation pipelines for seamless development workflows.
 
+## 🏗️ **NEW MODULAR ARCHITECTURE**
+
+This project has been completely restructured into a clean, modular architecture with proper separation of concerns:
+
+```
+codegenapp/
+├── frontend/           # React TypeScript Dashboard
+├── backend/           # FastAPI Python Backend  
+├── shared/            # Shared TypeScript types & utilities
+├── cloudflare-worker/ # Webhook gateway worker
+├── docs/              # Documentation
+└── tests/             # Test suites
+```
+
 ## 🚀 Overview
 
 CodegenApp is a sophisticated CI/CD management system that combines the power of AI agents (via Codegen API) with automated validation pipelines to create a seamless development experience. The system provides real-time dashboard monitoring, automated testing, and intelligent deployment workflows.
@@ -81,25 +95,31 @@ graph TB
 
 ## 🔧 Technology Stack
 
-### Frontend
+### Frontend (`/frontend`)
 - **React 18** with TypeScript
 - **Tailwind CSS** for styling
 - **WebSocket** for real-time communication
 - **Context API** for state management
 - **Lucide React** for icons
 
-### Backend
+### Backend (`/backend`)
 - **FastAPI** (Python) for API endpoints
 - **SQLAlchemy** with PostgreSQL for data persistence
 - **Redis** for state management and caching
 - **WebSocket** for real-time communication
 - **Asyncio** for concurrent operations
 
+### External Services Integration
+- **Codegen SDK** - Agent coordination & code generation
+- **Graph-Sitter** - Static analysis & code quality metrics
+- **Grainchain** - Sandboxing + snapshot creation + PR validation deployments
+- **Web-Eval-Agent** - UI testing & browser automation
+
 ### Infrastructure
-- **Docker/Kubernetes** for validation environments
+- **Node.js** runtime environment
 - **GitHub API** for repository integration
-- **Codegen API** for AI agent execution
-- **Web-eval-agent** for browser testing
+- **Cloudflare Workers** for webhook gateway
+- **Web-Eval-Agent** for automated component testing
 
 ## 📋 Workflow Process
 
@@ -171,30 +191,42 @@ REACT_APP_WS_URL=ws://localhost:8000/ws
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/your-org/codegenApp.git
+git clone https://github.com/Zeeeepa/codegenApp.git
 cd codegenApp
 ```
 
-2. **Backend Setup**
+2. **Environment Setup**
 ```bash
-cd backend
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn app.main:app --reload --port 8000
+# Copy environment configuration
+cp .env.example .env
+# Edit .env with your actual API keys and configuration
 ```
 
-3. **Frontend Setup**
+3. **Setup Dependencies**
 ```bash
-cd frontend
-npm install
+npm run setup
+```
+
+4. **Development Mode**
+```bash
+npm run dev
+```
+
+5. **Production Build & Start**
+```bash
+npm run build
 npm start
 ```
 
-4. **Database Migration**
+6. **Complete Deployment Test**
 ```bash
-cd backend
-alembic revision --autogenerate -m "Initial migration"
-alembic upgrade head
+# Set required environment variables
+export GEMINI_API_KEY=AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0
+export CODEGEN_API_TOKEN=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
+export GITHUB_TOKEN=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
+
+# Run full deployment test with web-eval-agent
+npm run deploy:test
 ```
 
 ## 📊 API Documentation
@@ -349,4 +381,3 @@ For support and questions:
 ---
 
 **CodegenApp** - Empowering developers with AI-driven CI/CD workflows 🚀
-

@@ -1,76 +1,44 @@
 {
-  "name": "agent-run-manager-web",
+  "name": "codegenapp",
   "version": "1.0.0",
-  "description": "A web application for managing agent runs, converted from Raycast extension",
+  "description": "CodegenApp - AI-Powered CI/CD Flow Management System",
   "private": true,
-  "dependencies": {
-    "@types/react": "^18.2.6",
-    "@types/react-dom": "^18.2.4",
-    "autoprefixer": "^10.4.14",
-    "concurrently": "^8.2.0",
-    "lucide-react": "^0.263.1",
-    "node-fetch": "^3.3.2",
-    "postcss": "^8.4.24",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-hot-toast": "^2.4.1",
-    "react-router-dom": "^6.8.0",
-    "react-scripts": "5.0.1",
-    "tailwindcss": "^3.3.0",
-    "typescript": "^4.9.5"
-  },
   "scripts": {
-    "start": "PORT=3002 react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "dev": "concurrently \"npm run server:dev\" \"npm run start\"",
-    "server:install": "cd server && npm install",
-    "server:start": "cd server && npm start",
-    "server:dev": "cd server && npm run dev",
-    "server:test": "cd server && npm test",
-    "test:web-eval": "jest --testPathPattern=tests/web-eval-agent",
-    "test:web-eval:watch": "jest --testPathPattern=tests/web-eval-agent --watch",
-    "test:web-eval:coverage": "jest --testPathPattern=tests/web-eval-agent --coverage",
-    "test:codegen-api": "node scripts/test-codegen-api.js",
-    "test:all": "npm test && npm run server:test && npm run test:web-eval && npm run test:codegen-api",
-    "postinstall": "npm run server:install"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "proxy": "http://localhost:3001",
-  "devServer": {
-    "headers": {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-      "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Authorization, Accept, Origin",
-      "Access-Control-Allow-Credentials": "true"
-    }
+    "setup": "npm run frontend:install && npm run backend:install",
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "build": "npm run frontend:build",
+    "start": "npm run frontend:start",
+    "test": "npm run test:components",
+    "test:components": "npm run web-eval:test",
+    "frontend:install": "cd frontend && npm install",
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build",
+    "frontend:start": "cd frontend && npm run start",
+    "backend:install": "cd backend && pip install -r requirements.txt",
+    "backend:dev": "cd backend && python -m uvicorn main:app --reload --port 8000",
+    "web-eval:install": "npm install -g web-eval-agent",
+    "web-eval:test": "web-eval-agent test --config web-eval-config.json",
+    "deploy:test": "./deploy-test.sh"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^24.0.3",
-    "@types/supertest": "^6.0.2",
-    "dotenv": "^16.5.0",
-    "supertest": "^7.0.0"
-  }
+    "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zeeeepa/codegenApp.git"
+  },
+  "keywords": [
+    "ai",
+    "cicd",
+    "automation",
+    "github",
+    "codegen",
+    "validation",
+    "dashboard"
+  ],
+  "author": "Zeeeepa",
+  "license": "MIT"
 }
