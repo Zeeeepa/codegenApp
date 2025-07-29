@@ -3,42 +3,28 @@
   "version": "1.0.0",
   "description": "CodegenApp - AI-Powered CI/CD Flow Management System",
   "private": true,
-  "workspaces": [
-    "frontend",
-    "backend",
-    "shared"
-  ],
   "scripts": {
+    "setup": "npm run frontend:install && npm run backend:install",
     "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
-    "build": "npm run backend:build && npm run frontend:build",
-    "test": "npm run backend:test && npm run frontend:test",
-    "lint": "npm run backend:lint && npm run frontend:lint",
-    "lint:fix": "npm run backend:lint:fix && npm run frontend:lint:fix",
-    "type-check": "npm run frontend:type-check",
-    "install:all": "npm install && npm run frontend:install && npm run backend:install",
+    "build": "npm run frontend:build",
+    "start": "npm run frontend:start",
+    "test": "npm run test:components",
+    "test:components": "npm run web-eval:test",
+    "frontend:install": "cd frontend && npm install",
     "frontend:dev": "cd frontend && npm run dev",
     "frontend:build": "cd frontend && npm run build",
-    "frontend:test": "cd frontend && npm test",
-    "frontend:lint": "cd frontend && npm run lint",
-    "frontend:lint:fix": "cd frontend && npm run lint:fix",
-    "frontend:install": "cd frontend && npm install",
-    "backend:dev": "cd backend && python -m uvicorn main:app --reload --port 8000",
-    "backend:build": "cd backend && python -m py_compile main.py",
-    "backend:test": "cd backend && python -m pytest",
-    "backend:lint": "cd backend && python -m flake8 .",
-    "backend:lint:fix": "cd backend && python -m black . && python -m isort .",
+    "frontend:start": "cd frontend && npm run start",
     "backend:install": "cd backend && pip install -r requirements.txt",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f"
+    "backend:dev": "cd backend && python -m uvicorn main:app --reload --port 8000",
+    "web-eval:install": "npm install -g web-eval-agent",
+    "web-eval:test": "web-eval-agent test --config web-eval-config.json",
+    "deploy:test": "./deploy-test.sh"
   },
   "devDependencies": {
     "concurrently": "^8.2.0"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "python": ">=3.9.0"
+    "node": ">=18.0.0"
   },
   "repository": {
     "type": "git",

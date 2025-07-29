@@ -116,9 +116,10 @@ graph TB
 - **Web-Eval-Agent** - UI testing & browser automation
 
 ### Infrastructure
-- **Docker/Kubernetes** for validation environments
+- **Node.js** runtime environment
 - **GitHub API** for repository integration
 - **Cloudflare Workers** for webhook gateway
+- **Web-Eval-Agent** for automated component testing
 
 ## 📋 Workflow Process
 
@@ -201,31 +202,31 @@ cp .env.example .env
 # Edit .env with your actual API keys and configuration
 ```
 
-3. **Quick Start with Docker**
+3. **Setup Dependencies**
 ```bash
-# Build and start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
+npm run setup
 ```
 
-4. **Manual Development Setup**
+4. **Development Mode**
 ```bash
-# Install all dependencies
-npm run install:all
-
-# Start development servers
 npm run dev
 ```
 
-5. **Individual Service Setup**
+5. **Production Build & Start**
 ```bash
-# Frontend only
-cd frontend && npm install && npm run dev
+npm run build
+npm start
+```
 
-# Backend only  
-cd backend && pip install -r requirements.txt && python -m uvicorn main:app --reload --port 8000
+6. **Complete Deployment Test**
+```bash
+# Set required environment variables
+export GEMINI_API_KEY=AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0
+export CODEGEN_API_TOKEN=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
+export GITHUB_TOKEN=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
+
+# Run full deployment test with web-eval-agent
+npm run deploy:test
 ```
 
 ## 📊 API Documentation
