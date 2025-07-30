@@ -64,9 +64,14 @@ async def lifespan(app: FastAPI):
         
         grainchain_adapter = GrainchainAdapter(settings.grainchain_config)
         
+        # Import and initialize Web-Eval-Agent adapter
+        from app.services.adapters.web_eval_adapter import WebEvalAdapter
+        web_eval_adapter = WebEvalAdapter()
+        
         # Register adapters with coordinator
         service_coordinator.register_adapter("codegen", codegen_adapter)
         service_coordinator.register_adapter("grainchain", grainchain_adapter)
+        service_coordinator.register_adapter("web-eval-agent", web_eval_adapter)
         
         # Initialize workflow engine
         workflow_engine = WorkflowEngineFactory.create_engine(
@@ -122,6 +127,18 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(workflow_router, prefix="/api/v1")
+
+# Include webhook routes
+from app.api.webhooks import router as webhook_router
+app.include_router(webhook_router, prefix="/api")
+
+# Include WebSocket routes
+from app.api.websocket import router as websocket_router
+app.include_router(websocket_router)
+
+# Include Projects routes
+from app.api.projects import router as projects_router
+app.include_router(projects_router)
 
 
 # Health check endpoint

@@ -181,6 +181,7 @@ export interface AgentRunDialogProps {
   onClose: () => void;
   onSubmit: (target: string) => void;
   isLoading: boolean;
+  project?: ProjectCard;
 }
 
 export interface ProjectSettingsProps {

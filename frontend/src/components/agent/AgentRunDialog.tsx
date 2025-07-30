@@ -1,19 +1,26 @@
 import React, { useState } from 'react';
-import { X, Play, Loader2 } from 'lucide-react';
+import { X, Play, Loader2, FileText } from 'lucide-react';
 import { AgentRunDialogProps } from '../../types';
 
 export const AgentRunDialog: React.FC<AgentRunDialogProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  isLoading
+  isLoading,
+  project
 }) => {
   const [target, setTarget] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (target.trim()) {
-      onSubmit(target.trim());
+      // Combine planning statement with user target
+      const planningStatement = project?.settings?.planningStatement || '';
+      const fullPrompt = planningStatement 
+        ? `Project='${project.repository.name}'\n\nPlanning Context:\n${planningStatement}\n\nTarget: ${target.trim()}`
+        : `Project='${project?.repository.name}'\n\nTarget: ${target.trim()}`;
+      
+      onSubmit(fullPrompt);
       setTarget('');
     }
   };
@@ -33,9 +40,16 @@ export const AgentRunDialog: React.FC<AgentRunDialogProps> = ({
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Start Agent Run
-            </h2>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Agent Run - {project?.repository.name}
+              </h2>
+              {project?.settings?.planningStatement && (
+                <p className="text-sm text-gray-600 mt-1">
+                  Planning statement configured
+                </p>
+              )}
+            </div>
             <button
               onClick={handleClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -47,6 +61,22 @@ export const AgentRunDialog: React.FC<AgentRunDialogProps> = ({
 
           {/* Content */}
           <form onSubmit={handleSubmit} className="p-6">
+            {/* Planning Statement Preview */}
+            {project?.settings?.planningStatement && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-900">Planning Statement</span>
+                </div>
+                <p className="text-sm text-blue-800 whitespace-pre-wrap">
+                  {project.settings.planningStatement.length > 150 
+                    ? `${project.settings.planningStatement.substring(0, 150)}...`
+                    : project.settings.planningStatement
+                  }
+                </p>
+              </div>
+            )}
+
             <div className="mb-4">
               <label 
                 htmlFor="target" 

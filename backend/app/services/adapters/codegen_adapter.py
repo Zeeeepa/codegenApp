@@ -19,7 +19,7 @@ from datetime import datetime
 import asyncio
 from urllib.parse import urljoin
 
-from models.api_models import (
+from app.models.api.api_models import (
     AgentRunResponse, UserResponse, OrganizationResponse,
     CreateAgentRunRequest, ResumeAgentRunRequest, StopAgentRunRequest,
     PaginatedResponse, AgentRunStatus

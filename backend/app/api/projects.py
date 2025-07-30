@@ -1,443 +1,453 @@
 """
-Project management API endpoints.
+Projects API endpoints
 
-Provides REST API endpoints for managing projects,
-their settings, and configurations in the CI/CD system.
+This module provides API endpoints for project management,
+GitHub integration, and validation pipeline orchestration.
 """
 
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
-import uuid
+import logging
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from pydantic import BaseModel
 
-from ..database.connection import get_db
-from ..models import Project, ProjectSettings, AuditLog, AuditAction
-from ..orchestration.state_manager import StateManager
+from app.services.github_service import GitHubService, GitHubRepository
+from app.services.adapters.codegen_adapter import CodegenService
+from app.services.adapters.web_eval_adapter import WebEvalAdapter
+from app.websocket.manager import websocket_manager
+from app.config.settings import get_settings
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
-state_manager = StateManager()
 
 
-# Pydantic models for request/response
-class ProjectCreate(BaseModel):
-    """Request model for creating a project."""
-    name: str = Field(..., min_length=1, max_length=255)
+# Request/Response Models
+class ProjectCreateRequest(BaseModel):
+    name: str
+    repository_url: str
     description: Optional[str] = None
-    webhook_url: str = Field(..., min_length=1, max_length=500)
-    github_repo: str = Field(..., min_length=1, max_length=255)
-    deployment_settings: Optional[dict] = None
-    validation_settings: Optional[dict] = None
-    notification_settings: Optional[dict] = None
+    auto_merge_enabled: bool = False
+    webhook_url: Optional[str] = None
 
 
-class ProjectUpdate(BaseModel):
-    """Request model for updating a project."""
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = None
-    webhook_url: Optional[str] = Field(None, min_length=1, max_length=500)
-    github_repo: Optional[str] = Field(None, min_length=1, max_length=255)
-    status: Optional[str] = Field(None, regex="^(active|inactive|archived)$")
+class ProjectSettingsRequest(BaseModel):
+    repository_rules: Optional[str] = None
+    setup_commands: Optional[List[str]] = None
+    secrets: Optional[Dict[str, str]] = None
+    auto_merge_enabled: Optional[bool] = None
 
 
-class ProjectSettingsUpdate(BaseModel):
-    """Request model for updating project settings."""
-    deployment_settings: Optional[dict] = None
-    validation_settings: Optional[dict] = None
-    notification_settings: Optional[dict] = None
+class AgentRunRequest(BaseModel):
+    target_text: str
+    auto_confirm_plan: bool = False
 
 
 class ProjectResponse(BaseModel):
-    """Response model for project data."""
     id: str
     name: str
+    repository_url: str
     description: Optional[str]
-    webhook_url: str
-    github_repo: str
+    auto_merge_enabled: bool
+    webhook_configured: bool
+    last_activity: Optional[str]
     status: str
-    created_at: str
-    updated_at: str
-    last_run: Optional[str]
-    deployment_settings: dict
-    validation_settings: dict
 
 
-@router.get("/", response_model=List[ProjectResponse])
-async def list_projects(
-    status: Optional[str] = None,
-    limit: int = 50,
-    offset: int = 0,
-    db: Session = Depends(get_db)
-):
+class ValidationRequest(BaseModel):
+    pr_number: int
+    test_scenarios: List[str]
+
+
+# Initialize services
+settings = get_settings()
+github_service = GitHubService()
+codegen_service = CodegenService(
+    api_token=settings.codegen_api_token,
+    base_url=settings.codegen_api_base_url
+)
+web_eval_adapter = WebEvalAdapter()
+
+
+@router.get("/repositories", response_model=List[Dict[str, Any]])
+async def get_repositories(org: Optional[str] = None):
     """
-    List all projects with optional filtering.
+    Get available GitHub repositories
     
     Args:
-        status: Filter by project status (optional)
-        limit: Maximum number of results
-        offset: Number of results to skip
-        db: Database session
+        org: Optional organization name
         
     Returns:
-        List of projects
+        List of available repositories
     """
-    query = db.query(Project)
-    
-    if status:
-        query = query.filter(Project.status == status)
-    
-    projects = query.offset(offset).limit(limit).all()
-    
-    return [
-        ProjectResponse(
-            id=project.id,
-            name=project.name,
-            description=project.description,
-            webhook_url=project.webhook_url,
-            github_repo=project.github_repo,
-            status=project.status,
-            created_at=project.created_at.isoformat() if project.created_at else "",
-            updated_at=project.updated_at.isoformat() if project.updated_at else "",
-            last_run=project.last_run.isoformat() if project.last_run else None,
-            deployment_settings=project.settings.deployment_settings if project.settings else {},
-            validation_settings=project.settings.validation_settings if project.settings else {}
-        )
-        for project in projects
-    ]
+    try:
+        repositories = await github_service.get_repositories(org)
+        
+        return [
+            {
+                "id": repo.id,
+                "name": repo.name,
+                "full_name": repo.full_name,
+                "description": repo.description,
+                "private": repo.private,
+                "clone_url": repo.clone_url,
+                "default_branch": repo.default_branch,
+                "owner": repo.owner
+            }
+            for repo in repositories
+        ]
+        
+    except Exception as e:
+        logger.error(f"Error getting repositories: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get repositories")
 
 
-@router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/create", response_model=ProjectResponse)
 async def create_project(
-    project_data: ProjectCreate,
-    user_id: Optional[str] = None,
-    db: Session = Depends(get_db)
+    request: ProjectCreateRequest,
+    background_tasks: BackgroundTasks
 ):
     """
-    Create a new project.
+    Create a new project and set up GitHub webhook
     
     Args:
-        project_data: Project creation data
-        user_id: ID of the user creating the project (optional)
-        db: Database session
+        request: Project creation request
+        background_tasks: Background tasks for async operations
         
     Returns:
-        Created project data
+        Created project information
     """
-    # Generate project ID
-    project_id = str(uuid.uuid4())
+    try:
+        # Parse repository URL to get owner and repo name
+        repo_parts = request.repository_url.replace("https://github.com/", "").split("/")
+        if len(repo_parts) != 2:
+            raise HTTPException(status_code=400, detail="Invalid repository URL format")
+        
+        owner, repo_name = repo_parts
+        
+        # Verify repository exists
+        repository = await github_service.get_repository(owner, repo_name)
+        if not repository:
+            raise HTTPException(status_code=404, detail="Repository not found")
+        
+        # Set up webhook if URL provided
+        webhook_configured = False
+        if request.webhook_url:
+            webhook_configured = await github_service.set_webhook(
+                owner, repo_name, request.webhook_url
+            )
+        
+        # Create project response
+        project_response = ProjectResponse(
+            id=f"{owner}/{repo_name}",
+            name=request.name,
+            repository_url=request.repository_url,
+            description=request.description,
+            auto_merge_enabled=request.auto_merge_enabled,
+            webhook_configured=webhook_configured,
+            last_activity=None,
+            status="active"
+        )
+        
+        # Send notification
+        await websocket_manager.send_notification(
+            "success",
+            f"Project '{request.name}' created successfully",
+            {"project_id": project_response.id},
+            project_name=project_response.id
+        )
+        
+        return project_response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating project: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create project")
+
+
+@router.post("/{project_id}/agent-run")
+async def create_agent_run(
+    project_id: str,
+    request: AgentRunRequest,
+    background_tasks: BackgroundTasks
+):
+    """
+    Create a new agent run for a project
     
-    # Create project
-    project = Project(
-        id=project_id,
-        name=project_data.name,
-        description=project_data.description,
-        webhook_url=project_data.webhook_url,
-        github_repo=project_data.github_repo,
-        status="active"
-    )
-    
-    db.add(project)
-    db.flush()  # Get the project ID
-    
-    # Create project settings
-    settings = ProjectSettings(
-        project_id=project_id,
-        deployment_settings=project_data.deployment_settings or {
-            "build_command": "npm run build",
-            "deploy_command": "npm run deploy",
-            "health_check_url": "",
-            "environment_variables": {}
-        },
-        validation_settings=project_data.validation_settings or {
-            "auto_merge": True,
-            "required_checks": ["build", "test", "security"],
-            "timeout_minutes": 30,
-            "max_retries": 3
-        },
-        notification_settings=project_data.notification_settings or {
-            "slack_webhook": "",
-            "email_notifications": True,
-            "github_status_updates": True
+    Args:
+        project_id: Project identifier (owner/repo)
+        request: Agent run request
+        background_tasks: Background tasks for async operations
+        
+    Returns:
+        Agent run information
+    """
+    try:
+        # Parse project ID
+        if "/" not in project_id:
+            raise HTTPException(status_code=400, detail="Invalid project ID format")
+        
+        # Create agent run using Codegen service
+        agent_run_request = {
+            "prompt": f"Project='{project_id}' {request.target_text}",
+            "auto_confirm_plan": request.auto_confirm_plan
         }
-    )
-    
-    db.add(settings)
-    
-    # Create audit log
-    audit_log = AuditLog.create_log(
-        action=AuditAction.PROJECT_CREATED,
-        description=f"Created project '{project_data.name}'",
-        entity_type="project",
-        entity_id=project_id,
-        project_id=project_id,
-        user_id=user_id,
-        metadata={
-            "name": project_data.name,
-            "github_repo": project_data.github_repo
+        
+        # Start agent run in background
+        background_tasks.add_task(
+            _process_agent_run,
+            project_id,
+            agent_run_request
+        )
+        
+        # Send immediate response
+        await websocket_manager.send_notification(
+            "info",
+            f"Agent run started for project {project_id}",
+            {"target_text": request.target_text},
+            project_name=project_id
+        )
+        
+        return {
+            "status": "started",
+            "project_id": project_id,
+            "target_text": request.target_text,
+            "message": "Agent run has been started"
         }
-    )
-    db.add(audit_log)
-    
-    db.commit()
-    db.refresh(project)
-    db.refresh(settings)
-    
-    return ProjectResponse(
-        id=project.id,
-        name=project.name,
-        description=project.description,
-        webhook_url=project.webhook_url,
-        github_repo=project.github_repo,
-        status=project.status,
-        created_at=project.created_at.isoformat(),
-        updated_at=project.updated_at.isoformat(),
-        last_run=None,
-        deployment_settings=settings.deployment_settings,
-        validation_settings=settings.validation_settings
-    )
-
-
-@router.get("/{project_id}", response_model=ProjectResponse)
-async def get_project(project_id: str, db: Session = Depends(get_db)):
-    """
-    Get a specific project by ID.
-    
-    Args:
-        project_id: ID of the project to retrieve
-        db: Database session
         
-    Returns:
-        Project data
-    """
-    project = db.query(Project).filter(Project.id == project_id).first()
-    
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Project {project_id} not found"
-        )
-    
-    return ProjectResponse(
-        id=project.id,
-        name=project.name,
-        description=project.description,
-        webhook_url=project.webhook_url,
-        github_repo=project.github_repo,
-        status=project.status,
-        created_at=project.created_at.isoformat() if project.created_at else "",
-        updated_at=project.updated_at.isoformat() if project.updated_at else "",
-        last_run=project.last_run.isoformat() if project.last_run else None,
-        deployment_settings=project.settings.deployment_settings if project.settings else {},
-        validation_settings=project.settings.validation_settings if project.settings else {}
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating agent run: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create agent run")
 
 
-@router.put("/{project_id}", response_model=ProjectResponse)
-async def update_project(
+@router.post("/{project_id}/validate")
+async def validate_project(
     project_id: str,
-    project_data: ProjectUpdate,
-    user_id: Optional[str] = None,
-    db: Session = Depends(get_db)
+    request: ValidationRequest,
+    background_tasks: BackgroundTasks
 ):
     """
-    Update a project.
+    Validate a project using Web-Eval-Agent
     
     Args:
-        project_id: ID of the project to update
-        project_data: Project update data
-        user_id: ID of the user updating the project (optional)
-        db: Database session
+        project_id: Project identifier (owner/repo)
+        request: Validation request
+        background_tasks: Background tasks for async operations
         
     Returns:
-        Updated project data
+        Validation status
     """
-    project = db.query(Project).filter(Project.id == project_id).first()
-    
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Project {project_id} not found"
+    try:
+        # Parse project ID
+        if "/" not in project_id:
+            raise HTTPException(status_code=400, detail="Invalid project ID format")
+        
+        owner, repo_name = project_id.split("/")
+        
+        # Get PR information
+        pr = await github_service.get_pull_request(owner, repo_name, request.pr_number)
+        if not pr:
+            raise HTTPException(status_code=404, detail="Pull request not found")
+        
+        # Start validation in background
+        background_tasks.add_task(
+            _process_validation,
+            project_id,
+            request.pr_number,
+            request.test_scenarios
         )
-    
-    # Store old values for audit
-    old_values = project.to_dict()
-    
-    # Update fields
-    if project_data.name is not None:
-        project.name = project_data.name
-    if project_data.description is not None:
-        project.description = project_data.description
-    if project_data.webhook_url is not None:
-        project.webhook_url = project_data.webhook_url
-    if project_data.github_repo is not None:
-        project.github_repo = project_data.github_repo
-    if project_data.status is not None:
-        project.status = project_data.status
-    
-    # Create audit log
-    audit_log = AuditLog.create_log(
-        action=AuditAction.PROJECT_UPDATED,
-        description=f"Updated project '{project.name}'",
-        entity_type="project",
-        entity_id=project_id,
-        project_id=project_id,
-        user_id=user_id,
-        old_values=old_values,
-        new_values=project.to_dict()
-    )
-    db.add(audit_log)
-    
-    db.commit()
-    db.refresh(project)
-    
-    return ProjectResponse(
-        id=project.id,
-        name=project.name,
-        description=project.description,
-        webhook_url=project.webhook_url,
-        github_repo=project.github_repo,
-        status=project.status,
-        created_at=project.created_at.isoformat() if project.created_at else "",
-        updated_at=project.updated_at.isoformat() if project.updated_at else "",
-        last_run=project.last_run.isoformat() if project.last_run else None,
-        deployment_settings=project.settings.deployment_settings if project.settings else {},
-        validation_settings=project.settings.validation_settings if project.settings else {}
-    )
+        
+        # Send immediate response
+        await websocket_manager.send_notification(
+            "info",
+            f"Validation started for PR #{request.pr_number}",
+            {"pr_number": request.pr_number},
+            project_name=project_id
+        )
+        
+        return {
+            "status": "started",
+            "project_id": project_id,
+            "pr_number": request.pr_number,
+            "message": "Validation has been started"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error starting validation: {e}")
+        raise HTTPException(status_code=500, detail="Failed to start validation")
 
 
-@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_project(
-    project_id: str,
-    user_id: Optional[str] = None,
-    db: Session = Depends(get_db)
-):
+@router.get("/{project_id}/branches")
+async def get_project_branches(project_id: str):
     """
-    Delete a project.
+    Get branches for a project repository
     
     Args:
-        project_id: ID of the project to delete
-        user_id: ID of the user deleting the project (optional)
-        db: Database session
-    """
-    project = db.query(Project).filter(Project.id == project_id).first()
-    
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Project {project_id} not found"
-        )
-    
-    # Create audit log before deletion
-    audit_log = AuditLog.create_log(
-        action=AuditAction.PROJECT_DELETED,
-        description=f"Deleted project '{project.name}'",
-        entity_type="project",
-        entity_id=project_id,
-        project_id=project_id,
-        user_id=user_id,
-        old_values=project.to_dict()
-    )
-    db.add(audit_log)
-    
-    # Delete project (cascade will handle related records)
-    db.delete(project)
-    db.commit()
-
-
-@router.put("/{project_id}/settings")
-async def update_project_settings(
-    project_id: str,
-    settings_data: ProjectSettingsUpdate,
-    user_id: Optional[str] = None,
-    db: Session = Depends(get_db)
-):
-    """
-    Update project settings.
-    
-    Args:
-        project_id: ID of the project
-        settings_data: Settings update data
-        user_id: ID of the user updating settings (optional)
-        db: Database session
+        project_id: Project identifier (owner/repo)
         
     Returns:
-        Updated settings data
+        List of branch names
     """
-    project = db.query(Project).filter(Project.id == project_id).first()
-    
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Project {project_id} not found"
-        )
-    
-    # Get or create settings
-    settings = project.settings
-    if not settings:
-        settings = ProjectSettings(project_id=project_id)
-        db.add(settings)
-    
-    # Store old values for audit
-    old_values = settings.to_dict()
-    
-    # Update settings
-    if settings_data.deployment_settings is not None:
-        settings.deployment_settings = settings_data.deployment_settings
-    if settings_data.validation_settings is not None:
-        settings.validation_settings = settings_data.validation_settings
-    if settings_data.notification_settings is not None:
-        settings.notification_settings = settings_data.notification_settings
-    
-    # Create audit log
-    audit_log = AuditLog.create_log(
-        action=AuditAction.PROJECT_SETTINGS_UPDATED,
-        description=f"Updated settings for project '{project.name}'",
-        entity_type="project_settings",
-        entity_id=str(settings.id),
-        project_id=project_id,
-        user_id=user_id,
-        old_values=old_values,
-        new_values=settings.to_dict()
-    )
-    db.add(audit_log)
-    
-    db.commit()
-    db.refresh(settings)
-    
-    return settings.to_dict()
+    try:
+        if "/" not in project_id:
+            raise HTTPException(status_code=400, detail="Invalid project ID format")
+        
+        owner, repo_name = project_id.split("/")
+        branches = await github_service.get_branches(owner, repo_name)
+        
+        return {"branches": branches}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting branches: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get branches")
 
 
-@router.get("/{project_id}/status")
-async def get_project_status(project_id: str, db: Session = Depends(get_db)):
+@router.post("/{project_id}/webhook")
+async def setup_webhook(project_id: str, webhook_url: str):
     """
-    Get current project status and workflow state.
+    Set up webhook for a project
     
     Args:
-        project_id: ID of the project
-        db: Database session
+        project_id: Project identifier (owner/repo)
+        webhook_url: Webhook URL to configure
         
     Returns:
-        Project status and workflow state
+        Webhook setup status
     """
-    project = db.query(Project).filter(Project.id == project_id).first()
-    
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Project {project_id} not found"
-        )
-    
-    # Get workflow state from state manager
-    workflow_state = state_manager.get_project_state(project_id)
-    
-    return {
-        "project_id": project_id,
-        "project_status": project.status,
-        "workflow_state": workflow_state["workflow_state"],
-        "active_runs": workflow_state["active_runs"],
-        "active_validations": workflow_state["active_validations"],
-        "last_activity": workflow_state["last_activity"],
-        "last_run": project.last_run.isoformat() if project.last_run else None
-    }
+    try:
+        if "/" not in project_id:
+            raise HTTPException(status_code=400, detail="Invalid project ID format")
+        
+        owner, repo_name = project_id.split("/")
+        
+        success = await github_service.set_webhook(owner, repo_name, webhook_url)
+        
+        if success:
+            await websocket_manager.send_notification(
+                "success",
+                f"Webhook configured for {project_id}",
+                {"webhook_url": webhook_url},
+                project_name=project_id
+            )
+            return {"status": "success", "webhook_url": webhook_url}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to configure webhook")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error setting up webhook: {e}")
+        raise HTTPException(status_code=500, detail="Failed to set up webhook")
 
+
+# Background task functions
+async def _process_agent_run(project_id: str, agent_run_request: Dict[str, Any]):
+    """Process agent run in background"""
+    try:
+        # Send progress update
+        await websocket_manager.send_progress_update(
+            task_id=f"agent_run_{project_id}",
+            progress=10,
+            status="running",
+            message="Starting agent run...",
+            project_name=project_id
+        )
+        
+        # TODO: Integrate with actual Codegen service
+        # For now, simulate the process
+        import asyncio
+        await asyncio.sleep(2)
+        
+        await websocket_manager.send_progress_update(
+            task_id=f"agent_run_{project_id}",
+            progress=50,
+            status="running",
+            message="Processing request...",
+            project_name=project_id
+        )
+        
+        await asyncio.sleep(3)
+        
+        await websocket_manager.send_progress_update(
+            task_id=f"agent_run_{project_id}",
+            progress=100,
+            status="completed",
+            message="Agent run completed successfully",
+            project_name=project_id
+        )
+        
+        # Send completion notification
+        await websocket_manager.send_notification(
+            "success",
+            f"Agent run completed for {project_id}",
+            {"result": "PR created successfully"},
+            project_name=project_id
+        )
+        
+    except Exception as e:
+        logger.error(f"Error processing agent run: {e}")
+        await websocket_manager.send_notification(
+            "error",
+            f"Agent run failed for {project_id}",
+            {"error": str(e)},
+            project_name=project_id
+        )
+
+
+async def _process_validation(project_id: str, pr_number: int, test_scenarios: List[str]):
+    """Process validation in background"""
+    try:
+        # Send progress update
+        await websocket_manager.send_progress_update(
+            task_id=f"validation_{project_id}_{pr_number}",
+            progress=10,
+            status="running",
+            message="Creating Grainchain snapshot...",
+            project_name=project_id
+        )
+        
+        # TODO: Integrate with actual validation pipeline
+        # For now, simulate the process
+        import asyncio
+        await asyncio.sleep(3)
+        
+        await websocket_manager.send_progress_update(
+            task_id=f"validation_{project_id}_{pr_number}",
+            progress=50,
+            status="running",
+            message="Running Web-Eval-Agent validation...",
+            project_name=project_id
+        )
+        
+        await asyncio.sleep(5)
+        
+        await websocket_manager.send_progress_update(
+            task_id=f"validation_{project_id}_{pr_number}",
+            progress=100,
+            status="completed",
+            message="Validation completed successfully",
+            project_name=project_id
+        )
+        
+        # Send completion notification
+        await websocket_manager.send_notification(
+            "success",
+            f"Validation completed for PR #{pr_number}",
+            {"result": "All tests passed", "pr_number": pr_number},
+            project_name=project_id
+        )
+        
+    except Exception as e:
+        logger.error(f"Error processing validation: {e}")
+        await websocket_manager.send_notification(
+            "error",
+            f"Validation failed for PR #{pr_number}",
+            {"error": str(e), "pr_number": pr_number},
+            project_name=project_id
+        )

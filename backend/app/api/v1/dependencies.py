@@ -10,7 +10,7 @@ import logging
 from app.core.workflow.engine import WorkflowEngine
 from app.core.orchestration.coordinator import ServiceCoordinator
 from app.core.orchestration.state_manager import WorkflowStateManager
-from app.services.adapters.codegen_adapter import CodegenAdapter
+from app.services.adapters.codegen_adapter import CodegenService
 from app.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -22,14 +22,14 @@ security = HTTPBearer()
 _workflow_engine: WorkflowEngine = None
 _service_coordinator: ServiceCoordinator = None
 _state_manager: WorkflowStateManager = None
-_codegen_adapter: CodegenAdapter = None
+_codegen_adapter: CodegenService = None
 
 
 def set_global_dependencies(
     engine: WorkflowEngine,
     coordinator: ServiceCoordinator,
     state_manager: WorkflowStateManager,
-    codegen_adapter: CodegenAdapter
+    codegen_adapter: CodegenService
 ):
     """Set global dependency instances (called from main.py)"""
     global _workflow_engine, _service_coordinator, _state_manager, _codegen_adapter
@@ -104,7 +104,7 @@ async def get_state_manager() -> WorkflowStateManager:
     return _state_manager
 
 
-async def get_codegen_adapter() -> CodegenAdapter:
+async def get_codegen_adapter() -> CodegenService:
     """Get Codegen adapter instance"""
     if not _codegen_adapter:
         raise HTTPException(
