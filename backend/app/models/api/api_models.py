@@ -4,9 +4,11 @@ Defines all request/response models for the API
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any, Union, Generic, TypeVar
 from datetime import datetime
 from enum import Enum
+
+T = TypeVar('T')
 
 
 # ============================================================================
@@ -91,9 +93,9 @@ class StopAgentRunRequest(BaseModel):
     agent_run_id: int = Field(..., description="Agent run ID to stop")
 
 
-class PaginatedResponse(BaseModel):
+class PaginatedResponse(BaseModel, Generic[T]):
     """Paginated response wrapper"""
-    items: List[Any] = Field(..., description="List of items")
+    items: List[T] = Field(..., description="List of items")
     total: int = Field(..., description="Total number of items")
     page: int = Field(..., description="Current page number")
     size: int = Field(..., description="Page size")

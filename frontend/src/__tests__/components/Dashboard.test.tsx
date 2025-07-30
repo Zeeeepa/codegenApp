@@ -16,17 +16,21 @@ jest.mock('../../hooks/useWebSocket', () => ({
   })
 }));
 
+const mockGetOrganizations = jest.fn().mockResolvedValue({
+  data: [
+    { id: 1, name: 'Test Org', slug: 'test-org' }
+  ]
+});
+
+const mockCreateAgentRun = jest.fn().mockResolvedValue({
+  id: 1,
+  status: 'pending'
+});
+
 jest.mock('../../api/client', () => ({
   getAPIClient: () => ({
-    getOrganizations: jest.fn().mockResolvedValue({
-      data: [
-        { id: 1, name: 'Test Org', slug: 'test-org' }
-      ]
-    }),
-    createAgentRun: jest.fn().mockResolvedValue({
-      id: 1,
-      status: 'pending'
-    })
+    getOrganizations: mockGetOrganizations,
+    createAgentRun: mockCreateAgentRun
   })
 }));
 
@@ -80,10 +84,7 @@ describe('Dashboard Component', () => {
 
   test('displays error state when API fails', async () => {
     // Mock API failure
-    const mockGetAPIClient = require('../../api/client').getAPIClient;
-    mockGetAPIClient.mockReturnValue({
-      getOrganizations: jest.fn().mockRejectedValue(new Error('API Error'))
-    });
+    mockGetOrganizations.mockRejectedValueOnce(new Error('API Error'));
 
     render(
       <TestWrapper>

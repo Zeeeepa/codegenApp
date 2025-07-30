@@ -30,6 +30,18 @@ class Settings(BaseSettings):
         description="Legacy Codegen API token (deprecated, use codegen_api_key)"
     )
     
+    # Gemini API configuration (for Web-Eval-Agent)
+    gemini_api_key: Optional[str] = Field(
+        default=None,
+        description="Gemini API key for Web-Eval-Agent validation"
+    )
+    
+    # GitHub API configuration
+    github_token: Optional[str] = Field(
+        default=None,
+        description="GitHub personal access token for repository operations"
+    )
+    
     # Database configuration (for workflow persistence)
     database_url: Optional[str] = Field(
         default=None, 

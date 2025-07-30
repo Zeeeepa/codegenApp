@@ -87,7 +87,7 @@ class AuditLog(Base):
     # Change Details
     old_values = Column(JSON)  # Previous state (for updates)
     new_values = Column(JSON)  # New state (for updates)
-    metadata = Column(JSON)    # Additional context data
+    context_metadata = Column(JSON)    # Additional context data
     
     # Error Information (if applicable)
     error_message = Column(Text)
@@ -167,9 +167,8 @@ class AuditLog(Base):
             user_id=user_id,
             user_email=user_email,
             request_id=request_id,
-            metadata=metadata or {},
+            context_metadata=metadata or {},
             error_message=error_message,
             source_service=source_service,
             timestamp=datetime.utcnow()
         )
-

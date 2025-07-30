@@ -1,343 +1,254 @@
-# CodegenApp Dashboard - Complete CI/CD Automation Platform
+# CodegenApp - AI-Powered CI/CD Dashboard
 
-A comprehensive dashboard for managing GitHub projects with AI-powered code generation, automated validation, and complete CI/CD workflows using cutting-edge AI agents.
+A comprehensive full-stack application that integrates multiple AI and development tools to create an automated CI/CD pipeline with real-time validation and deployment capabilities.
 
-## 🏗️ **NEW MODULAR ARCHITECTURE**
+## 🚀 Features
 
-This project has been completely restructured into a clean, modular architecture with proper separation of concerns:
+### Core Functionality
+- **Project Management**: GitHub repository integration with real-time project cards
+- **AI Agent Runs**: Codegen SDK integration for automated code generation
+- **Real-time Validation**: Web-Eval-Agent powered UI testing with Gemini AI
+- **Webhook Integration**: Live GitHub event notifications via Cloudflare Workers
+- **Automated Deployment**: Grainchain-powered sandboxing and validation
+- **Code Analysis**: Graph-Sitter integration for static code analysis
 
-```
-codegenapp/
-├── frontend/           # React TypeScript Dashboard
-├── backend/           # FastAPI Python Backend  
-├── shared/            # Shared TypeScript types & utilities
-├── cloudflare-worker/ # Webhook gateway worker
-├── docs/              # Documentation
-└── tests/             # Test suites
-```
+### Real-time Dashboard
+- **Project Cards**: Visual project management with live status updates
+- **WebSocket Communication**: Real-time notifications and progress tracking
+- **Agent Run Interface**: Interactive AI agent execution with progress monitoring
+- **Validation Pipeline**: Automated PR validation with visual feedback
+- **Settings Management**: Per-project configuration and secrets management
 
-## 🚀 Overview
+## 🏗️ Architecture
 
-CodegenApp is a sophisticated CI/CD management system that combines the power of AI agents (via Codegen API) with automated validation pipelines to create a seamless development experience. The system provides real-time dashboard monitoring, automated testing, and intelligent deployment workflows.
+### Backend Stack
+- **FastAPI**: High-performance async API framework
+- **WebSocket**: Real-time bidirectional communication
+- **Service Orchestration**: Modular adapter pattern for external services
+- **Background Tasks**: Async processing for long-running operations
 
-## 🏗️ System Architecture
-
-```mermaid
-graph TB
-    subgraph "Frontend Dashboard"
-        A[React Dashboard] --> B[Project Dropdown]
-        A --> C[Project Cards]
-        A --> D[Real-time Updates]
-        D --> E[WebSocket Connection]
-    end
-    
-    subgraph "Backend Orchestration"
-        F[FastAPI Backend] --> G[Workflow Engine]
-        G --> H[State Manager]
-        G --> I[Agent Run Controller]
-        H --> J[Redis Cache]
-    end
-    
-    subgraph "AI Integration"
-        K[Codegen API] --> L[Agent Execution]
-        L --> M[Response Processing]
-        M --> N[Plan/PR/Regular]
-    end
-    
-    subgraph "Validation Pipeline"
-        O[Pipeline Coordinator] --> P[Snapshot Manager]
-        P --> Q[Docker/K8s Environment]
-        O --> R[Deployment Orchestrator]
-        R --> S[Health Checks]
-        O --> T[Web Evaluation]
-        T --> U[Browser Testing]
-    end
-    
-    subgraph "GitHub Integration"
-        V[Webhook Gateway] --> W[PR Management]
-        W --> X[Auto-merge Logic]
-        X --> Y[Status Updates]
-    end
-    
-    A --> F
-    F --> K
-    G --> O
-    O --> V
-    E --> F
-```
-
-## 🎯 Key Features
-
-### 1. **AI-Powered Agent Runs**
-- **Intelligent Code Generation**: Integration with Codegen API for sophisticated code generation and problem-solving
-- **Interactive Workflows**: Support for plan confirmation/modification and continuation flows
-- **Real-time Progress**: Live updates on agent execution with detailed progress tracking
-- **Error Recovery**: Automatic retry mechanisms with intelligent error handling
-
-### 2. **Comprehensive Validation Pipeline**
-- **Isolated Environments**: Docker/Kubernetes snapshots for secure validation
-- **Automated Deployment**: Configurable build and deployment commands
-- **Health Monitoring**: Comprehensive health checks and performance validation
-- **Browser Testing**: AI-powered web evaluation using web-eval-agent integration
-- **Resource Management**: Automatic cleanup and resource optimization
-
-### 3. **Real-time Dashboard**
-- **Project Management**: Intuitive project selection and configuration
-- **Live Monitoring**: WebSocket-powered real-time updates
-- **Progress Tracking**: Visual progress indicators for all operations
-- **Activity Feed**: Comprehensive activity logging and monitoring
-
-### 4. **GitHub Integration**
-- **Webhook Processing**: Automatic PR detection and processing
-- **Status Updates**: Real-time GitHub status updates
-- **Auto-merge**: Intelligent auto-merge based on validation results
-- **PR Management**: Complete PR lifecycle management
-
-## 🔧 Technology Stack
-
-### Frontend (`/frontend`)
-- **React 18** with TypeScript
-- **Tailwind CSS** for styling
-- **WebSocket** for real-time communication
-- **Context API** for state management
-- **Lucide React** for icons
-
-### Backend (`/backend`)
-- **FastAPI** (Python) for API endpoints
-- **SQLAlchemy** with PostgreSQL for data persistence
-- **Redis** for state management and caching
-- **WebSocket** for real-time communication
-- **Asyncio** for concurrent operations
+### Frontend Stack
+- **React**: Modern component-based UI framework
+- **Real-time Updates**: WebSocket integration for live data
+- **Responsive Design**: Mobile-friendly dashboard interface
 
 ### External Services Integration
-- **Codegen SDK** - Agent coordination & code generation
-- **Graph-Sitter** - Static analysis & code quality metrics
-- **Grainchain** - Sandboxing + snapshot creation + PR validation deployments
-- **Web-Eval-Agent** - UI testing & browser automation
+- **Codegen SDK**: AI-powered code generation and modification
+- **GitHub API**: Repository management and webhook handling
+- **Web-Eval-Agent**: Browser automation and UI testing
+- **Grainchain**: Sandboxing and snapshot creation
+- **Graph-Sitter**: Static code analysis and parsing
+- **Cloudflare Workers**: Webhook gateway and routing
 
-### Infrastructure
-- **Node.js** runtime environment
-- **GitHub API** for repository integration
-- **Cloudflare Workers** for webhook gateway
-- **Web-Eval-Agent** for automated component testing
-
-## 📋 Workflow Process
-
-### 1. **Project Setup**
-```
-1. User selects project from dropdown
-2. Project configuration loaded (webhook URL, deployment settings)
-3. Real-time WebSocket connection established
-4. Dashboard displays project status and controls
-```
-
-### 2. **Agent Run Execution**
-```
-1. User enters target/goal text
-2. Agent run initiated via Codegen API
-3. Real-time progress updates via WebSocket
-4. Response processing (Regular/Plan/PR types)
-5. User interaction for plan confirmation or continuation
-```
-
-### 3. **Validation Pipeline (PR Created)**
-```
-1. PR creation detected via webhook or agent response
-2. Validation pipeline triggered automatically
-3. Snapshot environment created (Docker/K8s)
-4. Codebase cloned into isolated environment
-5. Deployment commands executed
-6. Health checks performed
-7. Web evaluation testing conducted
-8. Results processed and reported
-9. Auto-merge decision based on validation results
-10. Resource cleanup
-```
-
-### 4. **Error Handling & Recovery**
-```
-1. Validation failures trigger error context collection
-2. Error details sent to Codegen API for resolution
-3. Updated PR created with fixes
-4. Re-validation triggered automatically
-5. Process repeats until success or max retries reached
-```
-
-## 🚀 Getting Started
+## 🛠️ Installation & Setup
 
 ### Prerequisites
-- Node.js 18+
-- Python 3.9+
-- PostgreSQL 13+
-- Redis 6+
-- Docker (for validation environments)
+- Python 3.8+
+- Node.js 16+
+- Docker (for Grainchain)
+- Git
 
 ### Environment Configuration
-```bash
-# Backend Environment Variables
-DATABASE_URL=postgresql://user:pass@localhost/codegenapp
-REDIS_URL=redis://localhost:6379
-CODEGEN_API_URL=https://api.codegen.com
-CODEGEN_API_KEY=your_api_key
-CODEGEN_ORG_ID=your_org_id
-GITHUB_WEBHOOK_SECRET=your_webhook_secret
 
-# Frontend Environment Variables
-REACT_APP_API_URL=http://localhost:8000
-REACT_APP_WS_URL=ws://localhost:8000/ws
+Create a `.env` file in the `backend` directory:
+
+```bash
+# Codegen Configuration
+CODEGEN_ORG_ID=323
+CODEGEN_API_TOKEN=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
+
+# GitHub Configuration  
+GITHUB_TOKEN=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
+
+# Gemini API Configuration
+GEMINI_API_KEY=AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0
+
+# Cloudflare Configuration
+CLOUDFLARE_API_KEY=eae82cf159577a8838cc83612104c09c5a0d6
+CLOUDFLARE_ACCOUNT_ID=2b2a1d3effa7f7fe4fe2a8c4e48681e3
+CLOUDFLARE_WORKER_NAME=webhook-gateway
+CLOUDFLARE_WORKER_URL=https://webhook-gateway.pixeliumperfecto.workers.dev
 ```
 
-### Installation
+### Backend Setup
 
-1. **Clone the repository**
 ```bash
-git clone https://github.com/Zeeeepa/codegenApp.git
-cd codegenApp
+cd backend
+pip install -r requirements.txt
+python main.py
 ```
 
-2. **Environment Setup**
-```bash
-# Copy environment configuration
-cp .env.example .env
-# Edit .env with your actual API keys and configuration
-```
+The backend will start on `http://localhost:8001`
 
-3. **Setup Dependencies**
-```bash
-npm run setup
-```
+### Frontend Setup
 
-4. **Development Mode**
 ```bash
-npm run dev
-```
-
-5. **Production Build & Start**
-```bash
-npm run build
+cd frontend
+npm install
 npm start
 ```
 
-6. **Complete Deployment Test**
-```bash
-# Set required environment variables
-export GEMINI_API_KEY=AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0
-export CODEGEN_API_TOKEN=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
-export GITHUB_TOKEN=your_github_personal_access_token
+The frontend will start on `http://localhost:3002`
 
-# Run full deployment test with web-eval-agent
-npm run deploy:test
+## 📡 API Endpoints
+
+### Projects Management
+- `GET /api/v1/projects/repositories` - List available GitHub repositories
+- `POST /api/v1/projects/create` - Create new project with webhook setup
+- `POST /api/v1/projects/{project_id}/agent-run` - Start AI agent run
+- `POST /api/v1/projects/{project_id}/validate` - Trigger validation pipeline
+- `GET /api/v1/projects/{project_id}/branches` - Get repository branches
+- `POST /api/v1/projects/{project_id}/webhook` - Configure webhook
+
+### Webhooks
+- `POST /api/webhooks/github` - GitHub webhook endpoint
+- `POST /api/webhooks/cloudflare` - Cloudflare worker webhook endpoint
+- `GET /api/webhooks/health` - Webhook service health check
+
+### WebSocket
+- `WS /ws` - General WebSocket connection
+- `WS /ws/{project_name}` - Project-specific WebSocket connection
+
+### Health & Status
+- `GET /health` - Application health check
+- `GET /api/v1/workflow/status` - Workflow engine status
+
+## 🔄 Workflow Process
+
+### 1. Project Setup
+1. **Repository Selection**: Choose from available GitHub repositories
+2. **Project Creation**: Configure project settings and webhook URL
+3. **Webhook Configuration**: Automatic GitHub webhook setup for PR notifications
+
+### 2. Agent Run Execution
+1. **Target Definition**: Specify development goals and requirements
+2. **AI Processing**: Codegen SDK processes requirements and generates code
+3. **PR Creation**: Automated pull request creation with generated changes
+
+### 3. Validation Pipeline
+1. **PR Detection**: Webhook notification triggers validation pipeline
+2. **Snapshot Creation**: Grainchain creates isolated deployment environment
+3. **Code Analysis**: Graph-Sitter performs static code analysis
+4. **UI Testing**: Web-Eval-Agent validates all UI components and flows
+5. **Auto-merge**: Successful validation triggers automatic PR merge
+
+### 4. Real-time Monitoring
+- **Live Updates**: WebSocket notifications for all pipeline stages
+- **Progress Tracking**: Visual progress indicators for long-running tasks
+- **Error Handling**: Automatic error detection and recovery workflows
+
+## 🧩 Service Components
+
+### Web-Eval-Agent Integration
+```python
+# Validation request example
+validation_request = WebEvalValidationRequest(
+    project_url="https://github.com/user/repo",
+    test_scenarios=[
+        "Test project selection and pinning",
+        "Validate agent run interface",
+        "Verify webhook notifications",
+        "Test validation pipeline"
+    ],
+    deployment_url="http://localhost:3002",
+    environment_vars={"GEMINI_API_KEY": "..."}
+)
+
+result = await web_eval_adapter.validate_deployment(validation_request)
 ```
 
-## 📊 API Documentation
+### GitHub Service Integration
+```python
+# Repository management example
+repositories = await github_service.get_repositories()
+webhook_success = await github_service.set_webhook(
+    owner="user",
+    repo="repository", 
+    webhook_url="https://webhook-gateway.workers.dev"
+)
+```
 
-### Project Management
-- `GET /api/v1/projects` - List all projects
-- `POST /api/v1/projects` - Create new project
-- `GET /api/v1/projects/{id}` - Get project details
-- `PUT /api/v1/projects/{id}` - Update project
-- `DELETE /api/v1/projects/{id}` - Delete project
+### WebSocket Communication
+```javascript
+// Frontend WebSocket connection
+const ws = new WebSocket('ws://localhost:8001/ws/project-name');
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    // Handle real-time updates
+    updateProjectCard(data);
+};
+```
 
-### Agent Runs
-- `POST /api/v1/agent-runs` - Start new agent run
-- `GET /api/v1/agent-runs` - List agent runs
-- `GET /api/v1/agent-runs/{id}` - Get agent run details
-- `POST /api/v1/agent-runs/{id}/continue` - Continue agent run
-- `POST /api/v1/agent-runs/{id}/plan-response` - Handle plan response
-
-### Validation Pipelines
-- `GET /api/v1/validations` - List validation pipelines
-- `GET /api/v1/validations/{id}` - Get validation details
-- `POST /api/v1/validations/{id}/retry` - Retry validation
-
-### WebSocket Events
-- `agent_run_started` - Agent run initiated
-- `agent_run_progress` - Progress updates
-- `agent_run_completed` - Agent run finished
-- `validation_started` - Validation pipeline started
-- `validation_progress` - Validation progress updates
-- `validation_completed` - Validation finished
-
-## 🔧 Configuration
+## 🔧 Configuration Options
 
 ### Project Settings
-```json
-{
-  "deployment_settings": {
-    "build_command": "npm run build",
-    "deploy_command": "npm run deploy",
-    "health_check_url": "/health",
-    "environment_variables": {}
-  },
-  "validation_settings": {
-    "auto_merge": true,
-    "required_checks": ["build", "test", "security"],
-    "timeout_minutes": 30,
-    "max_retries": 3
-  },
-  "notification_settings": {
-    "slack_webhook": "",
-    "email_notifications": true,
-    "github_status_updates": true
-  }
-}
-```
+- **Repository Rules**: Custom rules for AI agent behavior
+- **Setup Commands**: Deployment and build commands
+- **Secrets Management**: Environment variables and API keys
+- **Auto-merge**: Automatic PR merging after successful validation
 
-### Validation Pipeline Steps
-1. **Snapshot Creation** - Isolated Docker/K8s environment
-2. **Codebase Clone** - Git clone of PR branch
-3. **Deployment** - Execute build and deploy commands
-4. **Health Check** - Verify deployment success
-5. **Web Evaluation** - Comprehensive browser testing
-6. **Cleanup** - Resource cleanup and reporting
+### Validation Settings
+- **Test Scenarios**: Custom UI testing scenarios
+- **Timeout Configuration**: Maximum validation time limits
+- **Retry Logic**: Automatic retry on transient failures
+- **Notification Preferences**: Real-time update settings
 
-## 🔍 Monitoring & Logging
+## 📊 Monitoring & Logging
 
-### Audit Logging
-- All system actions are logged with full context
-- User actions tracked with timestamps and metadata
-- Error tracking with stack traces and recovery attempts
-- Performance metrics and resource usage monitoring
+### Real-time Metrics
+- Active WebSocket connections
+- Running validation pipelines
+- Agent run status and progress
+- GitHub webhook event processing
 
-### Real-time Monitoring
-- WebSocket connections for live updates
-- Progress tracking for all operations
-- Resource usage monitoring
-- Health check status reporting
+### Logging Levels
+- **INFO**: General application flow
+- **DEBUG**: Detailed service interactions
+- **ERROR**: Error conditions and exceptions
+- **WARNING**: Potential issues and recoveries
 
-## 🛡️ Security
+## 🚦 Current Implementation Status
 
-### Authentication & Authorization
-- API key-based authentication for Codegen integration
-- GitHub App authentication for repository access
-- Webhook signature verification
-- Role-based access control (planned)
+### ✅ Completed Features
+- [x] Backend API with FastAPI
+- [x] WebSocket real-time communication
+- [x] GitHub API integration
+- [x] Web-Eval-Agent service adapter
+- [x] Webhook processing system
+- [x] Projects management API
+- [x] Service orchestration framework
 
-### Environment Isolation
-- Docker/Kubernetes sandboxing for validation
-- Network isolation for security
-- Resource limits and quotas
-- Automatic cleanup of sensitive data
+### 🔄 In Progress
+- [ ] Frontend dashboard completion
+- [ ] WebSocket client integration
+- [ ] UI component implementation
 
-## 🚀 Deployment
+### ⏳ Planned Features
+- [ ] Grainchain snapshot integration
+- [ ] Graph-Sitter code analysis
+- [ ] Cloudflare Worker deployment
+- [ ] Complete validation pipeline
+- [ ] Comprehensive UI testing
+- [ ] Performance optimization
 
-### Production Deployment
+## 🧪 Testing
+
+### Running Tests
 ```bash
-# Docker Compose
-docker-compose up -d
+# Backend tests
+cd backend
+pytest tests/
 
-# Kubernetes
-kubectl apply -f k8s/
+# Frontend tests  
+cd frontend
+npm test
 ```
 
-### Environment Variables
-```bash
-# Production settings
-NODE_ENV=production
-DATABASE_URL=postgresql://user:password@localhost:5432/database
-REDIS_URL=redis://redis:6379
-CODEGEN_API_URL=https://api.codegen.com
-```
+### Test Coverage
+- Unit tests for all service adapters
+- Integration tests for API endpoints
+- WebSocket communication tests
+- End-to-end workflow validation
 
 ## 🤝 Contributing
 
@@ -355,29 +266,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For support and questions:
 - Create an issue in the GitHub repository
-- Contact the development team
-- Check the documentation wiki
+- Check the [PLAN.md](PLAN.md) for detailed implementation roadmap
+- Review API documentation in the `/docs` endpoint when running
 
-## 🗺️ Roadmap
+## 🔮 Future Enhancements
 
-### Phase 1 (Current)
-- ✅ Basic project management
-- ✅ Agent run orchestration
-- ✅ Validation pipeline foundation
-- ✅ Real-time dashboard updates
-
-### Phase 2 (In Progress)
-- 🔄 Complete validation pipeline implementation
-- 🔄 GitHub integration and webhooks
-- 🔄 Auto-merge functionality
-- 🔄 Enhanced error handling
-
-### Phase 3 (Planned)
-- 📋 Advanced monitoring and analytics
-- 📋 Multi-environment support
-- 📋 Role-based access control
-- 📋 Plugin system for extensibility
+- **Multi-language Support**: Expand beyond current language support
+- **Advanced Analytics**: Detailed metrics and reporting dashboard
+- **Team Collaboration**: Multi-user project management
+- **Custom Integrations**: Plugin system for additional services
+- **Mobile App**: Native mobile application for monitoring
+- **Enterprise Features**: Advanced security and compliance features
 
 ---
 
-**CodegenApp** - Empowering developers with AI-driven CI/CD workflows 🚀
+**Built with ❤️ using modern AI and development tools**
+
