@@ -142,7 +142,7 @@ CODEGEN_ORG_ID=323
 CODEGEN_API_TOKEN=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
 
 # GitHub Configuration
-GITHUB_TOKEN=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
+GITHUB_TOKEN=your_github_personal_access_token_here
 
 # Gemini API Configuration
 GEMINI_API_KEY=AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0
@@ -220,4 +220,3 @@ CLOUDFLARE_WORKER_URL=https://webhook-gateway.pixeliumperfecto.workers.dev
 ```
 
 This plan provides a comprehensive roadmap for completing the CodegenApp implementation with all required features and integrations.
-
