@@ -1,159 +1,164 @@
-# STEP1.md - Fix Critical UI Foundation Issues
+# STEP1 - CI/CD Workflow Engine Implementation
 
-## QUERY 1 ##########
+## QUERY ##########
 
 ### ROLE
-You are a senior frontend architect with 12+ years of experience in React/TypeScript applications, specializing in semantic HTML structure, accessibility compliance, and error boundary implementation with extensive knowledge of modern React patterns.
+You are a senior backend systems engineer with 15+ years of experience in distributed systems, specializing in workflow orchestration, state machines, and event-driven architectures with extensive experience in FastAPI, WebSocket, and real-time systems.
 
 ### TASK
-Fix Critical UI Foundation Issues in App.tsx
+Implement CI/CD Workflow Engine with State Machine Orchestration
 
 ### YOUR QUEST
-Repair the missing main element structure in App.tsx and implement proper semantic HTML hierarchy with error boundaries to establish a solid foundation for all subsequent UI components and ensure proper accessibility compliance.
+Create a single, isolated workflow engine that orchestrates the complete CI/CD flow from requirements input to completion, managing state transitions, persistence, and coordination between all services using a state machine pattern for maximum reliability and observability.
 
-### TECHNICAL CONTEXT
+## TECHNICAL CONTEXT
 
-#### EXISTING CODEBASE:
+### EXISTING CODEBASE:
 
-```typescript
-// From frontend/src/App.tsx (lines 82-206)
-return (
-  <div className="min-h-screen bg-gray-50">
-    {/* Header */}
-    <header className="bg-white border-b border-gray-200 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Github className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">
-                CodegenApp Dashboard
-              </h1>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <ProjectSelector
-              onProjectSelect={handleProjectSelect}
-              selectedProjects={selectedProjectNames}
-            />
-            
-            <button 
-              onClick={() => setIsSettingsOpen(true)}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              data-testid="settings-button"
-              aria-label="Open settings"
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
+```python
+# From backend/app/services/adapters/codegen_adapter.py
+class CodegenAdapter:
+    async def create_agent_run(self, project_id: str, target: str, context: str = "") -> Dict[str, Any]:
+        # Existing implementation for creating agent runs
+        pass
+    
+    async def get_agent_run_status(self, run_id: str) -> Dict[str, Any]:
+        # Existing implementation for getting run status
+        pass
 
-    {/* Main Content - MISSING PROPER MAIN ELEMENT */}
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Content continues... */}
-    </main>
-  </div>
-);
+# From backend/app/services/webhook_processor.py
+class WebhookProcessor:
+    async def process_github_webhook(self, payload: Dict[str, Any]) -> None:
+        # Existing webhook processing
+        pass
+
+# From backend/app/websocket/manager.py
+class WebSocketManager:
+    async def send_to_project(self, project_id: str, message: Dict[str, Any]) -> None:
+        # Existing WebSocket messaging
+        pass
+
+# From backend/app/models/project.py
+class Project(BaseModel):
+    id: str
+    repository: Dict[str, Any]
+    settings: Optional[Dict[str, Any]] = None
+    agentRuns: List[Dict[str, Any]] = []
+    notifications: List[Dict[str, Any]] = []
 ```
 
-#### IMPLEMENTATION REQUIREMENTS:
+### IMPLEMENTATION REQUIREMENTS:
 
-- Add proper semantic HTML structure with main element
-- Implement React Error Boundary component for robust error handling
-- Ensure WCAG 2.1 AA accessibility compliance
-- Add proper ARIA labels and roles where missing
-- Implement skip navigation links for keyboard users
-- Add proper focus management and keyboard navigation
-- Ensure all interactive elements have proper focus indicators
-- Performance requirement: <100ms initial render time
-- Must maintain existing functionality while fixing structure
-- Error boundary must catch and display user-friendly error messages
+- Implement WorkflowEngine class that manages complete CI/CD lifecycle
+- Create WorkflowState enum with states: IDLE, PLANNING, CODING, PR_CREATED, VALIDATING, COMPLETED, FAILED
+- Implement StateMachine class with transition logic and validation
+- Create WorkflowContext class to maintain state data throughout the flow
+- Implement persistence layer for workflow state using SQLite/JSON storage
+- Add event-driven architecture with async event handlers
+- Ensure thread-safety for concurrent workflow executions
+- Implement timeout handling for each workflow state (max 30 minutes per state)
+- Add comprehensive error handling with automatic retry logic (max 3 retries)
+- Integrate with existing WebSocket manager for real-time updates
+- Performance requirement: Handle up to 50 concurrent workflows
+- Memory requirement: Maximum 100MB per workflow instance
 
 ### INTEGRATION CONTEXT
 
-#### UPSTREAM DEPENDENCIES:
+### UPSTREAM DEPENDENCIES:
 
-- React 18+ (package.json): Core React functionality for error boundaries
-- TypeScript 4.9+ (tsconfig.json): Type safety for error boundary props
-- Tailwind CSS 3+ (tailwind.config.js): Styling framework for error UI
-- Lucide React (package.json): Icon components for error states
+CodegenAdapter (backend/app/services/adapters/codegen_adapter.py):
+- Provides agent run creation and status checking
+- Required for PLANNING and CODING states
+- Must handle API rate limits and failures
 
-#### DOWNSTREAM DEPENDENCIES:
+WebSocketManager (backend/app/websocket/manager.py):
+- Provides real-time communication to frontend
+- Required for state change notifications
+- Must handle connection failures gracefully
 
-- All existing components (ProjectSelector, ProjectCard, SettingsDialog): Must render within error boundary
-- Web-eval-agent testing: Must validate proper semantic structure
-- STEP2.md - Agent Run Dialog Enhancement: Depends on stable UI foundation
-- STEP3.md - Real-time Notifications: Requires error boundary for WebSocket errors
+WebhookProcessor (backend/app/services/webhook_processor.py):
+- Provides GitHub event processing
+- Required for PR_CREATED state detection
+- Must handle webhook payload validation
 
-### EXPECTED OUTCOME
+### DOWNSTREAM DEPENDENCIES:
 
-#### Files to Create:
-- `frontend/src/components/ErrorBoundary.tsx` - React error boundary component
-- `frontend/src/components/SkipNavigation.tsx` - Accessibility skip links
+ValidationPipeline (STEP5.md - Continuous Validation Pipeline):
+- Will consume workflow state changes
+- Depends on VALIDATING state transitions
+- Requires workflow context data
 
-#### Files to Modify:
-- `frontend/src/App.tsx` - Fix main element structure and add error boundary
-- `frontend/src/index.tsx` - Add error boundary at root level
+NotificationSystem (STEP8.md - Real-time Notification System):
+- Will consume workflow events
+- Depends on state change events
+- Requires workflow progress data
 
-#### Required Interfaces:
-```typescript
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-  errorInfo: ErrorInfo | null;
-}
+PRManager (STEP9.md - Automated PR Management):
+- Will consume PR-related workflow states
+- Depends on PR_CREATED and COMPLETED states
+- Requires workflow completion signals
 
-interface ErrorBoundaryProps {
-  children: React.ReactNode;
-  fallback?: React.ComponentType<ErrorFallbackProps>;
-}
+## EXPECTED OUTCOME
 
-interface ErrorFallbackProps {
-  error: Error;
-  resetError: () => void;
-}
-```
+Create file: backend/app/core/workflow/workflow_engine.py
+- Must implement WorkflowEngine class with async methods
+- Must include state machine logic with validation
+- Must implement persistence and recovery mechanisms
+- Must include comprehensive error handling
 
-### ACCEPTANCE CRITERIA
+Create file: backend/app/core/workflow/state_machine.py
+- Must implement StateMachine class with transition validation
+- Must include state definitions and transition rules
+- Must implement timeout and retry logic
+- Must include state persistence methods
 
-1. App.tsx contains proper semantic HTML structure with main element
-2. Error boundary catches and displays user-friendly error messages
-3. All accessibility requirements met (WCAG 2.1 AA compliance)
-4. Skip navigation links work correctly for keyboard users
-5. All existing functionality preserved without regression
-6. Web-eval-agent validation passes for UI structure
-7. Error boundary unit tests achieve >95% code coverage
-8. Performance metrics: <100ms initial render time maintained
+Create file: backend/app/core/workflow/workflow_context.py
+- Must implement WorkflowContext class for state data
+- Must include serialization/deserialization methods
+- Must implement data validation and sanitization
+- Must include context merging and updating logic
 
-### IMPLEMENTATION CONSTRAINTS
+Create file: backend/app/models/workflow_state.py
+- Must define WorkflowState enum and related models
+- Must include Pydantic models for validation
+- Must implement state transition validation
+- Must include workflow metadata models
+
+Create file: backend/app/api/v1/workflows.py
+- Must implement REST API endpoints for workflow management
+- Must include workflow creation, status, and control endpoints
+- Must implement proper error handling and validation
+- Must include OpenAPI documentation
+
+Create file: backend/tests/test_workflow_engine.py
+- Must include unit tests with >95% code coverage
+- Must test all state transitions and error conditions
+- Must include performance tests for concurrent workflows
+- Must test persistence and recovery scenarios
+
+## ACCEPTANCE CRITERIA
+
+1. Workflow engine correctly manages complete CI/CD lifecycle from requirements to completion
+2. State machine enforces valid transitions and prevents invalid state changes
+3. Persistence layer maintains workflow state across application restarts
+4. Error handling includes automatic retries and graceful failure recovery
+5. Real-time updates are sent via WebSocket for all state changes
+6. Performance tests show handling of 50 concurrent workflows within memory limits
+7. All unit tests pass with at least 95% code coverage
+8. Integration tests validate coordination with existing services
+9. Timeout handling prevents workflows from hanging indefinitely
+10. API endpoints provide complete workflow management capabilities
+
+## IMPLEMENTATION CONSTRAINTS
 
 - This task represents a SINGLE atomic unit of functionality
-- Must be independently implementable with no dependencies on other STEP files
+- Must be independently implementable using existing backend infrastructure
 - Implementation must include comprehensive automated tests
-- Code must conform to project coding standards with proper TypeScript types
-- Must not break any existing component functionality
-- All changes must be backward compatible
-
-### TESTING REQUIREMENTS
-
-#### Unit Tests Required:
-- ErrorBoundary component error catching and display
-- SkipNavigation component keyboard navigation
-- App.tsx semantic structure validation
-- Accessibility compliance testing
-
-#### Integration Tests Required:
-- Error boundary integration with existing components
-- Skip navigation integration with main content areas
-- Focus management across component boundaries
-
-#### Performance Tests Required:
-- Initial render time <100ms
-- Error boundary overhead <10ms
-- Memory usage impact <5MB additional
+- Code must conform to existing FastAPI patterns and conventions
+- Must not modify existing service interfaces
+- All dependencies on other STEP{n}.md files are explicitly listed above
+- Must implement proper logging and monitoring for observability
+- Must handle concurrent access and race conditions safely
+- Must provide clear error messages and debugging information
+- Must be deployable without breaking existing functionality
 

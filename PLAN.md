@@ -1,7 +1,7 @@
-# CodegenApp Implementation Plan
+# CodegenApp Implementation Plan - Single-Unit Atomic Task Framework v4.0
 
 ## Project Overview
-This document outlines the comprehensive implementation plan for the CodegenApp - a full-stack CI/CD dashboard that integrates Codegen SDK, GitHub, Web-Eval-Agent, Grainchain, and Graph-Sitter for automated code generation, validation, and deployment.
+This document outlines the comprehensive implementation plan for the CodegenApp - a full-stack CI/CD dashboard that integrates Codegen SDK, GitHub, Web-Eval-Agent, Grainchain, and Graph-Sitter for automated code generation, validation, and deployment using atomic task implementation.
 
 ## Core Architecture
 - **Backend**: FastAPI with real-time WebSocket communication
@@ -9,7 +9,7 @@ This document outlines the comprehensive implementation plan for the CodegenApp 
 - **Services**: GitHub API, Codegen SDK, Web-Eval-Agent, Grainchain, Graph-Sitter
 - **Infrastructure**: Cloudflare Workers for webhook gateway
 
-## Implementation Checklist
+## Implementation Checklist - Atomic Components
 
 ### 1. [✅] Backend Core Infrastructure
 - **Description**: FastAPI backend with service orchestration, WebSocket support, and API endpoints
@@ -62,10 +62,10 @@ This document outlines the comprehensive implementation plan for the CodegenApp 
   - Validation pipeline orchestration
   - Repository and branch management
 
-### 6. [🔄] Frontend Dashboard Implementation
+### 6. [✅] Frontend Dashboard Implementation
 - **Description**: React-based dashboard for project management with real-time updates
 - **Dependencies**: React, WebSocket client, API integration
-- **Status**: 🔄 IN PROGRESS
+- **Status**: ✅ COMPLETED
 - **Components**:
   - Project selection and management UI
   - Real-time WebSocket integration
@@ -73,66 +73,107 @@ This document outlines the comprehensive implementation plan for the CodegenApp 
   - Validation flow UI
   - Settings and configuration panels
 
-### 7. [⏳] Grainchain Snapshot Integration
-- **Description**: Sandboxing and snapshot creation for PR validation deployments
-- **Dependencies**: Grainchain service, Docker environment
+### 7. [⏳] CI/CD Workflow Engine - ATOMIC STEP 1
+- **Description**: State machine-based workflow orchestration for complete CI/CD flow
+- **Dependencies**: Backend infrastructure, WebSocket manager
 - **Status**: ⏳ PENDING
-- **Components**:
-  - Snapshot creation workflow
-  - Environment setup automation
-  - Deployment command execution
-  - Resource cleanup
+- **Atomic Components**:
+  - Workflow state machine
+  - Flow controller
+  - State persistence
+  - Transition logic
 
-### 8. [⏳] Graph-Sitter Code Analysis
-- **Description**: Static code analysis and quality metrics integration
-- **Dependencies**: Graph-Sitter repository, code parsing
-- **Status**: ⏳ PENDING
-- **Components**:
-  - Code analysis pipeline
-  - Quality metrics collection
-  - Integration with validation flow
-  - Reporting and visualization
-
-### 9. [⏳] Cloudflare Worker Webhook Gateway
+### 8. [⏳] Cloudflare Worker Webhook Gateway - ATOMIC STEP 2
 - **Description**: Cloudflare Worker for webhook routing and processing
 - **Dependencies**: Cloudflare account, worker deployment
 - **Status**: ⏳ PENDING
-- **Components**:
+- **Atomic Components**:
   - Webhook routing logic
   - Event forwarding
   - Security and authentication
   - Error handling and logging
 
-### 10. [⏳] Complete Validation Pipeline
+### 9. [⏳] Grainchain Snapshot Integration - ATOMIC STEP 3
+- **Description**: Sandboxing and snapshot creation for PR validation deployments
+- **Dependencies**: Grainchain service, Docker environment
+- **Status**: ⏳ PENDING
+- **Atomic Components**:
+  - Snapshot creation workflow
+  - Environment setup automation
+  - Deployment command execution
+  - Resource cleanup
+
+### 10. [⏳] Graph-Sitter Code Analysis - ATOMIC STEP 4
+- **Description**: Static code analysis and quality metrics integration
+- **Dependencies**: Graph-Sitter repository, code parsing
+- **Status**: ⏳ PENDING
+- **Atomic Components**:
+  - Code analysis pipeline
+  - Quality metrics collection
+  - Integration with validation flow
+  - Reporting and visualization
+
+### 11. [⏳] Continuous Validation Pipeline - ATOMIC STEP 5
 - **Description**: End-to-end validation pipeline integrating all services
 - **Dependencies**: All above components
 - **Status**: ⏳ PENDING
-- **Components**:
+- **Atomic Components**:
   - PR detection and processing
   - Grainchain snapshot creation
   - Web-Eval-Agent validation
   - Auto-merge functionality
   - Error handling and recovery
 
-### 11. [⏳] UI Testing and Validation
+### 12. [⏳] Requirement Completion Detection - ATOMIC STEP 6
+- **Description**: AI-powered system to determine when requirements are fully met
+- **Dependencies**: Codegen API, validation results
+- **Status**: ⏳ PENDING
+- **Atomic Components**:
+  - Context analysis engine
+  - Completion criteria evaluation
+  - Continuous cycle management
+  - State comparison logic
+
+### 13. [⏳] Enhanced Project Card Features - ATOMIC STEP 7
+- **Description**: Complete project card functionality with all required features
+- **Dependencies**: Frontend components, API integration
+- **Status**: ⏳ PENDING
+- **Atomic Components**:
+  - Planning Statement configuration
+  - Repository rules with color indicators
+  - Setup commands with branch selection
+  - Secrets management dialog
+  - Persistent settings storage
+
+### 14. [⏳] Real-time Notification System - ATOMIC STEP 8
+- **Description**: Complete notification system for PR events and validation status
+- **Dependencies**: WebSocket manager, Cloudflare worker
+- **Status**: ⏳ PENDING
+- **Atomic Components**:
+  - PR notification handling
+  - Validation status updates
+  - Real-time UI updates
+  - Notification persistence
+
+### 15. [⏳] Automated PR Management - ATOMIC STEP 9
+- **Description**: Complete PR lifecycle management with validation and merging
+- **Dependencies**: GitHub service, validation pipeline
+- **Status**: ⏳ PENDING
+- **Atomic Components**:
+  - PR creation detection
+  - Validation orchestration
+  - Auto-merge logic
+  - Error recovery
+
+### 16. [⏳] UI Testing and Validation - ATOMIC STEP 10
 - **Description**: Comprehensive UI testing using Web-Eval-Agent
 - **Dependencies**: Web-Eval-Agent, deployed application
 - **Status**: ⏳ PENDING
-- **Components**:
+- **Atomic Components**:
   - Full workflow testing
   - Component interaction validation
   - Error scenario testing
   - Performance validation
-
-### 12. [⏳] Documentation and README
-- **Description**: Comprehensive documentation and updated README
-- **Dependencies**: All implemented features
-- **Status**: ⏳ PENDING
-- **Components**:
-  - API documentation
-  - Setup and configuration guide
-  - Usage examples
-  - Architecture overview
 
 ## Environment Variables Required
 
@@ -154,29 +195,23 @@ CLOUDFLARE_WORKER_NAME=webhook-gateway
 CLOUDFLARE_WORKER_URL=https://webhook-gateway.pixeliumperfecto.workers.dev
 ```
 
-## Current Status Summary
+## Atomic Implementation Strategy
 
-### ✅ Completed Components
-- Backend infrastructure with FastAPI
-- WebSocket real-time communication
-- Web-Eval-Agent service integration
-- GitHub API service
-- Webhook processing system
-- Projects management API
-- Service orchestration and coordination
+### Phase 1: Core CI/CD Engine (Steps 1-3)
+1. **STEP1**: CI/CD Workflow Engine
+2. **STEP2**: Cloudflare Worker Gateway
+3. **STEP3**: Grainchain Snapshot Integration
 
-### 🔄 In Progress
-- Frontend dashboard implementation
-- API integration testing
+### Phase 2: Analysis & Validation (Steps 4-6)
+4. **STEP4**: Graph-Sitter Code Analysis
+5. **STEP5**: Continuous Validation Pipeline
+6. **STEP6**: Requirement Completion Detection
 
-### ⏳ Next Steps
-1. Complete frontend dashboard with all UI components
-2. Implement Grainchain snapshot integration
-3. Add Graph-Sitter code analysis
-4. Deploy Cloudflare Worker webhook gateway
-5. Integrate complete validation pipeline
-6. Perform comprehensive UI testing
-7. Update documentation and README
+### Phase 3: UI Enhancement & Testing (Steps 7-10)
+7. **STEP7**: Enhanced Project Card Features
+8. **STEP8**: Real-time Notification System
+9. **STEP9**: Automated PR Management
+10. **STEP10**: UI Testing and Validation
 
 ## Testing Strategy
 
@@ -219,4 +254,11 @@ CLOUDFLARE_WORKER_URL=https://webhook-gateway.pixeliumperfecto.workers.dev
                     └──────────────────┘
 ```
 
-This plan provides a comprehensive roadmap for completing the CodegenApp implementation with all required features and integrations.
+## Continuous CI/CD Flow
+
+```
+Requirements Input → Plan → Code → PR → Webhook → Snapshot → 
+Validation → Analysis → [Complete? → Merge] OR [Incomplete? → New Plan] → Loop
+```
+
+This plan provides a comprehensive roadmap for completing the CodegenApp implementation with all required features using atomic task implementation for maximum parallel execution velocity.
