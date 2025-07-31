@@ -21,7 +21,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-validation-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
+          key: ${{ runner.os }}-pip-validation-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/setup.py') }}
           restore-keys: |
             ${{ runner.os }}-pip-validation-
       - name: Install dependencies
@@ -29,13 +29,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install graph-sitter
           
-          # Install project dependencies if they exist
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
-          
-          if [ -f pyproject.toml ]; then
+          # Install project dependencies
+          if [ -f setup.py ]; then
             pip install -e .
+          elif [ -f pyproject.toml ]; then
+            pip install -e .
+          elif [ -f requirements.txt ]; then
+            pip install -r requirements.txt
           fi
       - name: Get changed files
         id: changed-files

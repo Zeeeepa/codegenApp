@@ -21,7 +21,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-intelligent-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
+          key: ${{ runner.os }}-pip-intelligent-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/setup.py') }}
           restore-keys: |
             ${{ runner.os }}-pip-intelligent-
       - name: Install dependencies
@@ -30,12 +30,12 @@ jobs:
           pip install graph-sitter codegen
           
           # Install project dependencies
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
-          
-          if [ -f pyproject.toml ]; then
+          if [ -f setup.py ]; then
             pip install -e .
+          elif [ -f pyproject.toml ]; then
+            pip install -e .
+          elif [ -f requirements.txt ]; then
+            pip install -r requirements.txt
           fi
       - name: Download validation scripts
         run: |
