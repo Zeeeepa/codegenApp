@@ -14,7 +14,7 @@ Implements all 9 endpoints identified from the frontend:
 
 import httpx
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union, Tuple
 from datetime import datetime
 import asyncio
 from urllib.parse import urljoin
@@ -31,19 +31,19 @@ logger = logging.getLogger(__name__)
 class CodegenService:
     """Service for interacting with Codegen API"""
     
-    def __init__(self, api_token: str, base_url: str = "https://api.codegen.com"):
-        self.api_token = api_token
-        self.base_url = base_url.rstrip('/')
-        self.client = httpx.AsyncClient(
+    def __init__(self, api_token: str, base_url: str = "https://api.codegen.com") -> None:
+        self.api_token: str = api_token
+        self.base_url: str = base_url.rstrip('/')
+        self.client: httpx.AsyncClient = httpx.AsyncClient(
             timeout=httpx.Timeout(30.0),
             headers={
                 "Authorization": f"Bearer {api_token}",
                 "Content-Type": "application/json",
-                "User-Agent": "Strands-Agents-Backend/1.0.0"
+                "User-Agent": "CodegenApp/1.0.0"
             }
         )
         
-    async def cleanup(self):
+    async def cleanup(self) -> None:
         """Cleanup resources"""
         await self.client.aclose()
     

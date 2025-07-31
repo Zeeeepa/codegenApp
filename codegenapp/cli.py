@@ -12,19 +12,20 @@ import threading
 import webbrowser
 import argparse
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Union
 
 
 class CodegenAppLauncher:
     """Main launcher class for CodegenApp"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.backend_process: Optional[subprocess.Popen] = None
         self.frontend_process: Optional[subprocess.Popen] = None
-        self.package_dir = Path(__file__).parent.parent
-        self.backend_dir = self.package_dir / "backend"
-        self.frontend_dir = self.package_dir / "frontend"
-        self.frontend_build_dir = self.frontend_dir / "build"
+        self.package_dir: Path = Path(__file__).parent.parent
+        self.project_root: Path = self.package_dir
+        self.backend_dir: Path = self.package_dir / "backend"
+        self.frontend_dir: Path = self.package_dir / "frontend"
+        self.frontend_build_dir: Path = self.frontend_dir / "build"
         
     def find_free_port(self, start_port: int = 8001) -> int:
         """Find a free port starting from the given port"""
@@ -49,9 +50,14 @@ class CodegenAppLauncher:
             
         # Check if frontend build exists
         if not self.frontend_build_dir.exists():
-            print(f"❌ Frontend build not found: {self.frontend_build_dir}")
-            print("💡 Run 'npm run build' in the frontend directory first")
-            return False
+            print(f"⚠️  Frontend build not found: {self.frontend_build_dir}")
+            print("🔨 Attempting to build frontend automatically...")
+            if self._build_frontend():
+                print("✅ Frontend build completed successfully!")
+            else:
+                print("❌ Frontend build failed")
+                print("💡 You can manually build with: cd frontend && npm install && npm run build")
+                return False
             
         # Check if main.py exists
         main_py = self.backend_dir / "main.py"
@@ -61,6 +67,65 @@ class CodegenAppLauncher:
             
         print("✅ All dependencies found")
         return True
+    
+    def _load_env_file(self, env_file: Path, env_dict: dict) -> None:
+        """Load environment variables from .env file"""
+        try:
+            with open(env_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        key = key.strip()
+                        value = value.strip().strip('"').strip("'")
+                        if key not in env_dict:  # Don't override existing env vars
+                            env_dict[key] = value
+        except Exception as e:
+            print(f"⚠️  Warning: Could not load .env file: {e}")
+    
+    def _build_frontend(self) -> bool:
+        """Build the React frontend"""
+        if not self.frontend_dir.exists():
+            print("❌ Frontend directory not found")
+            return False
+            
+        # Check if Node.js is available
+        try:
+            subprocess.run(['node', '--version'], check=True, capture_output=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("❌ Node.js not found. Please install Node.js to build the frontend.")
+            print("   Visit: https://nodejs.org/")
+            return False
+            
+        # Detect package manager
+        package_manager = self._detect_package_manager()
+        
+        try:
+            print(f"📦 Installing dependencies with {package_manager}...")
+            if package_manager == 'npm':
+                subprocess.run(['npm', 'install'], cwd=self.frontend_dir, check=True)
+                subprocess.run(['npm', 'run', 'build'], cwd=self.frontend_dir, check=True)
+            elif package_manager == 'yarn':
+                subprocess.run(['yarn', 'install'], cwd=self.frontend_dir, check=True)
+                subprocess.run(['yarn', 'build'], cwd=self.frontend_dir, check=True)
+            elif package_manager == 'pnpm':
+                subprocess.run(['pnpm', 'install'], cwd=self.frontend_dir, check=True)
+                subprocess.run(['pnpm', 'run', 'build'], cwd=self.frontend_dir, check=True)
+                
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Frontend build failed: {e}")
+            return False
+    
+    def _detect_package_manager(self) -> str:
+        """Detect which package manager to use"""
+        if (self.frontend_dir / 'pnpm-lock.yaml').exists():
+            return 'pnpm'
+        elif (self.frontend_dir / 'yarn.lock').exists():
+            return 'yarn'
+        else:
+            return 'npm'
     
     def start_backend(self, port: int = 8001) -> bool:
         """Start the FastAPI backend server"""
@@ -76,6 +141,12 @@ class CodegenAppLauncher:
             # Start backend process
             env = os.environ.copy()
             env['PORT'] = str(port)
+            env['PYTHONPATH'] = self.backend_dir
+            
+            # Load .env file if it exists
+            env_file = self.project_root / '.env'
+            if env_file.exists():
+                self._load_env_file(env_file, env)
             
             self.backend_process = subprocess.Popen(
                 [sys.executable, "main.py"],
@@ -229,6 +300,140 @@ class CodegenAppLauncher:
             print(f"❌ Error running CodegenApp: {e}")
         finally:
             self.cleanup()
+    
+    def verify_installation(self) -> bool:
+        """Verify that the installation is complete and working"""
+        print("🔍 CodegenApp Installation Verification")
+        print("=" * 50)
+        
+        success = True
+        
+        # Check Python version
+        print(f"🐍 Python version: {sys.version}")
+        
+        # Check package directory
+        print(f"📁 Package directory: {self.package_dir}")
+        if not self.package_dir.exists():
+            print("❌ Package directory not found")
+            success = False
+        else:
+            print("✅ Package directory found")
+        
+        # Check backend
+        print(f"🔧 Backend directory: {self.backend_dir}")
+        if not self.backend_dir.exists():
+            print("❌ Backend directory not found")
+            success = False
+        else:
+            print("✅ Backend directory found")
+            
+            # Check main.py
+            main_py = self.backend_dir / "main.py"
+            if main_py.exists():
+                print("✅ Backend main.py found")
+            else:
+                print("❌ Backend main.py not found")
+                success = False
+        
+        # Check frontend
+        print(f"🎨 Frontend directory: {self.frontend_dir}")
+        if not self.frontend_dir.exists():
+            print("❌ Frontend directory not found")
+            success = False
+        else:
+            print("✅ Frontend directory found")
+            
+            # Check package.json
+            package_json = self.frontend_dir / "package.json"
+            if package_json.exists():
+                print("✅ Frontend package.json found")
+            else:
+                print("❌ Frontend package.json not found")
+                success = False
+            
+            # Check build directory
+            if self.frontend_build_dir.exists():
+                print("✅ Frontend build directory found")
+            else:
+                print("⚠️  Frontend build directory not found")
+                print("   Run: cd frontend && npm install && npm run build")
+        
+        # Check Node.js
+        try:
+            result = subprocess.run(['node', '--version'], capture_output=True, text=True)
+            print(f"🟢 Node.js version: {result.stdout.strip()}")
+        except FileNotFoundError:
+            print("❌ Node.js not found")
+            print("   Install from: https://nodejs.org/")
+            success = False
+        
+        # Check npm
+        try:
+            result = subprocess.run(['npm', '--version'], capture_output=True, text=True)
+            print(f"📦 npm version: {result.stdout.strip()}")
+        except FileNotFoundError:
+            print("❌ npm not found")
+            success = False
+        
+        # Check environment file
+        env_file = self.project_root / '.env'
+        if env_file.exists():
+            print("✅ .env file found")
+        else:
+            print("⚠️  .env file not found")
+            print("   Copy .env.example to .env and configure")
+        
+        # Test backend startup (quick test)
+        print("\n🧪 Testing backend startup...")
+        try:
+            # Try to import the backend main module
+            sys.path.insert(0, str(self.backend_dir))
+            
+            # Quick import test
+            try:
+                # Set minimal required env vars for testing
+                import os
+                test_env = os.environ.copy()
+                test_env['CODEGEN_API_KEY'] = 'test'
+                test_env['CODEGEN_ORG_ID'] = 'test'
+                
+                # Temporarily set environment
+                original_env = {}
+                for key, value in test_env.items():
+                    if key not in os.environ:
+                        original_env[key] = None
+                        os.environ[key] = value
+                
+                try:
+                    from app.config.settings import get_settings
+                    settings = get_settings()
+                    print("✅ Backend configuration loads successfully")
+                    print(f"   CORS Origins: {settings.cors_origins}")
+                finally:
+                    # Restore original environment
+                    for key, value in original_env.items():
+                        if value is None:
+                            os.environ.pop(key, None)
+                        else:
+                            os.environ[key] = value
+                            
+            except Exception as e:
+                print(f"❌ Backend configuration error: {e}")
+                success = False
+                
+        except Exception as e:
+            print(f"❌ Backend import error: {e}")
+            success = False
+        
+        print("\n" + "=" * 50)
+        if success:
+            print("🎉 Installation verification PASSED!")
+            print("   You can run 'codegen' to start the application")
+        else:
+            print("❌ Installation verification FAILED!")
+            print("   Please fix the issues above before running the application")
+        
+        return success
 
 
 def main():
@@ -270,10 +475,23 @@ Examples:
         version="CodegenApp 1.0.0"
     )
     
+    parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="Verify installation and configuration"
+    )
+    
     args = parser.parse_args()
     
-    # Create and run launcher
+    # Create launcher
     launcher = CodegenAppLauncher()
+    
+    # Handle verification command
+    if args.verify:
+        success = launcher.verify_installation()
+        sys.exit(0 if success else 1)
+    
+    # Run normal application
     launcher.run(
         backend_port=args.backend_port,
         frontend_port=args.frontend_port,
