@@ -2,6 +2,61 @@
 
 A comprehensive full-stack application that integrates multiple AI and development tools to create an automated CI/CD pipeline with real-time validation and deployment capabilities.
 
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.8+ 
+- Node.js 16+ and npm
+- Git
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Zeeeepa/codegenApp.git
+   cd codegenApp
+   ```
+
+2. **Run the installation script:**
+   ```bash
+   python3 install.py
+   ```
+
+3. **Install the package in development mode:**
+   ```bash
+   pip install -e .
+   ```
+
+4. **Start the application:**
+   ```bash
+   codegen
+   ```
+
+That's it! The application will start both backend and frontend servers and automatically open your browser to http://localhost:3002.
+
+## 🎯 Usage
+
+### Basic Usage
+```bash
+codegen                    # Start with default ports (backend: 8001, frontend: 3002)
+```
+
+### Advanced Usage
+```bash
+codegen --backend-port 8080 --frontend-port 3000  # Custom ports
+codegen --no-browser                               # Don't open browser automatically
+codegen --help                                     # Show all options
+```
+
+### Access Points
+- **Frontend UI**: http://localhost:3002
+- **Backend API**: http://localhost:8001  
+- **API Documentation**: http://localhost:8001/docs
+- **Health Check**: http://localhost:8001/health
+
+## 🛑 Stopping the Application
+Press `Ctrl+C` in the terminal where you ran `codegen` to stop both servers gracefully.
+
 ## 🚀 Features
 
 ### Core Functionality
@@ -56,9 +111,10 @@ Create a `.env` file in the `backend` directory:
 # Codegen Configuration
 CODEGEN_ORG_ID=323
 CODEGEN_API_TOKEN=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
+CODEGEN_API_KEY=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
 
 # GitHub Configuration  
-GITHUB_TOKEN=your_github_personal_access_token_here
+GITHUB_TOKEN=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
 
 # Gemini API Configuration
 GEMINI_API_KEY=AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0
@@ -68,6 +124,218 @@ CLOUDFLARE_API_KEY=eae82cf159577a8838cc83612104c09c5a0d6
 CLOUDFLARE_ACCOUNT_ID=2b2a1d3effa7f7fe4fe2a8c4e48681e3
 CLOUDFLARE_WORKER_NAME=webhook-gateway
 CLOUDFLARE_WORKER_URL=https://webhook-gateway.pixeliumperfecto.workers.dev
+```
+
+## 🚀 Deployment Commands
+
+### Quick Start (Development)
+```bash
+# Clone and setup
+git clone <repository-url>
+cd codegenApp
+
+# Setup environment
+cp backend/.env.example backend/.env
+# Edit backend/.env with your API keys
+
+# Install dependencies and start services
+./deploy.sh
+```
+
+### Manual Deployment Steps
+
+#### 1. Environment Setup
+```bash
+# Create backend environment file
+cat > backend/.env << EOF
+CODEGEN_ORG_ID=323
+CODEGEN_API_TOKEN=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
+CODEGEN_API_KEY=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
+GITHUB_TOKEN=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
+GEMINI_API_KEY=AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0
+CLOUDFLARE_API_KEY=eae82cf159577a8838cc83612104c09c5a0d6
+CLOUDFLARE_ACCOUNT_ID=2b2a1d3effa7f7fe4fe2a8c4e48681e3
+CLOUDFLARE_WORKER_NAME=webhook-gateway
+CLOUDFLARE_WORKER_URL=https://webhook-gateway.pixeliumperfecto.workers.dev
+HOST=0.0.0.0
+PORT=8001
+DEBUG=true
+LOG_LEVEL=INFO
+EOF
+```
+
+#### 2. Backend Deployment
+```bash
+# Navigate to backend directory
+cd backend
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Install additional dependencies for comprehensive SDK
+pip install aiohttp google-generativeai
+
+# Start backend server
+python main.py
+```
+
+#### 3. Frontend Deployment
+```bash
+# Navigate to frontend directory (in new terminal)
+cd frontend
+
+# Install Node.js dependencies
+npm install
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```
+
+#### 4. Verification Commands
+```bash
+# Check backend health
+curl http://localhost:8001/health
+
+# Check frontend accessibility
+curl http://localhost:3002
+
+# Test API endpoints
+curl -H "Content-Type: application/json" http://localhost:8001/api/v1/workflow/status
+
+# Test WebSocket connection
+curl --include \
+     --no-buffer \
+     --header "Connection: Upgrade" \
+     --header "Upgrade: websocket" \
+     --header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
+     --header "Sec-WebSocket-Version: 13" \
+     http://localhost:8001/ws
+```
+
+### Production Deployment
+
+#### Using Docker (Recommended)
+```bash
+# Build and run with Docker Compose
+docker-compose up --build -d
+
+# Check container status
+docker-compose ps
+
+# View logs
+docker-compose logs -f
+```
+
+#### Manual Production Setup
+```bash
+# Backend production setup
+cd backend
+pip install -r requirements.txt
+pip install gunicorn
+gunicorn main:app --host 0.0.0.0 --port 8001 --workers 4
+
+# Frontend production build
+cd frontend
+npm run build
+npm install -g serve
+serve -s build -l 3002
+```
+
+### Automated Deployment & Testing
+```bash
+# Run comprehensive deployment and testing
+python deploy_and_test.py
+
+# Run specific deployment test
+python -m pytest tests/ -v
+
+# Run web evaluation tests
+python test_ui_foundation.py
+```
+
+### Service-Specific Commands
+
+#### Grainchain (Local Sandboxing)
+```bash
+# Start Docker daemon (if not running)
+sudo systemctl start docker
+
+# Verify Docker access
+docker ps
+
+# Test grainchain functionality
+python -c "from backend.app.services.adapters.grainchain_adapter import GrainchainAdapter; print('Grainchain ready')"
+```
+
+#### Web-Eval-Agent Testing
+```bash
+# Test Gemini API connection
+python -c "import google.generativeai as genai; genai.configure(api_key='AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0'); print('Gemini API ready')"
+
+# Run web evaluation
+python -c "from backend.app.services.adapters.web_eval_adapter import WebEvalAdapter; adapter = WebEvalAdapter(); print('Web-Eval-Agent ready')"
+```
+
+#### GitHub Integration
+```bash
+# Test GitHub token
+curl -H "Authorization: token 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" https://api.github.com/user
+
+# Test repository access
+curl -H "Authorization: token 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" https://api.github.com/user/repos
+```
+
+#### Codegen API Testing
+```bash
+# Test Codegen API connection
+curl -H "Authorization: Bearer sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99" \
+     -H "Content-Type: application/json" \
+     https://api.codegen.com/v1/users/me
+
+# Test organization access
+curl -H "Authorization: Bearer sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99" \
+     -H "Content-Type: application/json" \
+     https://api.codegen.com/v1/organizations
+```
+
+### Troubleshooting Commands
+
+#### Port Conflicts
+```bash
+# Check what's running on ports
+lsof -i :8001  # Backend port
+lsof -i :3002  # Frontend port
+
+# Kill processes if needed
+kill -9 $(lsof -t -i:8001)
+kill -9 $(lsof -t -i:3002)
+```
+
+#### Service Health Checks
+```bash
+# Backend health check with detailed output
+curl -v http://localhost:8001/health
+
+# Frontend accessibility check
+curl -I http://localhost:3002
+
+# WebSocket connection test
+wscat -c ws://localhost:8001/ws
+```
+
+#### Log Monitoring
+```bash
+# Monitor backend logs
+tail -f backend/app.log
+
+# Monitor deployment logs
+tail -f deployment_test.log
+
+# Monitor system resources
+htop
 ```
 
 ### Backend Setup

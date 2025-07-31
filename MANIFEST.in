@@ -1,0 +1,41 @@
+# Include the README and other documentation
+include README.md
+include LICENSE
+include requirements.txt
+include *.md
+include *.txt
+include *.json
+include *.yaml
+include *.yml
+
+# Include the entire backend directory
+recursive-include backend *
+recursive-exclude backend __pycache__
+recursive-exclude backend *.pyc
+recursive-exclude backend *.pyo
+recursive-exclude backend *.log
+
+# Include the frontend build directory
+recursive-include frontend/build *
+recursive-include frontend/public *
+include frontend/package.json
+include frontend/package-lock.json
+
+# Include configuration files
+include *.json
+include *.yaml
+include *.yml
+include .env.example
+
+# Exclude development files
+exclude .gitignore
+exclude .env
+exclude .env.local
+exclude deploy*.py
+exclude test*.py
+recursive-exclude * __pycache__
+recursive-exclude * *.pyc
+recursive-exclude * *.pyo
+recursive-exclude * .DS_Store
+recursive-exclude * .pytest_cache
+recursive-exclude * node_modules
