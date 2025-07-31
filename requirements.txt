@@ -1,0 +1,22 @@
+# FastAPI and web framework dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# HTTP client for external API calls
+httpx==0.25.2
+requests==2.31.0
+
+# Pydantic for data validation
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Utilities
+python-dotenv==1.0.0
+
+# File processing
+PyYAML==6.0.1
+
+# Additional dependencies for CLI functionality
+click>=8.0.0
+colorama>=0.4.4
