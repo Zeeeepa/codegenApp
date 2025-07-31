@@ -4,8 +4,12 @@ CodegenApp - AI Agent Run Manager
 A comprehensive application for managing AI agent runs with a React frontend and FastAPI backend.
 """
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Command
 import os
+import subprocess
+import sys
+import shutil
+from pathlib import Path
 
 # Read the contents of README file
 this_directory = os.path.abspath(os.path.dirname(__file__))
@@ -19,6 +23,93 @@ def read_requirements():
         with open('requirements.txt', 'r') as f:
             requirements = [line.strip() for line in f if line.strip() and not line.startswith('#')]
     return requirements
+
+
+class BuildFrontendCommand(Command):
+    """Custom command to build the React frontend during installation."""
+    
+    description = 'Build the React frontend'
+    user_options = []
+    
+    def initialize_options(self):
+        pass
+    
+    def finalize_options(self):
+        pass
+    
+    def run(self):
+        """Build the frontend using npm."""
+        frontend_dir = Path(__file__).parent / 'frontend'
+        
+        if not frontend_dir.exists():
+            print("⚠️  Frontend directory not found, skipping frontend build")
+            return
+            
+        print("🔨 Building React frontend...")
+        
+        # Check if Node.js is available
+        try:
+            subprocess.run(['node', '--version'], check=True, capture_output=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("❌ Node.js not found. Please install Node.js to build the frontend.")
+            print("   Visit: https://nodejs.org/")
+            return
+            
+        # Detect package manager
+        package_manager = self._detect_package_manager(frontend_dir)
+        
+        try:
+            # Install dependencies
+            print(f"📦 Installing dependencies with {package_manager}...")
+            if package_manager == 'npm':
+                subprocess.run(['npm', 'install'], cwd=frontend_dir, check=True)
+                subprocess.run(['npm', 'run', 'build'], cwd=frontend_dir, check=True)
+            elif package_manager == 'yarn':
+                subprocess.run(['yarn', 'install'], cwd=frontend_dir, check=True)
+                subprocess.run(['yarn', 'build'], cwd=frontend_dir, check=True)
+            elif package_manager == 'pnpm':
+                subprocess.run(['pnpm', 'install'], cwd=frontend_dir, check=True)
+                subprocess.run(['pnpm', 'run', 'build'], cwd=frontend_dir, check=True)
+                
+            print("✅ Frontend build completed successfully!")
+            
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Frontend build failed: {e}")
+            print("   You can manually build the frontend later with:")
+            print(f"   cd frontend && {package_manager} install && {package_manager} run build")
+    
+    def _detect_package_manager(self, frontend_dir):
+        """Detect which package manager to use."""
+        if (frontend_dir / 'pnpm-lock.yaml').exists():
+            return 'pnpm'
+        elif (frontend_dir / 'yarn.lock').exists():
+            return 'yarn'
+        else:
+            return 'npm'
+
+
+class CustomInstallCommand(Command):
+    """Custom install command that builds frontend first."""
+    
+    description = 'Install with frontend build'
+    user_options = []
+    
+    def initialize_options(self):
+        pass
+    
+    def finalize_options(self):
+        pass
+    
+    def run(self):
+        """Run frontend build then normal installation."""
+        # Build frontend first
+        self.run_command('build_frontend')
+        
+        # Run normal installation
+        from setuptools.command.install import install
+        install_cmd = install(self.distribution)
+        install_cmd.ensure_finalized()
+        install_cmd.run()
 
 setup(
     name="codegenapp",
@@ -59,6 +150,10 @@ setup(
         'console_scripts': [
             'codegen=codegenapp.cli:main',
         ],
+    },
+    cmdclass={
+        'build_frontend': BuildFrontendCommand,
+        'install': CustomInstallCommand,
     },
     include_package_data=True,
     package_data={

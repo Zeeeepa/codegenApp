@@ -2,9 +2,10 @@
 Configuration settings for the Strands-Agents backend
 """
 
-from pydantic import BaseSettings, Field
-from typing import Optional, Dict, Any
+from pydantic import BaseSettings, Field, validator
+from typing import Optional, Dict, Any, Union
 import os
+import json
 
 
 class Settings(BaseSettings):
@@ -124,9 +125,21 @@ class Settings(BaseSettings):
     
     # CORS configuration
     cors_origins: list = Field(
-        default=["http://localhost:3000", "http://localhost:8000"],
+        default=["http://localhost:3000", "http://localhost:8000", "http://localhost:3080", "http://localhost:8080"],
         description="Allowed CORS origins"
     )
+    
+    @validator('cors_origins', pre=True)
+    def parse_cors_origins(cls, v):
+        """Parse cors_origins from string or list"""
+        if isinstance(v, str):
+            try:
+                # Try to parse as JSON
+                return json.loads(v)
+            except json.JSONDecodeError:
+                # If not JSON, split by comma
+                return [origin.strip() for origin in v.split(',') if origin.strip()]
+        return v
     
     # Monitoring configuration
     enable_metrics: bool = Field(default=True, description="Enable Prometheus metrics")
@@ -136,6 +149,20 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
+        
+        @classmethod
+        def parse_env_var(cls, field_name: str, raw_val: str) -> Any:
+            """Custom environment variable parsing"""
+            if field_name == 'cors_origins':
+                # Handle cors_origins as comma-separated string
+                if raw_val.startswith('[') and raw_val.endswith(']'):
+                    # It's JSON, parse normally
+                    import json
+                    return json.loads(raw_val)
+                else:
+                    # It's comma-separated, split it
+                    return [origin.strip() for origin in raw_val.split(',') if origin.strip()]
+            return cls.json_loads(raw_val)
         
         # Environment variable prefixes
         env_prefix = ""
