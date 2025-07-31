@@ -17,7 +17,7 @@ export const AgentRunDialog: React.FC<AgentRunDialogProps> = ({
       // Combine planning statement with user target
       const planningStatement = project?.settings?.planningStatement || '';
       const fullPrompt = planningStatement 
-        ? `Project='${project.repository.name}'\n\nPlanning Context:\n${planningStatement}\n\nTarget: ${target.trim()}`
+        ? `Project='${project?.repository.name}'\n\nPlanning Context:\n${planningStatement}\n\nTarget: ${target.trim()}`
         : `Project='${project?.repository.name}'\n\nTarget: ${target.trim()}`;
       
       onSubmit(fullPrompt);

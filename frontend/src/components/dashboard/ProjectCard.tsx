@@ -194,8 +194,8 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               <input
                 type="checkbox"
                 id={`auto-confirm-${project.id}`}
-                checked={project.settings?.autoConfirmProposedPlan || false}
-                onChange={(e) => handleSettingsSave({ autoConfirmProposedPlan: e.target.checked })}
+                checked={project.settings?.autoConfirmPlan || false}
+                onChange={(e) => handleSettingsSave({ autoConfirmPlan: e.target.checked })}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <label 
