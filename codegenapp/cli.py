@@ -12,19 +12,19 @@ import threading
 import webbrowser
 import argparse
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Union
 
 
 class CodegenAppLauncher:
     """Main launcher class for CodegenApp"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.backend_process: Optional[subprocess.Popen] = None
         self.frontend_process: Optional[subprocess.Popen] = None
-        self.package_dir = Path(__file__).parent.parent
-        self.backend_dir = self.package_dir / "backend"
-        self.frontend_dir = self.package_dir / "frontend"
-        self.frontend_build_dir = self.frontend_dir / "build"
+        self.package_dir: Path = Path(__file__).parent.parent
+        self.backend_dir: Path = self.package_dir / "backend"
+        self.frontend_dir: Path = self.package_dir / "frontend"
+        self.frontend_build_dir: Path = self.frontend_dir / "build"
         
     def find_free_port(self, start_port: int = 8001) -> int:
         """Find a free port starting from the given port"""
