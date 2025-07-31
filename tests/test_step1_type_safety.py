@@ -25,9 +25,10 @@ class TestTypeAnnotations:
     
     def setup_method(self):
         """Setup test environment with real variables"""
-        self.codegen_org_id = "323"
-        self.codegen_api_token = "sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99"
-        self.github_token = "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"
+        # Use environment variables or fallback to test values
+        self.codegen_org_id = os.environ.get("CODEGEN_ORG_ID", "323")
+        self.codegen_api_token = os.environ.get("CODEGEN_API_TOKEN", "test-token")
+        self.github_token = os.environ.get("GITHUB_TOKEN", "test-github-token")
         
         # Set environment variables
         os.environ["CODEGEN_ORG_ID"] = self.codegen_org_id
