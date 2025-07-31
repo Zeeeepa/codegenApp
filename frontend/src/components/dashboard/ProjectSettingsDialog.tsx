@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Settings, FileText, Terminal, Key, GitBranch, Play, Save, AlertCircle, Plus, Trash2 } from 'lucide-react';
-import { CachedProject } from '../../api/types';
+import { ProjectCard } from '../../types';
 import { GitHubBranch } from '../../api/githubTypes';
 import { 
   getProjectSettings, 
@@ -17,13 +17,13 @@ import toast from 'react-hot-toast';
 interface ProjectSettingsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  project: CachedProject;
-  onUpdate: () => void;
+  project: ProjectCard;
+  onSave: (settings: any) => void;
 }
 
 type TabType = 'rules' | 'setup' | 'secrets';
 
-export function ProjectSettingsDialog({ isOpen, onClose, project, onUpdate }: ProjectSettingsDialogProps) {
+export function ProjectSettingsDialog({ isOpen, onClose, project, onSave }: ProjectSettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<TabType>('rules');
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +63,7 @@ export function ProjectSettingsDialog({ isOpen, onClose, project, onUpdate }: Pr
       // Populate form fields
       setRepositoryRules(projectSettings.repositoryRules || '');
       setSetupCommands(projectSettings.setupCommands || '');
-      setSelectedBranch(projectSettings.selectedBranch || project.defaultBranch);
+      setSelectedBranch(projectSettings.selectedBranch || project.repository.default_branch);
       setSecrets(projectSettings.secrets || {});
       setSecretsText(secretsToEnvString(projectSettings.secrets || {}));
     } catch (error) {
@@ -108,7 +108,7 @@ export function ProjectSettingsDialog({ isOpen, onClose, project, onUpdate }: Pr
 
       await updateProjectSettings(project.id, updates);
       toast.success('Project settings saved successfully');
-      onUpdate();
+      onSave(updates);
     } catch (error) {
       console.error('Failed to save project settings:', error);
       toast.error('Failed to save project settings');
@@ -224,7 +224,7 @@ export function ProjectSettingsDialog({ isOpen, onClose, project, onUpdate }: Pr
             <Settings className="h-6 w-6 text-blue-400" />
             <div>
               <h2 className="text-xl font-semibold text-white">Project Settings</h2>
-              <p className="text-sm text-gray-400">{project.name}</p>
+              <p className="text-sm text-gray-400">{project.repository.name}</p>
             </div>
           </div>
           <button
@@ -330,7 +330,7 @@ export function ProjectSettingsDialog({ isOpen, onClose, project, onUpdate }: Pr
                       ) : (
                         branches.map((branch) => (
                           <option key={branch.name} value={branch.name}>
-                            {branch.name} {branch.name === project.defaultBranch && '(default)'}
+                            {branch.name} {branch.name === project.repository.default_branch && '(default)'}
                           </option>
                         ))
                       )}

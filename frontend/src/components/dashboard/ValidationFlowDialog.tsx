@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Play, CheckCircle, XCircle, Clock, GitPullRequest, Terminal, Eye, Merge } from 'lucide-react';
-import { Project } from '../../types';
+import { ProjectCard } from '../../types';
 
 interface ValidationFlowDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  project: Project;
+  project: ProjectCard;
   prNumber: number | null;
   onComplete: (success: boolean) => void;
 }
