@@ -1,0 +1,107 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codegenapp"
+version = "1.0.0"
+description = "AI Agent Run Manager - Create and manage AI agent runs"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Zeeeepa", email = "your-email@example.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "PyYAML>=6.0",
+    "click>=8.0.0",
+    "colorama>=0.4.4",
+    "fastapi>=0.68.0,<1.0.0",
+    "httpx>=0.24.0",
+    "pydantic>=1.10.0,<2.0.0",
+    "python-dotenv>=0.19.0",
+    "python-multipart>=0.0.5",
+    "requests>=2.28.0",
+    "uvicorn[standard]>=0.15.0,<1.0.0",
+]
+keywords = ["ai", "agent", "automation", "fastapi", "react"]
+
+[project.urls]
+Homepage = "https://github.com/Zeeeepa/codegenApp"
+Repository = "https://github.com/Zeeeepa/codegenApp"
+Issues = "https://github.com/Zeeeepa/codegenApp/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-asyncio>=0.18.0",
+    "black>=22.0",
+    "flake8>=4.0",
+    "mypy>=0.950",
+]
+
+[project.scripts]
+codegen = "codegenapp.cli:main"
+
+[tool.setuptools]
+packages = ["codegenapp"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+codegenapp = [
+    "frontend/build/**/*",
+    "backend/**/*",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | frontend
+)/
+'''
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+exclude = [
+    "frontend/",
+    "build/",
+    "dist/",
+]
+
