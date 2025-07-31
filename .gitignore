@@ -47,7 +47,9 @@ data/
 backend/data/
 
 # Package lock files (too large for commits)
+# Allow frontend/package-lock.json for CI/CD caching
 package-lock.json
+!frontend/package-lock.json
 yarn.lock
 
 # Logs
