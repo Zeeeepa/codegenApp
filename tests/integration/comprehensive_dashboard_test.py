@@ -19,7 +19,7 @@ import google.generativeai as genai
 os.environ['GEMINI_API_KEY'] = 'AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0'
 os.environ['CODEGEN_ORG_ID'] = '323'
 os.environ['CODEGEN_API_TOKEN'] = 'sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99'
-os.environ['GITHUB_TOKEN'] = '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'
+os.environ['GITHUB_TOKEN'] = 'test_github_token_placeholder'
 os.environ['CLOUDFLARE_API_KEY'] = 'eae82cf159577a8838cc83612104c09c5a0d6'
 os.environ['CLOUDFLARE_ACCOUNT_ID'] = '2b2a1d3effa7f7fe4fe2a8c4e48681e3'
 os.environ['CLOUDFLARE_WORKER_URL'] = 'https://webhook-gateway.pixeliumperfecto.workers.dev'
