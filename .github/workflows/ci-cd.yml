@@ -47,8 +47,6 @@ jobs:
     - name: Install frontend dependencies
       working-directory: ./frontend
       run: |
-        echo "Current directory: $(pwd)"
-        echo "Package.json exists: $(test -f package.json && echo 'yes' || echo 'no')"
         npm ci
         
     - name: Install backend dependencies
@@ -108,8 +106,6 @@ jobs:
     - name: Install frontend dependencies for audit
       working-directory: ./frontend
       run: |
-        echo "Current directory: $(pwd)"
-        echo "Package.json exists: $(test -f package.json && echo 'yes' || echo 'no')"
         npm ci
       
     - name: Run npm audit on frontend
