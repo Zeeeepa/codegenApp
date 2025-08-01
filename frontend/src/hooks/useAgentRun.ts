@@ -9,6 +9,71 @@ export const useAgentRun = (): UseAgentRunReturn => {
   
   const { addAgentRun, updateAgentRun, getProject } = useProjectStore();
 
+  // Helper function to poll agent run status
+  const pollAgentRunStatus = useCallback(async (
+    projectId: string, 
+    localRunId: string, 
+    apiRunId: string
+  ) => {
+    const pollInterval = 2000; // 2 seconds
+    const maxPolls = 150; // 5 minutes max
+    let pollCount = 0;
+
+    const poll = async () => {
+      try {
+        pollCount++;
+        
+        const response = await codegenService.getAgentRunStatus(apiRunId);
+        
+        if (response.success && response.data) {
+          const apiData = response.data;
+          
+          // Update local store with API response
+          updateAgentRun(projectId, localRunId, {
+            status: apiData.status === 'completed' ? 'completed' : 
+                   apiData.status === 'failed' ? 'failed' : 'running',
+            type: apiData.type,
+            response: apiData.content,
+            updatedAt: new Date().toISOString()
+          });
+
+          // If completed or failed, stop polling
+          if (apiData.status === 'completed' || apiData.status === 'failed') {
+            return;
+          }
+
+          // Continue polling if not finished and under max polls
+          if (pollCount < maxPolls) {
+            setTimeout(poll, pollInterval);
+          } else {
+            // Timeout - mark as failed
+            updateAgentRun(projectId, localRunId, {
+              status: 'failed',
+              response: 'Agent run timed out',
+              updatedAt: new Date().toISOString()
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error polling agent run status:', error);
+        
+        // On error, try a few more times before giving up
+        if (pollCount < 5) {
+          setTimeout(poll, pollInterval * 2); // Longer interval on error
+        } else {
+          updateAgentRun(projectId, localRunId, {
+            status: 'failed',
+            response: 'Failed to get agent run status',
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+    };
+
+    // Start polling
+    setTimeout(poll, pollInterval);
+  }, [updateAgentRun]);
+
   const createAgentRun = useCallback(async (projectId: string, target: string): Promise<string> => {
     setIsLoading(true);
     setError(null);
@@ -108,70 +173,7 @@ export const useAgentRun = (): UseAgentRunReturn => {
     }
   }, []);
 
-  // Helper function to poll agent run status
-  const pollAgentRunStatus = useCallback(async (
-    projectId: string, 
-    localRunId: string, 
-    apiRunId: string
-  ) => {
-    const pollInterval = 2000; // 2 seconds
-    const maxPolls = 150; // 5 minutes max
-    let pollCount = 0;
 
-    const poll = async () => {
-      try {
-        pollCount++;
-        
-        const response = await codegenService.getAgentRunStatus(apiRunId);
-        
-        if (response.success && response.data) {
-          const apiData = response.data;
-          
-          // Update local store with API response
-          updateAgentRun(projectId, localRunId, {
-            status: apiData.status === 'completed' ? 'completed' : 
-                   apiData.status === 'failed' ? 'failed' : 'running',
-            type: apiData.type,
-            response: apiData.content,
-            updatedAt: new Date().toISOString()
-          });
-
-          // If completed or failed, stop polling
-          if (apiData.status === 'completed' || apiData.status === 'failed') {
-            return;
-          }
-
-          // Continue polling if not finished and under max polls
-          if (pollCount < maxPolls) {
-            setTimeout(poll, pollInterval);
-          } else {
-            // Timeout - mark as failed
-            updateAgentRun(projectId, localRunId, {
-              status: 'failed',
-              response: 'Agent run timed out',
-              updatedAt: new Date().toISOString()
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error polling agent run status:', error);
-        
-        // On error, try a few more times before giving up
-        if (pollCount < 5) {
-          setTimeout(poll, pollInterval * 2); // Longer interval on error
-        } else {
-          updateAgentRun(projectId, localRunId, {
-            status: 'failed',
-            response: 'Failed to get agent run status',
-            updatedAt: new Date().toISOString()
-          });
-        }
-      }
-    };
-
-    // Start polling
-    setTimeout(poll, pollInterval);
-  }, [updateAgentRun]);
 
   return {
     createAgentRun,
