@@ -17,14 +17,27 @@ A comprehensive full-stack application that integrates multiple AI and developme
    cd codegenApp
    ```
 
-2. **Run the installation script:**
+2. **Install using the modern installation script:**
    ```bash
-   python3 install.py
+   python3 install.py --break-system-packages  # If using system Python
+   # OR
+   python3 install.py  # If using virtual environment (recommended)
    ```
 
-3. **Install the package in development mode:**
+   This script will:
+   - Build the React frontend automatically
+   - Install the package in development mode using modern `pyproject.toml`
+   - Handle all dependencies
+
+3. **Alternative manual installation:**
    ```bash
-   pip install -e .
+   # Build frontend first (optional, but recommended)
+   python3 build_frontend.py
+   
+   # Install package
+   pip install -e . --break-system-packages  # If using system Python
+   # OR
+   pip install -e .  # If using virtual environment
    ```
 
 4. **Start the application:**
@@ -114,7 +127,7 @@ CODEGEN_API_TOKEN=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
 CODEGEN_API_KEY=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
 
 # GitHub Configuration  
-GITHUB_TOKEN=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
+GITHUB_TOKEN=your_github_token_here
 
 # Gemini API Configuration
 GEMINI_API_KEY=AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0
@@ -151,7 +164,7 @@ cat > backend/.env << EOF
 CODEGEN_ORG_ID=323
 CODEGEN_API_TOKEN=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
 CODEGEN_API_KEY=sk-ce027fa7-3c8d-4beb-8c86-ed8ae982ac99
-GITHUB_TOKEN=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
+GITHUB_TOKEN=your_github_token_here
 GEMINI_API_KEY=AIzaSyBXmhlHudrD4zXiv-5fjxi1gGG-_kdtaZ0
 CLOUDFLARE_API_KEY=eae82cf159577a8838cc83612104c09c5a0d6
 CLOUDFLARE_ACCOUNT_ID=2b2a1d3effa7f7fe4fe2a8c4e48681e3
@@ -282,10 +295,10 @@ python -c "from backend.app.services.adapters.web_eval_adapter import WebEvalAda
 #### GitHub Integration
 ```bash
 # Test GitHub token
-curl -H "Authorization: token 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" https://api.github.com/user
+curl -H "Authorization: token your_github_token_here" https://api.github.com/user
 
 # Test repository access
-curl -H "Authorization: token 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" https://api.github.com/user/repos
+curl -H "Authorization: token your_github_token_here" https://api.github.com/user/repos
 ```
 
 #### Codegen API Testing

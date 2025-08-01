@@ -86,31 +86,54 @@ def build_frontend():
         return False
 
 
+def install_package():
+    """Install the package using pip and pyproject.toml"""
+    print("📦 Installing CodegenApp package...")
+    
+    # Check if we should use --break-system-packages
+    cmd = [sys.executable, '-m', 'pip', 'install', '-e', '.']
+    if '--break-system-packages' in sys.argv:
+        cmd.append('--break-system-packages')
+    
+    try:
+        run_command(cmd)
+        print("✅ Package installation successful!")
+        return True
+    except:
+        print("❌ Package installation failed")
+        return False
+
+
 def main():
     """Main installation function"""
     print("🚀 CodegenApp Installation")
     print("=" * 40)
+    print("📋 Using modern pyproject.toml packaging")
     
     # Check if we're in the right directory
-    if not Path("setup.py").exists():
-        print("❌ setup.py not found. Please run this script from the project root.")
+    if not Path("pyproject.toml").exists():
+        print("❌ pyproject.toml not found. Please run this script from the project root.")
         sys.exit(1)
     
     # Check Node.js and npm
     if not check_node_npm():
         print("❌ Node.js and npm are required to build the frontend")
         print("💡 Please install Node.js from https://nodejs.org/")
-        sys.exit(1)
+        print("⚠️  Continuing without frontend build...")
+    else:
+        # Build frontend
+        if not build_frontend():
+            print("❌ Frontend build failed, but continuing...")
     
-    # Build frontend
-    if not build_frontend():
-        print("❌ Frontend build failed")
+    # Install the package
+    if not install_package():
+        print("❌ Installation failed")
         sys.exit(1)
     
     print("=" * 40)
-    print("✅ Installation preparation complete!")
-    print("💡 Now you can run: pip install -e .")
-    print("🎉 Then start the app with: codegen")
+    print("✅ Installation complete!")
+    print("🎉 You can now run: codegen --help")
+    print("📖 Check README.md for usage instructions")
 
 
 if __name__ == "__main__":
