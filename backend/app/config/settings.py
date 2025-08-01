@@ -2,7 +2,8 @@
 Configuration settings for the Strands-Agents backend
 """
 
-from pydantic import BaseSettings, Field, validator
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings
 from typing import Optional, Dict, Any, Union
 import os
 import json
@@ -129,7 +130,8 @@ class Settings(BaseSettings):
         description="Allowed CORS origins"
     )
     
-    @validator('cors_origins', pre=True)
+    @field_validator('cors_origins', mode='before')
+    @classmethod
     def parse_cors_origins(cls, v):
         """Parse cors_origins from string or list"""
         if isinstance(v, str):
