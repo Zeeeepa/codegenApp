@@ -55,7 +55,7 @@ export const useAgentRun = (): UseAgentRunReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [addAgentRun, getProject]);
+  }, [addAgentRun, getProject, pollAgentRunStatus]);
 
   const getAgentRunStatus = useCallback(async (runId: string): Promise<AgentRun> => {
     try {
@@ -181,4 +181,3 @@ export const useAgentRun = (): UseAgentRunReturn => {
     error,
   };
 };
-

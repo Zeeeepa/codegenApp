@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { AgentRun, CodegenApiResponse, ApiResponse } from '../types';
+import { CodegenApiResponse, ApiResponse } from '../types';
 
 class CodegenService {
   private api: AxiosInstance;
@@ -326,4 +326,3 @@ class CodegenService {
 }
 
 export const codegenService = new CodegenService();
-
