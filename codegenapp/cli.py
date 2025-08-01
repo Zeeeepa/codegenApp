@@ -182,6 +182,14 @@ class CodegenAppLauncher:
             # Check if process is still running
             if self.backend_process and self.backend_process.poll() is not None:
                 print("❌ Backend process exited unexpectedly")
+                # Try to read any output from the process
+                try:
+                    if self.backend_process.stdout:
+                        output = self.backend_process.stdout.read()
+                        if output:
+                            print(f"Backend output: {output}")
+                except Exception:
+                    pass
                 return False
             
             try:
