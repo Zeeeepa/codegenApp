@@ -46,7 +46,7 @@ jobs:
           echo "$CHANGED_FILES"
           
           # Save to environment for later steps
-          echo "CHANGED_FILES<> $GITHUB_ENV
+          echo "CHANGED_FILES<<EOF" >> $GITHUB_ENV
           echo "$CHANGED_FILES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
       - name: Run PR Validation

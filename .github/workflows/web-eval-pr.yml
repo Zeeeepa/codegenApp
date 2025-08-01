@@ -75,7 +75,13 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
     - name: Run server tests
-      run: npm run server:test
+      run: |
+        if npm run | grep -q "server:test"; then
+          npm run server:test
+        else
+          echo "No server:test script found, running available tests..."
+          npm run test
+        fi
       
     - name: Build application
       run: npm run build
@@ -114,7 +120,12 @@ jobs:
     - name: Install dependencies
       run: |
         npm ci
-        npm run server:install
+        if npm run | grep -q "server:install"; then
+          npm run server:install
+        else
+          echo "No server:install script found, using setup script..."
+          npm run setup
+        fi
         
     - name: Build application
       run: npm run build

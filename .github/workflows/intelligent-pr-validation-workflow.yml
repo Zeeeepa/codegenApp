@@ -63,7 +63,7 @@ jobs:
           echo "CHANGED_COUNT=$CHANGED_COUNT" >> $GITHUB_OUTPUT
           
           # Save changed files
-          echo "CHANGED_FILES<> $GITHUB_ENV
+          echo "CHANGED_FILES<<EOF" >> $GITHUB_ENV
           echo "$CHANGED_FILES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
           
