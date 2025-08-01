@@ -47,13 +47,6 @@ export function ProjectSettingsDialog({ isOpen, onClose, project, onSave }: Proj
   const [newSecretKey, setNewSecretKey] = useState('');
   const [newSecretValue, setNewSecretValue] = useState('');
 
-  useEffect(() => {
-    if (isOpen) {
-      loadSettings();
-      loadBranches();
-    }
-  }, [isOpen, project.id, loadSettings, loadBranches]);
-
   const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
@@ -94,6 +87,13 @@ export function ProjectSettingsDialog({ isOpen, onClose, project, onSave }: Proj
       setLoadingBranches(false);
     }
   }, [project.id]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadSettings();
+      loadBranches();
+    }
+  }, [isOpen, project.id, loadSettings, loadBranches]);
 
   const handleSave = async () => {
     if (!settings) return;
