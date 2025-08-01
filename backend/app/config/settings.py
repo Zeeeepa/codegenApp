@@ -125,23 +125,16 @@ class Settings(BaseSettings):
     )
     
     # CORS configuration
-    cors_origins: list = Field(
-        default=["http://localhost:3000", "http://localhost:8000", "http://localhost:3080", "http://localhost:8080"],
-        description="Allowed CORS origins"
+    cors_origins: str = Field(
+        default="http://localhost:3000,http://localhost:8000,http://localhost:3080,http://localhost:8080",
+        description="Allowed CORS origins (comma-separated)"
     )
     
-    @field_validator('cors_origins', mode='before')
-    @classmethod
-    def parse_cors_origins(cls, v):
-        """Parse cors_origins from string or list"""
-        if isinstance(v, str):
-            try:
-                # Try to parse as JSON
-                return json.loads(v)
-            except json.JSONDecodeError:
-                # If not JSON, split by comma
-                return [origin.strip() for origin in v.split(',') if origin.strip()]
-        return v
+    def get_cors_origins_list(self) -> list:
+        """Get CORS origins as a list"""
+        if isinstance(self.cors_origins, str):
+            return [origin.strip() for origin in self.cors_origins.split(',') if origin.strip()]
+        return self.cors_origins
     
     # Monitoring configuration
     enable_metrics: bool = Field(default=True, description="Enable Prometheus metrics")
