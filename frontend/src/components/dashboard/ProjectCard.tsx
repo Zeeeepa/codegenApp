@@ -8,14 +8,9 @@ import {
   CheckCircle, 
   XCircle, 
   Clock,
-  AlertCircle,
   ExternalLink,
   Trash2,
   GitPullRequest,
-  Terminal,
-  Key,
-  GitBranch,
-  Eye,
   CheckSquare
 } from 'lucide-react';
 import { ProjectCardProps, AgentRun } from '../../types';

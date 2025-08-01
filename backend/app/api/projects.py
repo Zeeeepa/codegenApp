@@ -11,7 +11,7 @@ from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
 
 from app.services.github_service import GitHubService, GitHubRepository
-from app.services.adapters.codegen_adapter import CodegenService
+from app.services.adapters.codegen_adapter import CodegenAdapter
 from app.services.adapters.web_eval_adapter import WebEvalAdapter
 from app.websocket.manager import websocket_manager
 from app.config.settings import get_settings
@@ -61,7 +61,7 @@ class ValidationRequest(BaseModel):
 # Initialize services
 settings = get_settings()
 github_service = GitHubService()
-codegen_service = CodegenService(
+codegen_service = CodegenAdapter(
     api_token=settings.codegen_api_token,
     base_url=settings.codegen_api_base_url
 )

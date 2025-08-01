@@ -2,9 +2,9 @@
 Configuration settings for the Strands-Agents backend
 """
 
-from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings
-from typing import Optional, Dict, Any, Union
+from pydantic import Field, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional, Dict, Any, Union, List
 import os
 import json
 
@@ -12,14 +12,21 @@ import json
 class Settings(BaseSettings):
     """Application settings"""
     
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore"
+    )
+    
     # Server configuration
     host: str = Field(default="0.0.0.0", description="Server host")
     port: int = Field(default=8001, description="Server port")
     debug: bool = Field(default=False, description="Debug mode")
     
     # Official Codegen API configuration
-    codegen_api_key: str = Field(..., description="Official Codegen API key")
-    codegen_org_id: str = Field(..., description="Codegen organization ID")
+    codegen_api_key: str = Field(default="demo_key", description="Official Codegen API key")
+    codegen_org_id: str = Field(default="demo_org", description="Codegen organization ID")
     codegen_api_base_url: str = Field(
         default="https://api.codegen.com", 
         description="Official Codegen API base URL"
@@ -125,28 +132,13 @@ class Settings(BaseSettings):
     )
     
     # CORS configuration
-    cors_origins: str = Field(
-        default="http://localhost:3000,http://localhost:8000,http://localhost:3080,http://localhost:8080",
-        description="Allowed CORS origins (comma-separated)"
+    cors_origins: List[str] = Field(
+        default=["http://localhost:3000", "http://localhost:8000", "http://localhost:3080", "http://localhost:8080"],
+        description="Allowed CORS origins"
     )
-    
-    def get_cors_origins_list(self) -> list:
-        """Get CORS origins as a list"""
-        if isinstance(self.cors_origins, str):
-            return [origin.strip() for origin in self.cors_origins.split(',') if origin.strip()]
-        return self.cors_origins
-    
     # Monitoring configuration
     enable_metrics: bool = Field(default=True, description="Enable Prometheus metrics")
     metrics_port: int = Field(default=8002, description="Metrics server port")
-    
-    model_config = {
-        "env_file": ".env",
-        "env_file_encoding": "utf-8",
-        "case_sensitive": False,
-        "env_prefix": "",
-        "extra": "allow",  # Allow extra fields for extensibility
-    }
     
     def get_codegen_headers(self) -> Dict[str, str]:
         """
@@ -224,7 +216,7 @@ class DevelopmentSettings(Settings):
     """Development environment settings"""
     debug: bool = True
     log_level: str = "DEBUG"
-    cors_origins: list = ["*"]  # Allow all origins in development
+    cors_origins: List[str] = ["*"]  # Allow all origins in development
 
 
 class ProductionSettings(Settings):

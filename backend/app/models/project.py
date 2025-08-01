@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, JSON, Text, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
@@ -111,4 +111,3 @@ class ProjectSettings(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
-

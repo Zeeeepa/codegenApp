@@ -10,7 +10,7 @@ import logging
 from typing import Generator, Optional
 from contextlib import contextmanager
 from sqlalchemy import create_engine, MetaData
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 from sqlalchemy.exc import SQLAlchemyError

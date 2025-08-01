@@ -9,7 +9,7 @@ from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Boolean, 
     JSON, ForeignKey, Enum, Float, Index
 )
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum

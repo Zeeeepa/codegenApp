@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Dict, Any, Optional
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, JSON, Text, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
@@ -189,4 +189,3 @@ class PullRequest(Base):
         return (self.validation_required and 
                 not self.validation_passed and
                 self.status == PullRequestStatus.OPEN)
-

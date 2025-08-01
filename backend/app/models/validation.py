@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Dict, Any, Optional, List
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, JSON, Text, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
@@ -202,4 +202,3 @@ class ValidationStep(Base):
         """Check if the validation step completed successfully."""
         return (self.status == ValidationStatus.COMPLETED and 
                 self.result == ValidationResult.SUCCESS)
-

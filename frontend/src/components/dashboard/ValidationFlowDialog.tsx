@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Play, CheckCircle, XCircle, Clock, GitPullRequest, Terminal, Eye, Merge } from 'lucide-react';
+import { X, Play, CheckCircle, XCircle, Clock, GitPullRequest, Eye, Merge } from 'lucide-react';
 import { ProjectCard } from '../../types';
 
 interface ValidationFlowDialogProps {
@@ -25,7 +25,7 @@ export const ValidationFlowDialog: React.FC<ValidationFlowDialogProps> = ({
   prNumber,
   onComplete
 }) => {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [, setCurrentStep] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [steps, setSteps] = useState<ValidationStep[]>([
     { id: 'snapshot', name: 'Create Grainchain Snapshot', status: 'pending' },

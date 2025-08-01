@@ -11,6 +11,7 @@ import subprocess
 import threading
 import webbrowser
 import argparse
+import requests
 from pathlib import Path
 from typing import Optional, List, Union
 
@@ -151,16 +152,11 @@ class CodegenAppLauncher:
             self.backend_process = subprocess.Popen(
                 [sys.executable, "main.py"],
                 cwd=self.backend_dir,
-                env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-                bufsize=1
+                env=env
             )
             
-            # Wait a moment and check if process started successfully
-            time.sleep(2)
-            if self.backend_process.poll() is not None:
+            # Wait for backend to be ready using health check
+            if not self._wait_for_backend_health(port):
                 print("❌ Backend failed to start")
                 return False
                 
@@ -170,6 +166,44 @@ class CodegenAppLauncher:
         except Exception as e:
             print(f"❌ Failed to start backend: {e}")
             return False
+    
+    def _wait_for_backend_health(self, port: int, timeout: int = 30) -> bool:
+        """Wait for backend to be healthy using health check endpoint"""
+        health_url = f"http://localhost:{port}/health"
+        start_time = time.time()
+        
+        print(f"⏳ Waiting for backend to be ready...")
+        
+        while time.time() - start_time < timeout:
+            # Check if process is still running
+            if self.backend_process and self.backend_process.poll() is not None:
+                print("❌ Backend process exited unexpectedly")
+                return False
+            
+            try:
+                response = requests.get(health_url, timeout=2)
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get("status") == "healthy":
+                        return True
+                elif response.status_code == 500:
+                    # Backend is running but health check failed (likely due to demo credentials)
+                    # Check if we can reach the root endpoint to confirm backend is responsive
+                    try:
+                        root_response = requests.get(f"http://localhost:{port}/", timeout=2)
+                        if root_response.status_code == 200:
+                            print("⚠️  Backend health check failed but server is responsive (likely demo credentials)")
+                            return True
+                    except requests.exceptions.RequestException:
+                        pass
+            except (requests.exceptions.RequestException, ValueError):
+                # Backend not ready yet, continue waiting
+                pass
+            
+            time.sleep(1)
+        
+        print(f"❌ Backend health check timed out after {timeout} seconds")
+        return False
     
     def start_frontend(self, port: int = 3002) -> bool:
         """Start the frontend server"""

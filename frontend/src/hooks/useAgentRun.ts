@@ -9,105 +9,6 @@ export const useAgentRun = (): UseAgentRunReturn => {
   
   const { addAgentRun, updateAgentRun, getProject } = useProjectStore();
 
-  const createAgentRun = useCallback(async (projectId: string, target: string): Promise<string> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const project = getProject(projectId);
-      if (!project) {
-        throw new Error('Project not found');
-      }
-
-      const projectName = project.repository.name;
-      const planningStatement = project.settings.planningStatement;
-
-      // Create agent run via API
-      const response = await codegenService.createAgentRun(projectName, target, planningStatement);
-      
-      if (!response.success || !response.data) {
-        throw new Error(response.error || 'Failed to create agent run');
-      }
-
-      const apiRunId = response.data;
-
-      // Add to local store
-      const localRunId = addAgentRun(projectId, {
-        projectId,
-        target,
-        status: 'pending',
-        type: 'regular',
-        logs: [{
-          id: Date.now().toString(),
-          timestamp: new Date().toISOString(),
-          level: 'info',
-          message: 'Agent run created successfully'
-        }]
-      });
-
-      // Start polling for status updates
-      pollAgentRunStatus(projectId, localRunId, apiRunId);
-
-      return localRunId;
-    } catch (err: any) {
-      setError(err.message || 'Failed to create agent run');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [addAgentRun, getProject]);
-
-  const getAgentRunStatus = useCallback(async (runId: string): Promise<AgentRun> => {
-    try {
-      const response = await codegenService.getAgentRunStatus(runId);
-      
-      if (!response.success || !response.data) {
-        throw new Error(response.error || 'Failed to get agent run status');
-      }
-
-      // Convert API response to AgentRun format
-      const agentRun: AgentRun = {
-        id: runId,
-        projectId: '', // Will be filled by caller
-        target: '',    // Will be filled by caller
-        status: response.data.status === 'completed' ? 'completed' : 
-                response.data.status === 'failed' ? 'failed' : 'running',
-        type: response.data.type,
-        response: response.data.content,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        logs: []
-      };
-
-      return agentRun;
-    } catch (err: any) {
-      setError(err.message || 'Failed to get agent run status');
-      throw err;
-    }
-  }, []);
-
-  const continueAgentRun = useCallback(async (runId: string, message: string): Promise<void> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await codegenService.continueAgentRun(runId, message);
-      
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to continue agent run');
-      }
-
-      // Add log entry for continuation
-      // Note: This would need project context to update the store
-      console.log('Agent run continued successfully');
-    } catch (err: any) {
-      setError(err.message || 'Failed to continue agent run');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   // Helper function to poll agent run status
   const pollAgentRunStatus = useCallback(async (
     projectId: string, 
@@ -173,6 +74,107 @@ export const useAgentRun = (): UseAgentRunReturn => {
     setTimeout(poll, pollInterval);
   }, [updateAgentRun]);
 
+  const createAgentRun = useCallback(async (projectId: string, target: string): Promise<string> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const project = getProject(projectId);
+      if (!project) {
+        throw new Error('Project not found');
+      }
+
+      const projectName = project.repository.name;
+      const planningStatement = project.settings.planningStatement;
+
+      // Create agent run via API
+      const response = await codegenService.createAgentRun(projectName, target, planningStatement);
+      
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to create agent run');
+      }
+
+      const apiRunId = response.data;
+
+      // Add to local store
+      const localRunId = addAgentRun(projectId, {
+        projectId,
+        target,
+        status: 'pending',
+        type: 'regular',
+        logs: [{
+          id: Date.now().toString(),
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          message: 'Agent run created successfully'
+        }]
+      });
+
+      // Start polling for status updates
+      pollAgentRunStatus(projectId, localRunId, apiRunId);
+
+      return localRunId;
+    } catch (err: any) {
+      setError(err.message || 'Failed to create agent run');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [addAgentRun, getProject, pollAgentRunStatus]);
+
+  const getAgentRunStatus = useCallback(async (runId: string): Promise<AgentRun> => {
+    try {
+      const response = await codegenService.getAgentRunStatus(runId);
+      
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to get agent run status');
+      }
+
+      // Convert API response to AgentRun format
+      const agentRun: AgentRun = {
+        id: runId,
+        projectId: '', // Will be filled by caller
+        target: '',    // Will be filled by caller
+        status: response.data.status === 'completed' ? 'completed' : 
+                response.data.status === 'failed' ? 'failed' : 'running',
+        type: response.data.type,
+        response: response.data.content,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        logs: []
+      };
+
+      return agentRun;
+    } catch (err: any) {
+      setError(err.message || 'Failed to get agent run status');
+      throw err;
+    }
+  }, []);
+
+  const continueAgentRun = useCallback(async (runId: string, message: string): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await codegenService.continueAgentRun(runId, message);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to continue agent run');
+      }
+
+      // Add log entry for continuation
+      // Note: This would need project context to update the store
+      console.log('Agent run continued successfully');
+    } catch (err: any) {
+      setError(err.message || 'Failed to continue agent run');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+
+
   return {
     createAgentRun,
     getAgentRunStatus,
@@ -181,4 +183,3 @@ export const useAgentRun = (): UseAgentRunReturn => {
     error,
   };
 };
-

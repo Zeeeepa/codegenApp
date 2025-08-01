@@ -6,7 +6,7 @@ import json
 import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from app.models.workflow_state import WorkflowMetadata
 
 logger = logging.getLogger(__name__)
