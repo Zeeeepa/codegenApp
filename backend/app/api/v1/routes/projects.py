@@ -14,7 +14,7 @@ from app.models.api.api_models import (
     ProjectAgentRunResponse, CreateAgentRunRequest, ValidationPipelineResponse
 )
 from app.api.v1.dependencies import get_current_user
-from app.services.adapters.codegen_adapter import CodegenService
+from app.services.adapters.codegen_adapter import CodegenAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -218,7 +218,7 @@ async def create_agent_run(
     project_id: str,
     request: CreateAgentRunRequest,
     current_user: dict = Depends(get_current_user),
-    codegen_service: CodegenService = Depends()
+    codegen_service: CodegenAdapter = Depends()
 ):
     """Start a new agent run for a project"""
     try:

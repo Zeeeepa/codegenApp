@@ -16,7 +16,7 @@ from app.config.settings import get_settings
 from app.core.workflow.engine import WorkflowEngine, WorkflowEngineFactory
 from app.core.orchestration.coordinator import ServiceCoordinator
 from app.core.orchestration.state_manager import StateManagerFactory
-from app.services.adapters.codegen_adapter import CodegenService
+from app.services.adapters.codegen_adapter import CodegenAdapter
 from app.services.adapters.grainchain_adapter import GrainchainAdapter
 from app.api.v1.dependencies import set_global_dependencies
 from app.api.v1.routes.workflow import router as workflow_router
@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI):
         service_coordinator = ServiceCoordinator()
         
         # Initialize service adapters
-        codegen_adapter = CodegenService(
+        codegen_adapter = CodegenAdapter(
             api_token=settings.codegen_api_token,
             base_url=settings.codegen_api_base_url
         )
