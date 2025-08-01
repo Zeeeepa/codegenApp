@@ -136,12 +136,9 @@ class Settings(BaseSettings):
         default=["http://localhost:3000", "http://localhost:8000", "http://localhost:3080", "http://localhost:8080"],
         description="Allowed CORS origins"
     )
-    
     # Monitoring configuration
     enable_metrics: bool = Field(default=True, description="Enable Prometheus metrics")
     metrics_port: int = Field(default=8002, description="Metrics server port")
-    
-
     
     def get_codegen_headers(self) -> Dict[str, str]:
         """
