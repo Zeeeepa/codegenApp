@@ -2,7 +2,8 @@
 Configuration settings for the Strands-Agents backend
 """
 
-from pydantic import BaseSettings, Field, validator
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings
 from typing import Optional, Dict, Any, Union
 import os
 import json
@@ -129,7 +130,8 @@ class Settings(BaseSettings):
         description="Allowed CORS origins"
     )
     
-    @validator('cors_origins', pre=True)
+    @field_validator('cors_origins', mode='before')
+    @classmethod
     def parse_cors_origins(cls, v):
         """Parse cors_origins from string or list"""
         if isinstance(v, str):
@@ -145,30 +147,13 @@ class Settings(BaseSettings):
     enable_metrics: bool = Field(default=True, description="Enable Prometheus metrics")
     metrics_port: int = Field(default=8002, description="Metrics server port")
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        
-        @classmethod
-        def parse_env_var(cls, field_name: str, raw_val: str) -> Any:
-            """Custom environment variable parsing"""
-            if field_name == 'cors_origins':
-                # Handle cors_origins as comma-separated string
-                if raw_val.startswith('[') and raw_val.endswith(']'):
-                    # It's JSON, parse normally
-                    import json
-                    return json.loads(raw_val)
-                else:
-                    # It's comma-separated, split it
-                    return [origin.strip() for origin in raw_val.split(',') if origin.strip()]
-            return cls.json_loads(raw_val)
-        
-        # Environment variable prefixes
-        env_prefix = ""
-        
-        # Allow extra fields for extensibility
-        extra = "allow"
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": False,
+        "env_prefix": "",
+        "extra": "allow",  # Allow extra fields for extensibility
+    }
     
     def get_codegen_headers(self) -> Dict[str, str]:
         """
