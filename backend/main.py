@@ -5,11 +5,15 @@ Integrates: Codegen SDK, grainchain, graph-sitter, web-eval-agent
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 import uvicorn
 import logging
 from typing import Dict, Any
 import asyncio
+import os
+from pathlib import Path
 
 # Import our properly structured components
 from app.config.settings import get_settings
@@ -139,6 +143,31 @@ app.include_router(websocket_router)
 # Include Projects routes
 from app.api.projects import router as projects_router
 app.include_router(projects_router)
+
+# Serve static files from frontend build
+frontend_build_path = Path(__file__).parent.parent / "frontend" / "build"
+if frontend_build_path.exists():
+    # Mount static files
+    app.mount("/static", StaticFiles(directory=str(frontend_build_path / "static")), name="static")
+    
+    # Serve favicon and other root files
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon():
+        return FileResponse(str(frontend_build_path / "favicon.ico"))
+    
+    @app.get("/manifest.json", include_in_schema=False)
+    async def manifest():
+        return FileResponse(str(frontend_build_path / "manifest.json"))
+    
+    # Serve React app for all other routes (SPA fallback)
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Don't serve SPA for API routes
+        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+            raise HTTPException(status_code=404, detail="Not Found")
+        
+        # Serve index.html for all other routes
+        return FileResponse(str(frontend_build_path / "index.html"))
 
 
 # Health check endpoint
