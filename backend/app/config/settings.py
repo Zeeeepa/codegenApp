@@ -4,7 +4,7 @@ Configuration settings for the Strands-Agents backend
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any, Union, List
 import os
 import json
 
@@ -125,7 +125,7 @@ class Settings(BaseSettings):
     )
     
     # CORS configuration
-    cors_origins: list = Field(
+    cors_origins: List[str] = Field(
         default=["http://localhost:3000", "http://localhost:8000", "http://localhost:3080", "http://localhost:8080"],
         description="Allowed CORS origins"
     )
@@ -248,7 +248,7 @@ class DevelopmentSettings(Settings):
     """Development environment settings"""
     debug: bool = True
     log_level: str = "DEBUG"
-    cors_origins: list = ["*"]  # Allow all origins in development
+    cors_origins: List[str] = ["*"]  # Allow all origins in development
 
 
 class ProductionSettings(Settings):
