@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Settings, FileText, Terminal, Key, GitBranch, Play, Save, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, Settings, FileText, Terminal, Key, Play, Save, Plus, Trash2 } from 'lucide-react';
 import { ProjectCard } from '../../types';
 import { GitHubBranch } from '../../api/githubTypes';
 import { 
@@ -47,14 +47,7 @@ export function ProjectSettingsDialog({ isOpen, onClose, project, onSave }: Proj
   const [newSecretKey, setNewSecretKey] = useState('');
   const [newSecretValue, setNewSecretValue] = useState('');
 
-  useEffect(() => {
-    if (isOpen) {
-      loadSettings();
-      loadBranches();
-    }
-  }, [isOpen, project.id]);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
       const projectSettings = await getProjectSettings(project.id);
@@ -72,9 +65,9 @@ export function ProjectSettingsDialog({ isOpen, onClose, project, onSave }: Proj
     } finally {
       setLoading(false);
     }
-  };
+  }, [project.id, project.repository.default_branch]);
 
-  const loadBranches = async () => {
+  const loadBranches = useCallback(async () => {
     try {
       setLoadingBranches(true);
       const preferences = await getPreferenceValues();
@@ -93,7 +86,14 @@ export function ProjectSettingsDialog({ isOpen, onClose, project, onSave }: Proj
     } finally {
       setLoadingBranches(false);
     }
-  };
+  }, [project.id]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadSettings();
+      loadBranches();
+    }
+  }, [isOpen, project.id, loadSettings, loadBranches]);
 
   const handleSave = async () => {
     if (!settings) return;

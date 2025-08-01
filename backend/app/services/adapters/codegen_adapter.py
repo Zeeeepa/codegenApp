@@ -28,7 +28,7 @@ from app.models.api.api_models import (
 logger = logging.getLogger(__name__)
 
 
-class CodegenService:
+class CodegenAdapter:
     """Service for interacting with Codegen API"""
     
     def __init__(self, api_token: str, base_url: str = "https://api.codegen.com") -> None:

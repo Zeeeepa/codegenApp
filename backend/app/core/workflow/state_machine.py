@@ -260,5 +260,5 @@ class StateMachine:
             "iteration": execution.metadata.current_iteration,
             "transitions_count": len(execution.state_history),
             "is_terminal": self.is_terminal_state(execution.current_state),
-            "can_retry": await self.can_retry(execution) if execution.current_state == WorkflowState.FAILED else False
+            "can_retry": execution.current_state == WorkflowState.FAILED and execution.retry_count < self.max_retries
         }

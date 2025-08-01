@@ -9,7 +9,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, Any, Optional
 from sqlalchemy import Column, Integer, String, DateTime, JSON, Text, Enum as SQLEnum
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
