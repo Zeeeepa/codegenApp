@@ -152,11 +152,7 @@ class CodegenAppLauncher:
             self.backend_process = subprocess.Popen(
                 [sys.executable, "main.py"],
                 cwd=self.backend_dir,
-                env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-                bufsize=1
+                env=env
             )
             
             # Wait for backend to be ready using health check
@@ -182,14 +178,6 @@ class CodegenAppLauncher:
             # Check if process is still running
             if self.backend_process and self.backend_process.poll() is not None:
                 print("❌ Backend process exited unexpectedly")
-                # Try to read any output from the process
-                try:
-                    if self.backend_process.stdout:
-                        output = self.backend_process.stdout.read()
-                        if output:
-                            print(f"Backend output: {output}")
-                except Exception:
-                    pass
                 return False
             
             try:
