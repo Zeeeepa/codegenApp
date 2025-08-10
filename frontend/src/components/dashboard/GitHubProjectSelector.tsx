@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronDown, Search, Star, GitBranch, Calendar, ExternalLink, Plus } from 'lucide-react';
 import GitHubService, { GitHubRepository } from '../../services/githubService';
 import { Project } from '../../types/dataModels';
+import { getPreferenceValues } from '../../utils/preferences';
 
 interface GitHubProjectSelectorProps {
   onProjectSelect: (repository: GitHubRepository) => void;
@@ -35,10 +36,23 @@ const GitHubProjectSelector: React.FC<GitHubProjectSelectorProps> = ({
   const [sortBy, setSortBy] = useState<'updated' | 'name' | 'stars'>('updated');
   const [filterBy, setFilterBy] = useState<'all' | 'pinned' | 'unpinned'>('all');
 
-  const githubService = new GitHubService();
+  const [githubService, setGithubService] = useState<GitHubService | null>(null);
+
+  useEffect(() => {
+    const initService = async () => {
+      const preferences = await getPreferenceValues();
+      if (preferences.githubToken) {
+        setGithubService(new GitHubService(preferences.githubToken));
+      } else {
+        setError("GitHub token not configured.");
+      }
+    };
+    initService();
+  }, []);
 
   // Load repositories
   const loadRepositories = useCallback(async () => {
+    if (!githubService) return;
     setLoading(true);
     setError(null);
 
@@ -57,7 +71,7 @@ const GitHubProjectSelector: React.FC<GitHubProjectSelectorProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [selectedProjects, sortBy]);
+  }, [selectedProjects, sortBy, githubService]);
 
   // Filter and search repositories
   useEffect(() => {

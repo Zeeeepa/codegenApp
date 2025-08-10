@@ -6,18 +6,12 @@ import {
   AgentRunResponse,
   UserResponse,
   OrganizationResponse,
-  CreateAgentRunRequest as LegacyCreateAgentRunRequest,
-  ResumeAgentRunRequest as LegacyResumeAgentRunRequest,
+  CreateAgentRunRequest,
+  ResumeAgentRunRequest,
   StopAgentRunRequest,
   PaginatedResponse,
   APIError,
 } from "./types";
-import { 
-  getCodegenService, 
-  CreateAgentRunRequest, 
-  ResumeAgentRunRequest,
-  AgentRunResponse as RealAgentRunResponse 
-} from "../services/codegenService";
 
 export class CodegenAPIClient {
   private baseUrl: string;
@@ -143,7 +137,7 @@ export class CodegenAPIClient {
   // Agent Run Methods
   async createAgentRun(
     organizationId: number,
-    request: LegacyCreateAgentRunRequest
+    request: CreateAgentRunRequest
   ): Promise<AgentRunResponse> {
     return this.makeRequest<AgentRunResponse>(
       API_ENDPOINTS.AGENT_RUN_CREATE(organizationId),
@@ -166,9 +160,9 @@ export class CodegenAPIClient {
   async resumeAgentRun(
     organizationId: number,
     agentRunId: number,
-    request: Omit<LegacyResumeAgentRunRequest, 'agent_run_id'>
+    request: Omit<ResumeAgentRunRequest, 'agent_run_id'>
   ): Promise<AgentRunResponse> {
-    const fullRequest: LegacyResumeAgentRunRequest = {
+    const fullRequest: ResumeAgentRunRequest = {
       ...request,
       agent_run_id: agentRunId,
     };
@@ -248,71 +242,6 @@ export class CodegenAPIClient {
       return false;
     }
   }
-
-  // ============================================================================
-  // REAL CODEGEN API METHODS - Official API Integration
-  // ============================================================================
-
-  /**
-   * Create a new agent run using the official Codegen API
-   */
-  async createRealAgentRun(request: CreateAgentRunRequest): Promise<RealAgentRunResponse> {
-    const codegenService = getCodegenService();
-    return await codegenService.createAgentRun(request);
-  }
-
-  /**
-   * Resume an existing agent run using the official Codegen API
-   */
-  async resumeRealAgentRun(request: ResumeAgentRunRequest): Promise<RealAgentRunResponse> {
-    const codegenService = getCodegenService();
-    return await codegenService.resumeAgentRun(request);
-  }
-
-  /**
-   * Get agent run status using the official Codegen API
-   */
-  async getRealAgentRunStatus(runId: string) {
-    const codegenService = getCodegenService();
-    return await codegenService.getAgentRunStatus(runId);
-  }
-
-  /**
-   * Get full agent run details using the official Codegen API
-   */
-  async getRealAgentRun(runId: string): Promise<RealAgentRunResponse> {
-    const codegenService = getCodegenService();
-    return await codegenService.getAgentRun(runId);
-  }
-
-  /**
-   * Cancel an agent run using the official Codegen API
-   */
-  async cancelRealAgentRun(runId: string): Promise<boolean> {
-    const codegenService = getCodegenService();
-    return await codegenService.cancelAgentRun(runId);
-  }
-
-  /**
-   * List agent runs using the official Codegen API
-   */
-  async listRealAgentRuns(options: {
-    limit?: number;
-    offset?: number;
-    status?: string;
-    repository?: string;
-  } = {}): Promise<RealAgentRunResponse[]> {
-    const codegenService = getCodegenService();
-    return await codegenService.listAgentRuns(options);
-  }
-
-  /**
-   * Test connection to the official Codegen API
-   */
-  async testRealCodegenConnection(): Promise<boolean> {
-    const codegenService = getCodegenService();
-    return await codegenService.testConnection();
-  }
 }
 
 // Singleton instance
@@ -331,90 +260,3 @@ export async function resetAPIClient(): Promise<void> {
   // Clear stored user info when credentials change
   await clearStoredUserInfo();
 }
-
-// Web Evaluation API Client (separate from main Codegen API)
-class WebEvalAPIClient {
-  private baseUrl: string;
-  private apiToken: string;
-
-  constructor() {
-    this.baseUrl = '';
-    this.apiToken = '';
-  }
-
-  private async initializeCredentials(): Promise<void> {
-    if (!this.apiToken) {
-      const credentials = await getCredentials();
-      this.baseUrl = credentials.apiBaseUrl || DEFAULT_API_BASE_URL;
-      this.apiToken = credentials.apiToken;
-    }
-  }
-
-  private async makeRequest<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    await this.initializeCredentials();
-    const url = `${this.baseUrl}${endpoint}`;
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiToken}`,
-        ...options.headers,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Request failed with status ${response.status}`);
-    }
-
-    return await response.json() as T;
-  }
-
-  async get<T = any>(endpoint: string): Promise<{ data: T }> {
-    const data = await this.makeRequest<T>(endpoint);
-    return { data };
-  }
-
-  async post<T = any>(endpoint: string, body: any): Promise<{ data: T }> {
-    const data = await this.makeRequest<T>(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-    return { data };
-  }
-
-  async delete<T = any>(endpoint: string): Promise<{ data: T }> {
-    const data = await this.makeRequest<T>(endpoint, {
-      method: 'DELETE',
-    });
-    return { data };
-  }
-}
-
-// Singleton instance for web evaluation
-let webEvalClient: WebEvalAPIClient | null = null;
-
-// Generic API client for web evaluation endpoints (backward compatibility)
-export const webEvalApiClient = {
-  get: async <T = any>(endpoint: string) => {
-    if (!webEvalClient) {
-      webEvalClient = new WebEvalAPIClient();
-    }
-    return webEvalClient.get<T>(endpoint);
-  },
-  post: async <T = any>(endpoint: string, body: any) => {
-    if (!webEvalClient) {
-      webEvalClient = new WebEvalAPIClient();
-    }
-    return webEvalClient.post<T>(endpoint, body);
-  },
-  delete: async <T = any>(endpoint: string) => {
-    if (!webEvalClient) {
-      webEvalClient = new WebEvalAPIClient();
-    }
-    return webEvalClient.delete<T>(endpoint);
-  },
-};

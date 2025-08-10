@@ -1,6 +1,6 @@
 /// <reference types="jest" />
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import App from './App';
 import { ProjectProvider } from './contexts/ProjectContext';
 

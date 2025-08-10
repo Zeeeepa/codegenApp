@@ -16,7 +16,7 @@ export const useGitHub = (): UseGitHubReturn => {
       const response = await githubService.fetchRepositories();
       
       if (response.success && response.data) {
-        setRepositories(response.data);
+        setRepositories(response.data!);
       } else {
         setError(response.error || 'Failed to fetch repositories');
       }

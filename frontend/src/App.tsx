@@ -27,21 +27,21 @@ function App() {
 
   // Validate GitHub token on app start
   useEffect(() => {
-    const validateGitHubToken = async () => {
-      setLoading(true);
-      try {
-        const isValid = await githubService.validateToken();
-        if (!isValid) {
-          setError('Invalid GitHub token. Please check your configuration.');
-        }
-      } catch (err: any) {
-        setError('Failed to validate GitHub token: ' + err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+    // const validateGitHubToken = async () => {
+    //   setLoading(true);
+    //   try {
+    //     const isValid = await githubService.validateToken();
+    //     if (!isValid) {
+    //       setError('Invalid GitHub token. Please check your configuration.');
+    //     }
+    //   } catch (err: any) {
+    //     setError('Failed to validate GitHub token: ' + err.message);
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
 
-    validateGitHubToken();
+    // validateGitHubToken();
   }, [setLoading, setError]);
 
   const handleProjectSelect = async (repository: any) => {
@@ -84,9 +84,9 @@ function App() {
   return (
     <ErrorBoundary>
       <SkipNavigation />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen text-white">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 shadow-sm" role="banner">
+        <header className="bg-gray-800 border-b border-gray-700 shadow-sm" role="banner">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center gap-3">
@@ -94,7 +94,7 @@ function App() {
                   <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                     <Github className="w-5 h-5 text-white" aria-hidden="true" />
                   </div>
-                  <h1 className="text-xl font-bold text-gray-900">
+                  <h1 className="text-xl font-bold text-white">
                     CodegenApp Dashboard
                   </h1>
                 </div>
@@ -111,7 +111,7 @@ function App() {
                 <button 
                   id="settings-button"
                   onClick={() => setIsSettingsOpen(true)}
-                  className="p-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg transition-colors"
+                  className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg transition-colors"
                   data-testid="settings-button"
                   aria-label="Open settings"
                 >
@@ -131,12 +131,12 @@ function App() {
         >
         {/* Error Display */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="mb-6 p-4 bg-red-900 bg-opacity-20 border border-red-800 rounded-lg">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-red-700">{error}</p>
+              <p className="text-sm text-red-300">{error}</p>
               <button
                 onClick={clearError}
-                className="text-red-400 hover:text-red-600"
+                className="text-red-400 hover:text-red-200"
               >
                 ×
               </button>
@@ -147,8 +147,8 @@ function App() {
         {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            <span className="ml-3 text-gray-600">Loading...</span>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+            <span className="ml-3 text-gray-400">Loading...</span>
           </div>
         )}
 
@@ -166,11 +166,11 @@ function App() {
           </div>
         ) : !isLoading && (
           <div className="text-center py-12">
-            <Github className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <Github className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">
               No projects added yet
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-400 mb-6">
               Add your first GitHub repository to get started with automated code generation.
             </p>
             <div className="flex justify-center">

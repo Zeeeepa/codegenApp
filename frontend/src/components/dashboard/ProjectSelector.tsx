@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronDown, Search, Plus, Github, Star, GitFork } from 'lucide-react';
 import { useGitHub } from '../../hooks';
 import { ProjectSelectorProps } from '../../types';
@@ -12,13 +12,21 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const { repositories, isLoading, error, fetchRepositories } = useGitHub();
 
-  useEffect(() => {
+  const loadRepositories = useCallback(() => {
     fetchRepositories();
   }, [fetchRepositories]);
 
+  useEffect(() => {
+    if (isOpen) {
+      loadRepositories();
+    }
+  }, [isOpen, loadRepositories]);
+
+  console.log('Number of repositories:', repositories.length);
+
   const filteredRepositories = repositories.filter(repo =>
     repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    repo.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (repo.description && repo.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
     repo.owner.login.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -69,13 +77,13 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
               <div className="p-4 text-center text-red-500">
                 <p className="text-sm">{error}</p>
                 <button
-                  onClick={fetchRepositories}
+                  onClick={loadRepositories}
                   className="mt-2 text-xs text-blue-500 hover:text-blue-700 underline"
                 >
                   Try again
                 </button>
               </div>
-            ) : filteredRepositories.length === 0 ? (
+            ) : filteredRepositories.length === 0 && !isLoading ? (
               <div className="p-4 text-center text-gray-500">
                 <Github className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                 <p className="text-sm">
@@ -83,80 +91,91 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
                 </p>
               </div>
             ) : (
-              filteredRepositories.map((repo) => {
-                const isSelected = selectedProjects.includes(repo.full_name);
-                
-                return (
-                  <button
-                    key={repo.id}
-                    onClick={() => !isSelected && handleRepositorySelect(repo)}
-                    disabled={isSelected}
-                    className={`w-full p-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors ${
-                      isSelected 
-                        ? 'bg-gray-100 cursor-not-allowed opacity-60' 
-                        : 'cursor-pointer'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        {/* Repository Name */}
-                        <div className="flex items-center gap-2 mb-1">
-                          <Github className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          <span className="font-medium text-gray-900 truncate">
-                            {repo.name}
-                          </span>
-                          {repo.private && (
-                            <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full">
-                              Private
+              <>
+                {filteredRepositories.map((repo) => {
+                  const isSelected = selectedProjects.includes(repo.full_name);
+                  
+                  return (
+                    <button
+                      key={repo.id}
+                      onClick={() => !isSelected && handleRepositorySelect(repo)}
+                      disabled={isSelected}
+                      className={`w-full p-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors ${
+                        isSelected 
+                          ? 'bg-gray-100 cursor-not-allowed opacity-60' 
+                          : 'cursor-pointer'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          {/* Repository Name */}
+                          <div className="flex items-center gap-2 mb-1">
+                            <Github className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <span className="font-medium text-gray-900 truncate">
+                              {repo.name}
                             </span>
-                          )}
-                          {isSelected && (
-                            <span className="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">
-                              Added
-                            </span>
-                          )}
-                        </div>
+                            {repo.private && (
+                              <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                                Private
+                              </span>
+                            )}
+                            {isSelected && (
+                              <span className="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">
+                                Added
+                              </span>
+                            )}
+                          </div>
 
-                        {/* Description */}
-                        {repo.description && (
-                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                            {repo.description}
-                          </p>
-                        )}
+                          {/* Description */}
+                          {repo.description && (
+                            <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                              {repo.description}
+                            </p>
+                          )}
 
-                        {/* Repository Stats */}
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          {repo.language && (
+                          {/* Repository Stats */}
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            {repo.language && (
+                              <div className="flex items-center gap-1">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span>{repo.language}</span>
+                              </div>
+                            )}
                             <div className="flex items-center gap-1">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              <span>{repo.language}</span>
+                              <Star className="w-3 h-3" />
+                              <span>{repo.stargazers_count}</span>
                             </div>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <Star className="w-3 h-3" />
-                            <span>{repo.stargazers_count}</span>
+                            <div className="flex items-center gap-1">
+                              <GitFork className="w-3 h-3" />
+                              <span>{repo.forks_count}</span>
+                            </div>
+                            <span>
+                              Updated {repo.updated_at ? formatDistanceToNow(new Date(repo.updated_at), { addSuffix: true }) : 'Unknown'}
+                            </span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <GitFork className="w-3 h-3" />
-                            <span>{repo.forks_count}</span>
-                          </div>
-                          <span>
-                            Updated {repo.updated_at ? formatDistanceToNow(new Date(repo.updated_at), { addSuffix: true }) : 'Unknown'}
-                          </span>
                         </div>
                       </div>
-                    </div>
-                  </button>
-                );
-              })
+                    </button>
+                  );
+                })}
+                {isLoading && (
+                  <div className="p-4 text-center text-gray-500">
+                    Loading...
+                  </div>
+                )}
+              </>
             )}
           </div>
 
           {/* Footer */}
           <div className="p-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-            <p className="text-xs text-gray-500 text-center">
-              Select a repository to add it to your dashboard
-            </p>
+            <button
+              onClick={loadRepositories}
+              disabled={isLoading}
+              className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Loading...' : 'Refresh'}
+            </button>
           </div>
         </div>
       )}

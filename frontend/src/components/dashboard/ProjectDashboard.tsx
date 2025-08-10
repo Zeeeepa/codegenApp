@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, RefreshCw } from 'lucide-react';
+import { Plus, Search, Filter, RefreshCw, AlertCircle } from 'lucide-react';
 import { CachedProject, ProjectFilters } from '../../api/types';
 import { ProjectCard as ProjectCardType } from '../../types';
 import { getCachedProjects, filterProjects } from '../../storage/projectCache';
 import { ProjectCard } from './ProjectCard';
-import { WebEvalPanel } from '../WebEvalPanel';
+
 import { getPreferenceValues } from '../../utils/preferences';
 import { getGitHubClient } from '../../api/github';
 import { updateProjectPRCount } from '../../storage/projectCache';
@@ -63,6 +63,8 @@ export function ProjectDashboard({ selectedProject, onProjectSelect }: ProjectDa
     sortDirection: 'desc',
   });
 
+  const [githubError, setGithubError] = useState<string | null>(null);
+
   useEffect(() => {
     loadProjects();
   }, []);
@@ -79,6 +81,13 @@ export function ProjectDashboard({ selectedProject, onProjectSelect }: ProjectDa
   const loadProjects = async () => {
     try {
       setLoading(true);
+      setGithubError(null);
+      const preferences = await getPreferenceValues();
+      if (!preferences.githubToken) {
+        setGithubError('Invalid GitHub token. Please check your configuration.');
+        setLoading(false);
+        return;
+      }
       const cachedProjects = await getCachedProjects();
       setProjects(cachedProjects);
       
@@ -138,6 +147,18 @@ export function ProjectDashboard({ selectedProject, onProjectSelect }: ProjectDa
     // Reload projects when a project is updated
     await loadProjects();
   };
+
+  if (githubError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center text-red-500">
+          <AlertCircle className="mx-auto h-12 w-12" />
+          <h3 className="text-xl font-medium mt-2">GitHub Error</h3>
+          <p>{githubError}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -272,7 +293,7 @@ export function ProjectDashboard({ selectedProject, onProjectSelect }: ProjectDa
       {/* Web Evaluation Tab */}
       {activeTab === 'web-eval' && (
         <div className="max-w-4xl mx-auto">
-          <WebEvalPanel />
+          <p className="text-white">Web Evaluation Panel is currently disabled.</p>
         </div>
       )}
     </div>

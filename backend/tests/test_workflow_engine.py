@@ -5,7 +5,7 @@ Comprehensive tests for the CI/CD Workflow Engine.
 import pytest
 import asyncio
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 from typing import Dict, Any
 
 from app.core.workflow.cicd_engine import CICDWorkflowEngine, WorkflowEngineError

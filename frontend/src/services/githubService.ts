@@ -112,12 +112,12 @@ class GitHubService {
   private baseUrl: string = 'https://api.github.com';
   private targetRepos: string[] = ['grainchain', 'codegenApp'];
 
-  constructor() {
-    this.token = process.env.REACT_APP_GITHUB_TOKEN || 
+  constructor(token?: string) {
+    this.token = token || process.env.REACT_APP_GITHUB_TOKEN || 
                  process.env.GITHUB_TOKEN || '';
     
     if (!this.token) {
-      console.warn('GitHub token not found in environment variables');
+      console.warn('GitHub token not found in environment variables or constructor');
     }
   }
 
@@ -538,9 +538,9 @@ class GitHubService {
 // Singleton instance
 let githubService: GitHubService | null = null;
 
-export function getGitHubService(): GitHubService {
-  if (!githubService) {
-    githubService = new GitHubService();
+export function getGitHubService(token?: string): GitHubService {
+  if (!githubService || token) {
+    githubService = new GitHubService(token);
   }
   return githubService;
 }

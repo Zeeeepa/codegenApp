@@ -1,42 +1,52 @@
-# Cloudflare Worker configuration for CodegenApp webhook handler
+# Cloudflare Worker Configuration for GitHub Webhook Gateway
+# Deploy with: wrangler publish
 
 name = "webhook-gateway"
-main = "webhook-handler.js"
+main = "webhook-gateway.js"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Environment variables (set these in Cloudflare dashboard or via wrangler secret)
+# Worker settings
 [env.production]
 name = "webhook-gateway"
+route = "webhook-gateway.pixeliumperfecto.workers.dev/*"
 
+# Environment variables (set these in Cloudflare Workers dashboard)
+[env.production.vars]
+# GITHUB_WEBHOOK_SECRET = "your_webhook_secret_here"
+# BACKEND_URL = "https://your-backend-url.com"
+# API_KEY = "your_api_key_here"
+
+# Development environment
 [env.development]
 name = "webhook-gateway-dev"
 
-# Variables that can be set publicly
-[vars]
-WORKER_VERSION = "1.0.0"
-ENVIRONMENT = "production"
+[env.development.vars]
+# GITHUB_WEBHOOK_SECRET = "dev_webhook_secret"
+# BACKEND_URL = "http://localhost:3001"
+# API_KEY = "dev_api_key"
 
-# Secrets (set via: wrangler secret put SECRET_NAME)
-# CODEGENAPP_API_URL - URL of the main CodegenApp API (e.g., https://your-domain.com)
-# WEBHOOK_SECRET - Secret for validating GitHub webhooks
-# API_TOKEN - Token for authenticating with CodegenApp API
-
-# Routes (configure these in Cloudflare dashboard)
-# Example: webhook-gateway.your-domain.workers.dev/*
+# Triggers
+[[triggers]]
+crons = ["0 */6 * * *"]  # Health check every 6 hours
 
 # KV namespaces (if needed for caching)
 # [[kv_namespaces]]
 # binding = "WEBHOOK_CACHE"
-# id = "your-kv-namespace-id"
-# preview_id = "your-preview-kv-namespace-id"
+# id = "your_kv_namespace_id"
+# preview_id = "your_preview_kv_namespace_id"
 
 # Durable Objects (if needed for state management)
 # [[durable_objects.bindings]]
 # name = "WEBHOOK_STATE"
 # class_name = "WebhookState"
 
-# Worker limits
-[limits]
-cpu_ms = 10000  # 10 seconds max CPU time
+# R2 buckets (if needed for file storage)
+# [[r2_buckets]]
+# binding = "WEBHOOK_LOGS"
+# bucket_name = "webhook-logs-bucket"
+
+# Analytics Engine (if needed for metrics)
+# [[analytics_engine_datasets]]
+# binding = "WEBHOOK_ANALYTICS"
 
